@@ -1,0 +1,45 @@
+{
+  "name": "grid-manager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Modern business management system with React, Node.js, and PostgreSQL",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "cd apps/api && set PORT=5001 && npm run dev",
+    "dev:web": "cd apps/web && npm run dev",
+    "build": "npm run build:api && npm run build:web",
+    "build:api": "cd apps/api && npm run build",
+    "build:web": "cd apps/web && npm run build",
+    "test": "npm run test:api && npm run test:web",
+    "test:api": "cd apps/api && npm test",
+    "test:web": "cd apps/web && npm test",
+    "lint": "npm run lint:api && npm run lint:web",
+    "lint:api": "cd apps/api && npm run lint",
+    "lint:web": "cd apps/web && npm run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "db:migrate": "cd apps/api && npm run db:migrate",
+    "db:seed": "cd apps/api && npm run db:seed",
+    "db:reset": "cd apps/api && npm run db:reset",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "install:all": "npm install && cd apps/api && npm install && cd ../web && npm install && cd ../../packages/types && npm install",
+    "postinstall": "npm run install:all"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "concurrently": "^8.2.2",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.0"
+  },
+  "packageManager": "npm@10.0.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "pg": "^8.16.3"
+  }
+}

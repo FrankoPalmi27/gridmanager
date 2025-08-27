@@ -1,0 +1,17 @@
+[build]
+  # Directorio base del monorepo
+  base = "."
+  # Comando para construir todo el proyecto
+  command = "npm run build"
+  # Directorio de publicación para el frontend
+  publish = "apps/web/dist"
+
+[functions]
+  # Directorio donde se encuentran las funciones serverless
+  directory = "netlify/functions"
+
+# Redirección para que todas las llamadas a /api vayan a nuestra función serverless
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200

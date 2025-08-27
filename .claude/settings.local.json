@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:api:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm install)",
+      "Bash(npm run:*)",
+      "Bash(set PORT=5001)",
+      "Bash(npm install:*)",
+      "Bash(node:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

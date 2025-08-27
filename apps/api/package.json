@@ -5,9 +5,9 @@
   "main": "src/server.ts",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "npm run db:generate && tsc",
+    "build": "tsc",
     "start": "node dist/server.js",
-    "start:migrate": "npm run db:migrate && npm start",
+    "start:ts": "tsx src/server.ts",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "lint": "eslint src --ext .ts,.tsx --report-unused-disable-directives --max-warnings 0",

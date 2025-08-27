@@ -9,18 +9,15 @@ COPY prisma ./prisma/
 # Install dependencies
 RUN npm install
 
-# Generate Prisma client
-RUN npm run db:generate
-
 # Copy source code
 COPY src ./src/
 COPY tsconfig.json ./
 
-# Build the application
+# Build the application (without database operations)
 RUN npm run build
 
 # Expose port
 EXPOSE 3001
 
 # Start the application
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npx prisma generate && npx prisma migrate deploy && npm start"]

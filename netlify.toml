@@ -1,17 +1,20 @@
 [build]
-  # Directorio base del monorepo
-  base = "."
-  # Comando para construir todo el proyecto
-  command = "npm run build"
-  # Directorio de publicación para el frontend
+  base = "apps/web"
   publish = "apps/web/dist"
+  command = "npm ci && npm run build"
 
-[functions]
-  # Directorio donde se encuentran las funciones serverless
-  directory = "netlify/functions"
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_VERSION = "9"
+  NODE_OPTIONS = "--max-old-space-size=4096"
 
-# Redirección para que todas las llamadas a /api vayan a nuestra función serverless
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
+  from = "/*"
+  to = "/index.html"
   status = 200
+
+[context.production]
+  environment = { VITE_API_URL = "https://grid-manager-api.railway.app/api/v1" }
+
+[context.deploy-preview]
+  environment = { VITE_API_URL = "https://grid-manager-api.railway.app/api/v1" }

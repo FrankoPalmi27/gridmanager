@@ -10,7 +10,9 @@
       "Bash(node:*)",
       "Bash(copy server-fixed.ts server.ts)",
       "Bash(\"commit-and-push.bat\")",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

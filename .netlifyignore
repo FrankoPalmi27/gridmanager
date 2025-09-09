@@ -1,0 +1,13 @@
+# Ignore API files and dependencies
+apps/api/**
+packages/**
+docs/**
+*.bat
+*.ps1
+.env*
+docker-compose.yml
+run-prisma.*
+start-dev.ps1
+
+# Keep only web app files
+!apps/web/**

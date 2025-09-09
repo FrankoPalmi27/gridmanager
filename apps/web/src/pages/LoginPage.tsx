@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { LoginSchema, LoginRequest } from '@grid-manager/types';
+import { z } from 'zod';
+
+// Inline types for deployment
+const LoginSchema = z.object({
+  email: z.string().email('Email inválido'),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+});
+
+type LoginRequest = z.infer<typeof LoginSchema>;
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/lib/api';
 

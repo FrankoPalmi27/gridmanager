@@ -22,8 +22,7 @@
     "db:reset": "cd apps/api && npm run db:reset",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
-    "install:all": "npm install && cd apps/api && npm install && cd ../web && npm install && cd ../../packages/types && npm install",
-    "postinstall": "npm run install:all"
+    "install:all": "cd packages/types && npm install && cd ../../apps/web && npm install"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

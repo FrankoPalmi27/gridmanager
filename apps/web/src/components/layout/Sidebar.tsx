@@ -20,7 +20,7 @@ interface SidebarProps {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST', 'SELLER'] },
+  { name: 'Dashboard', href: '/', icon: HomeIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST', 'SELLER'] },
   { name: 'Ingresos', href: '/sales', icon: ArrowTrendingUpIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST', 'SELLER'] },
   { name: 'Egresos', href: '/purchases', icon: ArrowTrendingDownIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST'] },
   { name: 'Contactos - Clientes', href: '/customers', icon: UsersIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST', 'SELLER'] },

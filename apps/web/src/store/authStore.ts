@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { AuthUser, AuthTokens } from '@grid-manager/types';
+
+interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+}
 
 interface AuthState {
   user: AuthUser | null;
@@ -15,8 +26,16 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      user: null,
-      tokens: null,
+      user: {
+        id: '1',
+        name: 'Usuario Demo',
+        email: 'demo@gridmanager.com',
+        role: 'ADMIN'
+      },
+      tokens: {
+        accessToken: 'demo-token',
+        refreshToken: 'demo-refresh'
+      },
       isLoading: false,
       
       setAuth: (user, tokens) =>

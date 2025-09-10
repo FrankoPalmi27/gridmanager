@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { UserRole, UserStatus } from '../types';
+import { UserRole, UserStatus } from '../types/index';
 import { authenticate, AuthenticatedRequest, managerOrAbove } from '../middleware/auth';
 import { validate, validateParams } from '../middleware/validation';
 import { prisma } from '../server';

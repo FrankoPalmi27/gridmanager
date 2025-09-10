@@ -20,8 +20,57 @@ import { userRoutes } from './routes/users';
 import { accountRoutes } from './routes/accounts';
 import { reportRoutes } from './routes/reports';
 
-const app = express();
-const PORT = process.env.PORT || 3001;
+// Factory function for creating the Express app (for serverless functions)
+export function createApp() {
+  const app = express();
+
+  // Database and Redis clients
+  // (Redis setup will be done in the main server section)
+
+  // Middleware
+  app.use(helmet());
+  app.use(compression());
+  app.use(cors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    credentials: true,
+  }));
+
+  // Rate limiting
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.',
+  });
+  app.use('/api/', limiter);
+
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // API Routes
+  app.use('/api/auth', authRoutes);
+  app.use('/api/dashboard', dashboardRoutes);
+  app.use('/api/customers', customerRoutes);
+  app.use('/api/suppliers', supplierRoutes);
+  app.use('/api/products', productRoutes);
+  app.use('/api/sales', saleRoutes);
+  app.use('/api/purchases', purchaseRoutes);
+  app.use('/api/users', userRoutes);
+  app.use('/api/accounts', accountRoutes);
+  app.use('/api/reports', reportRoutes);
+
+  // Health check
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // Error handler
+  app.use(errorHandler);
+
+  return app;
+}
+
+const app = createApp();
+const PORT = parseInt(process.env.PORT || '3001', 10);
 
 // Database and Redis clients
 export const prisma = new PrismaClient();
@@ -41,25 +90,6 @@ if (process.env.REDIS_URL) {
 }
 
 export { redis };
-
-// Middleware
-app.use(helmet());
-app.use(compression());
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  credentials: true,
-}));
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
-  message: 'Too many requests from this IP, please try again later.',
-});
-app.use(limiter);
-
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
 
 // Swagger configuration
 const swaggerOptions = {

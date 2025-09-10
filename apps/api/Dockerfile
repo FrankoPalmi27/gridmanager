@@ -1,36 +1,23 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy Railway-specific package.json (without local deps)
-COPY package.railway.json ./package.json
-COPY package-lock.json* ./
+# Copy package files
+COPY package*.json ./
 
-# Clear npm cache and install dependencies
-RUN npm cache clean --force
-RUN npm ci --production --silent
+# Install dependencies
+RUN npm ci
 
-# Copy prisma schema
+# Copy prisma schema and generate client
 COPY prisma ./prisma/
-
-# Generate Prisma client
 RUN npx prisma generate
 
 # Copy source code
 COPY src ./src/
 COPY tsconfig.json ./
 
-# Install all dependencies for build
-RUN npm ci --silent
-
-# Build the application
-RUN npm run build
-
-# Remove dev dependencies to reduce image size
-RUN npm prune --production
-
-# Expose port 
+# Expose port
 EXPOSE 3001
 
-# Start the application
-CMD ["sh", "-c", "npx prisma generate && npm start"]
+# Start application
+CMD ["npm", "start"]

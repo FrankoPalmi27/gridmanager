@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { UserRole } from '../types';
+import { UserRole } from '../types/index';
 import { prisma } from '../server';
 
 export interface AuthenticatedRequest extends Request {
@@ -17,7 +17,7 @@ export const authenticate = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
 
@@ -54,7 +54,7 @@ export const authenticate = async (
       email: user.email,
       name: user.name,
       role: user.role as UserRole,
-      branchId: user.branchId || undefined,
+      ...(user.branchId && { branchId: user.branchId }),
     };
 
     next();
@@ -67,7 +67,7 @@ export const authenticate = async (
 };
 
 export const authorize = (roles: UserRole[]) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
       return res.status(401).json({
         success: false,

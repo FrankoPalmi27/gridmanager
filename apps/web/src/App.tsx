@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { DashboardPage } from './pages/DashboardPage';
 import { SalesPage } from './pages/SalesPage';
+import { CustomersPage } from './pages/CustomersPage';
+import { ProductsPage } from './pages/ProductsPage';
+import { SuppliersPage } from './pages/SuppliersPage';
+import { PurchasesPage } from './pages/PurchasesPage';
 import { AccountsPage } from './pages/AccountsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { UsersPage } from './pages/UsersPage';
@@ -100,13 +104,13 @@ function App() {
       case 'sales':
         return <SalesPage />;
       case 'customers':
-        return <div className="p-6"><h1 className="text-2xl font-bold">Clientes</h1><p>Página en desarrollo...</p></div>;
+        return <CustomersPage />;
       case 'products':
-        return <div className="p-6"><h1 className="text-2xl font-bold">Productos</h1><p>Página en desarrollo...</p></div>;
+        return <ProductsPage />;
       case 'suppliers':
-        return <div className="p-6"><h1 className="text-2xl font-bold">Proveedores</h1><p>Página en desarrollo...</p></div>;
+        return <SuppliersPage />;
       case 'purchases':
-        return <div className="p-6"><h1 className="text-2xl font-bold">Compras</h1><p>Página en desarrollo...</p></div>;
+        return <PurchasesPage />;
       case 'accounts':
         return <AccountsPage />;
       case 'reports':

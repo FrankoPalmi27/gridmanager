@@ -1,11 +1,11 @@
 [build]
   base = "apps/web"
-  publish = "apps/web/dist"
+  publish = "dist"
   command = "npm ci && npm run build"
 
 [build.environment]
-  NODE_VERSION = "18"
-  NPM_VERSION = "9"
+  NODE_VERSION = "20"
+  NPM_VERSION = "10"
   NODE_OPTIONS = "--max-old-space-size=4096"
 
 [[redirects]]
@@ -14,7 +14,7 @@
   status = 200
 
 [context.production]
-  environment = { VITE_API_URL = "https://grid-manager-api.railway.app/api/v1" }
+  environment = { VITE_API_URL = "https://your-railway-app-url.railway.app/api" }
 
-[context.deploy-preview]
-  environment = { VITE_API_URL = "https://grid-manager-api.railway.app/api/v1" }
+[context.deploy-preview]  
+  environment = { VITE_API_URL = "https://your-railway-app-url.railway.app/api" }

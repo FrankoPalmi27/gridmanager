@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { CreateCustomerSchema } from '@grid-manager/types';
+import { CreateCustomerSchema } from '../types';
 import { authenticate, AuthenticatedRequest, allRoles } from '../middleware/auth';
 import { validate, validateParams } from '../middleware/validation';
 import { prisma } from '../server';

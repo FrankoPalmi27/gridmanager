@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { UserRole } from '@grid-manager/types';
+import { UserRole } from '../types';
 import { prisma } from '../server';
 
 export interface AuthenticatedRequest extends Request {

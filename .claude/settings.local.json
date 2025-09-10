@@ -37,7 +37,13 @@
       "Bash(npx tsx:*)",
       "Bash(PORT=5004 npx tsx src/mock-server.ts)",
       "Bash(del App.old.tsx App.new.tsx App.restored.tsx App.simple.tsx)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(docker:*)",
+      "Bash(where psql)",
+      "Bash(npx dotenv -e .env -- npx prisma db push:*)",
+      "Bash(npm start)",
+      "Bash(set DATABASE_URL=postgresql://postgres.bcpanxxwahxbvxueeioj:GRIDMANAGER_2025@aws-1-us-east-1.pooler.supabase.com:6543/postgres)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

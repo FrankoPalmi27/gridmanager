@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { LoginSchema, RegisterSchema } from '@grid-manager/types';
+import { LoginSchema, RegisterSchema } from '../types';
 import { validate } from '../middleware/validation';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../server';

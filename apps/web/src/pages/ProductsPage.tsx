@@ -1,4 +1,9 @@
 import React, { useState } from 'react';
+import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
+import { StatusBadge, StockStatusBadge } from '../components/ui/StatusBadge';
+import { Input } from '../components/ui/Input';
+import { formatCurrency } from '../lib/formatters';
 
 interface Product {
   id: string;
@@ -96,12 +101,12 @@ export function ProductsPage() {
             <h1 className="text-2xl font-bold text-gray-900">Productos</h1>
             <p className="text-gray-600">Gestiona tu catálogo de productos y stock</p>
           </div>
-          <button
+          <Button
             onClick={handleNewProduct}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            variant="primary"
           >
             + Nuevo Producto
-          </button>
+          </Button>
         </div>
 
         {/* Stats Cards */}
@@ -157,7 +162,7 @@ export function ProductsPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Valor Inventario</p>
-                <p className="text-lg font-semibold text-green-600">${totalValue.toLocaleString()}</p>
+                <p className="text-lg font-semibold text-green-600">{formatCurrency(totalValue)}</p>
               </div>
             </div>
           </div>
@@ -166,17 +171,16 @@ export function ProductsPage() {
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input
+            <Input
               type="text"
               placeholder="Buscar productos por nombre o SKU..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              icon={<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>}
+              iconPosition="left"
+              className="w-full"
             />
           </div>
           <select
@@ -243,8 +247,8 @@ export function ProductsPage() {
                       <div className="text-sm text-gray-500">{product.brand}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">Venta: ${product.price}</div>
-                      <div className="text-sm text-gray-500">Costo: ${product.cost}</div>
+                      <div className="text-sm text-gray-900">Venta: {formatCurrency(product.price)}</div>
+                      <div className="text-sm text-gray-500">Costo: {formatCurrency(product.cost)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className={`text-sm font-medium ${
@@ -255,28 +259,22 @@ export function ProductsPage() {
                         {product.stock} unidades
                       </div>
                       <div className="text-sm text-gray-500">Mín: {product.minStock}</div>
-                      {product.stock <= product.minStock && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mt-1">
-                          Stock bajo
-                        </span>
-                      )}
+                      <div className="mt-1">
+                        <StockStatusBadge currentStock={product.stock} minStock={product.minStock} />
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        product.status === 'active'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
+                      <StatusBadge variant={product.status === 'active' ? 'active' : 'inactive'} dot>
                         {product.status === 'active' ? 'Activo' : 'Inactivo'}
-                      </span>
+                      </StatusBadge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-blue-600 hover:text-blue-900 mr-4">
+                      <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-900 mr-2">
                         Editar
-                      </button>
-                      <button className="text-gray-600 hover:text-gray-900">
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
                         Stock
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -298,21 +296,23 @@ export function ProductsPage() {
         </div>
       </div>
 
-      {/* Modal placeholder */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Nuevo Producto</h3>
-            <p className="text-gray-600 mb-4">Funcionalidad en desarrollo...</p>
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      )}
+      {/* New Product Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Nuevo Producto"
+        size="md"
+        footer={
+          <Button
+            onClick={() => setIsModalOpen(false)}
+            variant="secondary"
+          >
+            Cerrar
+          </Button>
+        }
+      >
+        <p className="text-gray-600">Funcionalidad en desarrollo...</p>
+      </Modal>
     </div>
   );
 }

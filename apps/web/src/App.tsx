@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { DashboardPage } from './pages/DashboardPage';
+import { SalesProvider } from './store/SalesContext';
 import { SalesPage } from './pages/SalesPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { ProductsPage } from './pages/ProductsPage';
@@ -100,7 +101,7 @@ function App() {
   const renderCurrentPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <DashboardPage />;
+        return <DashboardPage onNavigate={setCurrentPage} />;
       case 'sales':
         return <SalesPage />;
       case 'customers':
@@ -123,8 +124,9 @@ function App() {
   };
 
   return (
-    <div className="App">
-      <div className="min-h-screen bg-gray-50/30 flex">
+    <SalesProvider>
+      <div className="App">
+        <div className="min-h-screen bg-gray-50/30 flex">
         {/* Sidebar */}
         <div className="w-64 bg-white border-r border-gray-200">
           <div className="p-6 border-b border-gray-200">
@@ -175,7 +177,8 @@ function App() {
           {renderCurrentPage()}
         </div>
       </div>
-    </div>
+      </div>
+    </SalesProvider>
   );
 }
 

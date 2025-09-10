@@ -1,4 +1,9 @@
 import React, { useState } from 'react';
+import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
+import { PurchaseStatusBadge } from '../components/ui/StatusBadge';
+import { Input } from '../components/ui/Input';
+import { formatCurrency, formatDate as formatDateUtil } from '../lib/formatters';
 
 interface Purchase {
   id: string;
@@ -112,12 +117,12 @@ export function PurchasesPage() {
             <h1 className="text-2xl font-bold text-gray-900">Compras</h1>
             <p className="text-gray-600">Gestiona tus compras a proveedores</p>
           </div>
-          <button
+          <Button
             onClick={handleNewPurchase}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            variant="primary"
           >
             + Nueva Compra
-          </button>
+          </Button>
         </div>
 
         {/* Stats Cards */}
@@ -131,7 +136,7 @@ export function PurchasesPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Total Compras</p>
-                <p className="text-lg font-semibold text-gray-900">${totalPurchases.toLocaleString()}</p>
+                <p className="text-lg font-semibold text-gray-900">{formatCurrency(totalPurchases)}</p>
               </div>
             </div>
           </div>
@@ -182,17 +187,16 @@ export function PurchasesPage() {
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input
+            <Input
               type="text"
               placeholder="Buscar compras por número o proveedor..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              icon={<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>}
+              iconPosition="left"
+              className="w-full"
             />
           </div>
           <select
@@ -260,13 +264,13 @@ export function PurchasesPage() {
                       <div className="text-sm text-gray-900">{purchase.supplier}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">Compra: {formatDate(purchase.date)}</div>
+                      <div className="text-sm text-gray-900">Compra: {formatDateUtil(new Date(purchase.date))}</div>
                       <div className={`text-sm ${
                         isOverdue(purchase.dueDate, purchase.status) 
                           ? 'text-red-600 font-medium' 
                           : 'text-gray-500'
                       }`}>
-                        Vence: {formatDate(purchase.dueDate)}
+                        Vence: {formatDateUtil(new Date(purchase.dueDate))}
                         {isOverdue(purchase.dueDate, purchase.status) && (
                           <span className="ml-1 text-red-600">⚠️</span>
                         )}
@@ -277,34 +281,32 @@ export function PurchasesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        ${purchase.total.toLocaleString()}
+                        {formatCurrency(purchase.total)}
                       </div>
                       <div className="text-sm text-gray-500">
-                        Sub: ${purchase.subtotal.toLocaleString()}
+                        Sub: {formatCurrency(purchase.subtotal)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusConfig[purchase.status].color}`}>
-                        {statusConfig[purchase.status].label}
-                      </span>
+                      <PurchaseStatusBadge status={purchase.status === 'paid' ? 'received' : purchase.status as 'received' | 'pending' | 'cancelled' | 'draft' | 'ordered'} />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-blue-600 hover:text-blue-900 mr-4">
+                      <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-900 mr-2">
                         Ver
-                      </button>
+                      </Button>
                       {purchase.status === 'pending' && (
-                        <button className="text-green-600 hover:text-green-900 mr-4">
+                        <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-900 mr-2">
                           Recibir
-                        </button>
+                        </Button>
                       )}
                       {purchase.status === 'received' && (
-                        <button className="text-yellow-600 hover:text-yellow-900 mr-4">
+                        <Button variant="ghost" size="sm" className="text-yellow-600 hover:text-yellow-900 mr-2">
                           Pagar
-                        </button>
+                        </Button>
                       )}
-                      <button className="text-gray-600 hover:text-gray-900">
+                      <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
                         ⋯
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -338,11 +340,11 @@ export function PurchasesPage() {
                 <h4 className="text-lg font-medium text-gray-900">Próximos Vencimientos</h4>
                 <p className="text-sm text-gray-500">{overduePurchases.length} compras vencidas</p>
               </div>
-              <button className="text-yellow-600 hover:text-yellow-700">
+              <Button variant="ghost" size="icon" className="text-yellow-600 hover:text-yellow-700">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -357,11 +359,11 @@ export function PurchasesPage() {
                 <h4 className="text-lg font-medium text-gray-900">Reporte Mensual</h4>
                 <p className="text-sm text-gray-500">Compras de este mes</p>
               </div>
-              <button className="text-blue-600 hover:text-blue-700">
+              <Button variant="ghost" size="icon" className="text-blue-600 hover:text-blue-700">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -376,31 +378,33 @@ export function PurchasesPage() {
                 <h4 className="text-lg font-medium text-gray-900">Gestionar Proveedores</h4>
                 <p className="text-sm text-gray-500">Ver y editar proveedores</p>
               </div>
-              <button className="text-green-600 hover:text-green-700">
+              <Button variant="ghost" size="icon" className="text-green-600 hover:text-green-700">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modal placeholder */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Nueva Compra</h3>
-            <p className="text-gray-600 mb-4">Funcionalidad en desarrollo...</p>
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      )}
+      {/* New Purchase Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Nueva Compra"
+        size="md"
+        footer={
+          <Button
+            onClick={() => setIsModalOpen(false)}
+            variant="secondary"
+          >
+            Cerrar
+          </Button>
+        }
+      >
+        <p className="text-gray-600">Funcionalidad en desarrollo...</p>
+      </Modal>
     </div>
   );
 }

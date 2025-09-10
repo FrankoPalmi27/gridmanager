@@ -1,4 +1,9 @@
 import React, { useState } from 'react';
+import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
+import { StatusBadge } from '../components/ui/StatusBadge';
+import { Input } from '../components/ui/Input';
+import { formatCurrency, formatTaxId, formatPhoneNumber } from '../lib/formatters';
 
 interface Supplier {
   id: string;
@@ -98,12 +103,12 @@ export function SuppliersPage() {
             <h1 className="text-2xl font-bold text-gray-900">Proveedores</h1>
             <p className="text-gray-600">Gestiona tus proveedores y cuentas por pagar</p>
           </div>
-          <button
+          <Button
             onClick={handleNewSupplier}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            variant="primary"
           >
             + Nuevo Proveedor
-          </button>
+          </Button>
         </div>
 
         {/* Stats Cards */}
@@ -145,7 +150,7 @@ export function SuppliersPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Deuda Total</p>
-                <p className="text-lg font-semibold text-red-600">${totalDebt.toLocaleString()}</p>
+                <p className="text-lg font-semibold text-red-600">{formatCurrency(totalDebt)}</p>
               </div>
             </div>
           </div>
@@ -168,17 +173,16 @@ export function SuppliersPage() {
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input
+            <Input
               type="text"
               placeholder="Buscar proveedores por nombre, email o CUIT..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              icon={<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>}
+              iconPosition="left"
+              className="w-full"
             />
           </div>
           <select
@@ -234,13 +238,13 @@ export function SuppliersPage() {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{supplier.name}</div>
-                          <div className="text-sm text-gray-500">CUIT: {supplier.taxId}</div>
+                          <div className="text-sm text-gray-500">CUIT: {formatTaxId(supplier.taxId)}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{supplier.email}</div>
-                      <div className="text-sm text-gray-500">{supplier.phone}</div>
+                      <div className="text-sm text-gray-500">{formatPhoneNumber(supplier.phone)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className={`text-sm font-medium ${
@@ -250,34 +254,30 @@ export function SuppliersPage() {
                             ? 'text-red-600' 
                             : 'text-green-600'
                       }`}>
-                        {supplier.balance === 0 ? 'Sin deuda' : `$${Math.abs(supplier.balance).toLocaleString()}`}
+                        {supplier.balance === 0 ? 'Sin deuda' : formatCurrency(Math.abs(supplier.balance))}
                       </div>
                       <div className="text-sm text-gray-500">{supplier.paymentTerms}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        ${supplier.totalPurchases.toLocaleString()}
+                        {formatCurrency(supplier.totalPurchases)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        supplier.status === 'active'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
+                      <StatusBadge variant={supplier.status === 'active' ? 'active' : 'inactive'} dot>
                         {supplier.status === 'active' ? 'Activo' : 'Inactivo'}
-                      </span>
+                      </StatusBadge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-blue-600 hover:text-blue-900 mr-4">
+                      <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-900 mr-2">
                         Editar
-                      </button>
-                      <button className="text-green-600 hover:text-green-900 mr-4">
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-900 mr-2">
                         Pagar
-                      </button>
-                      <button className="text-gray-600 hover:text-gray-900">
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
                         Ver
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -299,21 +299,23 @@ export function SuppliersPage() {
         </div>
       </div>
 
-      {/* Modal placeholder */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Nuevo Proveedor</h3>
-            <p className="text-gray-600 mb-4">Funcionalidad en desarrollo...</p>
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      )}
+      {/* New Supplier Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Nuevo Proveedor"
+        size="md"
+        footer={
+          <Button
+            onClick={() => setIsModalOpen(false)}
+            variant="secondary"
+          >
+            Cerrar
+          </Button>
+        }
+      >
+        <p className="text-gray-600">Funcionalidad en desarrollo...</p>
+      </Modal>
     </div>
   );
 }

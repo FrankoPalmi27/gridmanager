@@ -1,4 +1,8 @@
 import React, { useState } from 'react';
+import { Button } from '../components/ui/Button';
+import { UserStatusBadge } from '../components/ui/StatusBadge';
+import { Modal } from '../components/ui/Modal';
+import { formatCurrency } from '../lib/formatters';
 
 interface Customer {
   id: string;
@@ -67,12 +71,12 @@ export function CustomersPage() {
             <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
             <p className="text-gray-600">Gestiona tu base de datos de clientes</p>
           </div>
-          <button
+          <Button
             onClick={handleNewCustomer}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            variant="primary"
           >
             + Nuevo Cliente
-          </button>
+          </Button>
         </div>
 
         {/* Search */}
@@ -149,25 +153,19 @@ export function CustomersPage() {
                             ? 'text-red-600' 
                             : 'text-gray-900'
                       }`}>
-                        ${customer.balance.toLocaleString()}
+                        {formatCurrency(customer.balance)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        customer.status === 'active'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {customer.status === 'active' ? 'Activo' : 'Inactivo'}
-                      </span>
+                      <UserStatusBadge status={customer.status} />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-blue-600 hover:text-blue-900 mr-4">
+                      <Button variant="ghost" size="sm" className="mr-2">
                         Editar
-                      </button>
-                      <button className="text-gray-600 hover:text-gray-900">
+                      </Button>
+                      <Button variant="ghost" size="sm">
                         Ver
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -218,7 +216,7 @@ export function CustomersPage() {
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Balance Positivo</p>
                 <p className="text-lg font-semibold text-green-600">
-                  ${customers.filter(c => c.balance > 0).reduce((sum, c) => sum + c.balance, 0).toLocaleString()}
+                  {formatCurrency(customers.filter(c => c.balance > 0).reduce((sum, c) => sum + c.balance, 0))}
                 </p>
               </div>
             </div>
@@ -234,7 +232,7 @@ export function CustomersPage() {
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Deuda Total</p>
                 <p className="text-lg font-semibold text-red-600">
-                  ${Math.abs(customers.filter(c => c.balance < 0).reduce((sum, c) => sum + c.balance, 0)).toLocaleString()}
+                  {formatCurrency(Math.abs(customers.filter(c => c.balance < 0).reduce((sum, c) => sum + c.balance, 0)))}
                 </p>
               </div>
             </div>
@@ -242,21 +240,14 @@ export function CustomersPage() {
         </div>
       </div>
 
-      {/* Modal placeholder */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Nuevo Cliente</h3>
-            <p className="text-gray-600 mb-4">Funcionalidad en desarrollo...</p>
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Nuevo Cliente"
+        size="md"
+      >
+        <p className="text-gray-600 mb-4">Funcionalidad en desarrollo...</p>
+      </Modal>
     </div>
   );
 }

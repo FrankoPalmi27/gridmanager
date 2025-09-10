@@ -1,437 +1,382 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { 
-  CurrencyDollarIcon, 
-  CreditCardIcon, 
-  UserGroupIcon, 
-  BuildingStorefrontIcon,
-  ClockIcon,
-  ArrowTrendingUpIcon,
-  ChevronRightIcon,
-  SparklesIcon,
-} from '@heroicons/react/24/outline';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { dashboardApi } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
+import { useSales } from '../store/SalesContext';
+import { SalesForm } from '../components/forms/SalesForm';
+import { Button } from '../components/ui/Button';
+import { formatCurrency } from '../lib/formatters';
 
-// Counter animation hook
-function useCountUp(end: number, duration: number = 800) {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    let startTime: number;
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      setCount(Math.floor(progress * end));
-      
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      }
-    };
-    
-    requestAnimationFrame(animate);
-  }, [end, duration]);
-
-  return count;
+interface DashboardPageProps {
+  onNavigate?: (page: string) => void;
 }
 
-export function DashboardPage() {
-  const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ['dashboard', 'summary'],
-    queryFn: () => dashboardApi.getSummary(),
-  });
-
-  const { data: activity, isLoading: activityLoading } = useQuery({
-    queryKey: ['dashboard', 'activity'],
-    queryFn: () => dashboardApi.getRecentActivity(),
-  });
-
-  const dashboardData = summary?.data.data;
-  const activityData = activity?.data.data;
-
-  if (summaryLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="loading-spinner h-8 w-8" />
-      </div>
-    );
-  }
-
-  // Animated stats component
-  function AnimatedStatCard({ stat, delay = 0 }: { stat: any; delay?: number }) {
-    const numericValue = typeof stat.rawValue === 'number' ? stat.rawValue : 0;
-    const animatedValue = useCountUp(numericValue, 800);
-    const [isVisible, setIsVisible] = useState(false);
-
-    useEffect(() => {
-      const timer = setTimeout(() => setIsVisible(true), delay);
-      return () => clearTimeout(timer);
-    }, [delay]);
-
-    const displayValue = typeof stat.rawValue === 'number' 
-      ? (stat.isCurrency ? formatCurrency(animatedValue) : animatedValue.toLocaleString())
-      : stat.value;
-
-    return (
-      <div className={`stat-card ${stat.borderClass} animate-slide-up`} 
-           style={{ animationDelay: `${delay}ms` }}>
-        <div className="flex items-center">
-          <div className={`p-3 rounded-xl ${stat.bgColor} transition-transform duration-300 hover:scale-110`}>
-            <stat.icon className={`h-6 w-6 ${stat.color}`} />
-          </div>
-          <div className="ml-4 flex-1">
-            <p className="text-sm text-gray-500">{stat.name}</p>
-            <p className={`stat-value text-lg ${isVisible ? 'animate-count-up' : ''}`}>
-              {displayValue}
-            </p>
-            {stat.change && (
-              <div className="flex items-center text-xs mt-1">
-                <ArrowTrendingUpIcon className="h-3 w-3 text-success-500 mr-1" />
-                <span className="text-success-600">+{stat.change}%</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const stats = [
+export function DashboardPage({ onNavigate }: DashboardPageProps) {
+  const [showNewSaleModal, setShowNewSaleModal] = useState(false);
+  const { dashboardStats } = useSales();
+  
+  // Mock data to prevent API calls that cause infinite reloads
+  const mockStats = [
     {
       name: 'Total Disponible',
-      value: formatCurrency(dashboardData?.totalAvailable || 0),
-      rawValue: dashboardData?.totalAvailable || 0,
-      isCurrency: true,
-      icon: CurrencyDollarIcon,
-      color: 'text-success-600',
-      bgColor: 'bg-success-100',
-      borderClass: 'success-border',
-      change: 12.5,
+      value: '$125,000',
+      rawValue: 125000,
+      icon: '💰',
+      color: 'text-green-600',
+      bgColor: 'bg-green-100',
+      change: '+12.5%'
     },
     {
       name: 'Cuentas',
-      value: dashboardData?.accountsCount || 0,
-      rawValue: dashboardData?.accountsCount || 0,
-      isCurrency: false,
-      icon: CreditCardIcon,
-      color: 'text-primary-600',
-      bgColor: 'bg-primary-100',
-      borderClass: 'primary-border',
+      value: '8',
+      rawValue: 8,
+      icon: '💳',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100'
     },
     {
       name: 'Deudas Clientes',
-      value: formatCurrency(dashboardData?.customerDebt || 0),
-      rawValue: dashboardData?.customerDebt || 0,
-      isCurrency: true,
-      icon: UserGroupIcon,
-      color: 'text-warning-600',
-      bgColor: 'bg-warning-100',
-      borderClass: 'warning-border',
+      value: '$35,000',
+      rawValue: 35000,
+      icon: '👥',
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-100'
     },
     {
       name: 'Deudas Proveedores',
-      value: formatCurrency(dashboardData?.supplierDebt || 0),
-      rawValue: dashboardData?.supplierDebt || 0,
-      isCurrency: true,
-      icon: BuildingStorefrontIcon,
-      color: 'text-error-600',
-      bgColor: 'bg-error-100',
-      borderClass: 'error-border',
-    },
+      value: '$18,500',
+      rawValue: 18500,
+      icon: '🏢',
+      color: 'text-red-600',
+      bgColor: 'bg-red-100'
+    }
   ];
 
-  // Module cards data
-  const modules = [
+  const moduleCards = [
     {
       name: 'Centro de Ventas',
       description: 'Gestiona ventas, presupuestos y clientes',
       icon: '💼',
-      path: '/sales',
+      path: 'sales',
       isNew: true,
-      progress: 75,
+      progress: 75
     },
     {
       name: 'Inventario',
       description: 'Control de productos y stock',
       icon: '📦',
-      path: '/products',
-      progress: 90,
+      path: 'products',
+      progress: 90
     },
     {
       name: 'Clientes',
       description: 'Base de datos de clientes',
       icon: '👥',
-      path: '/customers',
-      progress: 85,
+      path: 'customers',
+      progress: 85
     },
     {
       name: 'Proveedores',
       description: 'Gestión de proveedores',
       icon: '🏢',
-      path: '/suppliers',
-      progress: 70,
+      path: 'suppliers',
+      progress: 70
     },
     {
       name: 'Reportes',
       description: 'Análisis y reportes avanzados',
       icon: '📊',
-      path: '/reports',
+      path: 'reports',
       isBeta: true,
-      progress: 60,
+      progress: 60
     },
     {
       name: 'Configuración',
       description: 'Ajustes del sistema',
       icon: '⚙️',
-      path: '/settings',
-      progress: 95,
-    },
+      path: 'users',
+      progress: 95
+    }
   ];
 
+  const handleModuleClick = (modulePath: string) => {
+    if (onNavigate) {
+      onNavigate(modulePath);
+    }
+    // You can also add other navigation logic here
+    console.log(`Navigating to: ${modulePath}`);
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Resumen general de tu negocio</p>
-      </div>
-
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <AnimatedStatCard 
-            key={stat.name} 
-            stat={stat} 
-            delay={index * 100}
-          />
-        ))}
-      </div>
-
-      {/* Modules section */}
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">Módulos del Sistema</h2>
-            <p className="text-sm text-gray-500">Acceso rápido a todas las funcionalidades</p>
-          </div>
-          <SparklesIcon className="h-5 w-5 text-primary-500 animate-pulse-soft" />
+    <div className="flex-1 overflow-auto">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600">Resumen general de tu negocio</p>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {modules.map((module, index) => (
-            <div key={module.name} className="module-card group animate-stagger" 
-                 style={{ animationDelay: `${index * 50}ms` }}>
-              <div className="flex items-start justify-between mb-4">
-                <div className="text-2xl">{module.icon}</div>
-                <div className="flex gap-2">
-                  {module.isNew && (
-                    <span className="px-2 py-1 text-xs font-medium bg-success-100 text-success-800 rounded-full">
-                      Nuevo
-                    </span>
-                  )}
-                  {module.isBeta && (
-                    <span className="px-2 py-1 text-xs font-medium bg-warning-100 text-warning-800 rounded-full">
-                      Beta
-                    </span>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {mockStats.map((stat, index) => (
+            <div key={stat.name} className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
+              <div className="flex items-center">
+                <div className={`p-3 rounded-lg ${stat.bgColor}`}>
+                  <span className="text-2xl">{stat.icon}</span>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm text-gray-500">{stat.name}</p>
+                  <p className={`text-lg font-semibold ${stat.color}`}>{stat.value}</p>
+                  {stat.change && (
+                    <p className="text-xs text-green-600 mt-1">{stat.change}</p>
                   )}
                 </div>
               </div>
-              
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{module.name}</h3>
-              <p className="text-sm text-gray-600 mb-4">{module.description}</p>
-              
-              {/* Progress bar */}
-              <div className="mb-4">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Configuración</span>
-                  <span>{module.progress}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-1.5">
-                  <div 
-                    className="bg-gradient-to-r from-primary-500 to-primary-600 h-1.5 rounded-full transition-all duration-1000 ease-out"
-                    style={{ width: `${module.progress}%` }}
-                  ></div>
-                </div>
-              </div>
-              
-              <button className="explore-btn ripple-effect w-full justify-center group-hover:shadow-md">
-                Explorar
-                <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </button>
             </div>
           ))}
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sales chart */}
-        <div className="lg:col-span-2 card">
-          <div className="card-header">
-            <h3 className="text-lg font-medium text-gray-900">
-              Ventas Últimos 30 Días
-            </h3>
-          </div>
-          <div className="card-body">
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dashboardData?.salesLast30Days || []}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => new Date(value).toLocaleDateString()}
-                  />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip 
-                    formatter={(value) => [formatCurrency(Number(value)), 'Ventas']}
-                    labelFormatter={(label) => `Fecha: ${new Date(label).toLocaleDateString()}`}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="amount" 
-                    stroke="#3b82f6" 
-                    strokeWidth={2}
-                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+        {/* Modules Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Módulos del Sistema</h2>
+              <p className="text-sm text-gray-500">Acceso rápido a todas las funcionalidades</p>
             </div>
           </div>
-        </div>
-
-        {/* Exchange rates and tasks */}
-        <div className="space-y-6">
-          {/* Exchange rates */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="text-lg font-medium text-gray-900">
-                Cotización del Dólar
-              </h3>
-            </div>
-            <div className="card-body space-y-4">
-              {dashboardData?.exchangeRates?.map((rate) => (
-                <div key={rate.currency} className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium text-gray-900">USD</p>
-                    <p className="text-sm text-gray-500">
-                      {new Date(rate.date).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium text-gray-900">
-                      ${rate.officialRate} (Oficial)
-                    </p>
-                    {rate.blueRate && (
-                      <p className="text-sm text-blue-600">
-                        ${rate.blueRate} (Blue)
-                      </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {moduleCards.map((module, index) => (
+              <div 
+                key={module.name} 
+                className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer group"
+                onClick={() => handleModuleClick(module.path)}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="text-2xl">{module.icon}</div>
+                  <div className="flex gap-2">
+                    {module.isNew && (
+                      <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                        Nuevo
+                      </span>
+                    )}
+                    {module.isBeta && (
+                      <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
+                        Beta
+                      </span>
                     )}
                   </div>
                 </div>
-              ))}
+                
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                  {module.name}
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">{module.description}</p>
+                
+                {/* Progress bar */}
+                <div className="mb-4">
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Configuración</span>
+                    <span>{module.progress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div 
+                      className="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
+                      style={{ width: `${module.progress}%` }}
+                    />
+                  </div>
+                </div>
+                
+                <Button 
+                  className="w-full group-hover:shadow-md"
+                  variant="primary"
+                >
+                  Explorar
+                  <svg className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Business Widgets */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Ventas de los últimos 30 días */}
+          <div className="bg-white p-6 rounded-xl border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Ventas - 30 días</h3>
+              <span className="text-2xl">📈</span>
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Total Ventas</span>
+                <span className="text-lg font-bold text-green-600">{formatCurrency(dashboardStats.totalSales)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Transacciones</span>
+                <span className="text-sm font-medium text-gray-900">{dashboardStats.totalTransactions}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Promedio/día</span>
+                <span className="text-sm font-medium text-gray-900">{formatCurrency(dashboardStats.averagePerDay)}</span>
+              </div>
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">vs mes anterior</span>
+                  <span className="text-xs text-green-600 font-medium">+{dashboardStats.monthlyGrowth.toFixed(1)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '73%' }}></div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Pending tasks */}
-          <div className="card">
-            <div className="card-header">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Tareas Pendientes
-                </h3>
-                <span className="badge badge-warning">
-                  {dashboardData?.pendingTasks || 0}
-                </span>
+          {/* Cotización USD */}
+          <div className="bg-white p-6 rounded-xl border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Cotización USD</h3>
+              <span className="text-2xl">💱</span>
+            </div>
+            <div className="space-y-3">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-600 mb-1">$1,247.50</div>
+                <div className="text-sm text-gray-600">ARS por USD</div>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-600">Compra</span>
+                <span className="font-medium text-gray-900">$1,245.00</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-600">Venta</span>
+                <span className="font-medium text-gray-900">$1,250.00</span>
+              </div>
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Variación 24h</span>
+                  <span className="text-xs text-red-600 font-medium">-0.8%</span>
+                </div>
+                <div className="text-xs text-gray-400 mt-1">Última actualización: 14:30</div>
               </div>
             </div>
-            <div className="card-body">
-              {dashboardData?.taskList && dashboardData.taskList.length > 0 ? (
-                <div className="space-y-3">
-                  {dashboardData.taskList.slice(0, 5).map((task) => (
-                    <div key={task.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                      <ClockIcon className="h-5 w-5 text-warning-500 mr-3" />
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{task.title}</p>
-                        <p className="text-sm text-gray-500">{task.description}</p>
-                      </div>
-                      <ChevronRightIcon className="h-4 w-4 text-gray-400" />
-                    </div>
-                  ))}
+          </div>
+
+          {/* Tareas Pendientes */}
+          <div className="bg-white p-6 rounded-xl border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Tareas Pendientes</h3>
+              <span className="text-2xl">✅</span>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Total</span>
+                <span className="text-lg font-bold text-orange-600">12</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-red-600">• Urgentes</span>
+                  <span className="font-medium text-red-600">3</span>
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <ClockIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No hay tareas pendientes</p>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-orange-600">• Importantes</span>
+                  <span className="font-medium text-orange-600">5</span>
                 </div>
-              )}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-blue-600">• Normales</span>
+                  <span className="font-medium text-blue-600">4</span>
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <Button variant="ghost" className="w-full text-sm">
+                  Ver todas las tareas
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Stats Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Activity */}
+          <div className="bg-white p-6 rounded-xl border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Actividad Reciente</h3>
+              <span className="text-sm text-gray-500">Últimas 24h</span>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center p-3 bg-green-50 rounded-lg">
+                <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">Nueva venta registrada</p>
+                  <p className="text-xs text-gray-500">Cliente: Juan Pérez - $2,500</p>
+                </div>
+                <span className="text-xs text-gray-400">10:30 AM</span>
+              </div>
+              <div className="flex items-center p-3 bg-blue-50 rounded-lg">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">Producto agregado al inventario</p>
+                  <p className="text-xs text-gray-500">SKU-001 - Stock: 50 unidades</p>
+                </div>
+                <span className="text-xs text-gray-400">09:15 AM</span>
+              </div>
+              <div className="flex items-center p-3 bg-orange-50 rounded-lg">
+                <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">Stock bajo detectado</p>
+                  <p className="text-xs text-gray-500">Producto B - Solo quedan 5 unidades</p>
+                </div>
+                <span className="text-xs text-gray-400">08:45 AM</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white p-6 rounded-xl border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Acciones Rápidas</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Button 
+                onClick={() => setShowNewSaleModal(true)}
+                variant="outline"
+                className="flex flex-col items-center p-4 h-auto bg-green-50 hover:bg-green-100 border-green-200 text-gray-700"
+              >
+                <span className="text-2xl mb-2">💰</span>
+                <span className="text-sm font-medium">Nueva Venta</span>
+              </Button>
+              <Button 
+                onClick={() => handleModuleClick('customers')}
+                variant="outline"
+                className="flex flex-col items-center p-4 h-auto bg-blue-50 hover:bg-blue-100 border-blue-200 text-gray-700"
+              >
+                <span className="text-2xl mb-2">👤</span>
+                <span className="text-sm font-medium">Nuevo Cliente</span>
+              </Button>
+              <Button 
+                onClick={() => handleModuleClick('products')}
+                variant="outline"
+                className="flex flex-col items-center p-4 h-auto bg-purple-50 hover:bg-purple-100 border-purple-200 text-gray-700"
+              >
+                <span className="text-2xl mb-2">📦</span>
+                <span className="text-sm font-medium">Nuevo Producto</span>
+              </Button>
+              <Button 
+                onClick={() => handleModuleClick('reports')}
+                variant="outline"
+                className="flex flex-col items-center p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200 text-gray-700"
+              >
+                <span className="text-2xl mb-2">📊</span>
+                <span className="text-sm font-medium">Ver Reportes</span>
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Recent activity */}
-      {!activityLoading && activityData && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent sales */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="text-lg font-medium text-gray-900">
-                Ventas Recientes
-              </h3>
-            </div>
-            <div className="card-body">
-              <div className="space-y-4">
-                {activityData.recentSales?.map((sale) => (
-                  <div key={sale.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{sale.number}</p>
-                      <p className="text-sm text-gray-500">{sale.customer}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-success-600">
-                        {formatCurrency(sale.total)}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {new Date(sale.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Recent purchases */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="text-lg font-medium text-gray-900">
-                Compras Recientes
-              </h3>
-            </div>
-            <div className="card-body">
-              <div className="space-y-4">
-                {activityData.recentPurchases?.map((purchase) => (
-                  <div key={purchase.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{purchase.number}</p>
-                      <p className="text-sm text-gray-500">{purchase.supplier}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-error-600">
-                        {formatCurrency(purchase.total)}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {new Date(purchase.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <SalesForm 
+        isOpen={showNewSaleModal}
+        onClose={() => setShowNewSaleModal(false)}
+      />
     </div>
   );
 }

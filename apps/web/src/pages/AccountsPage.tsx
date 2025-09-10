@@ -1,14 +1,11 @@
 import React, { useState, Fragment } from 'react';
 import { Dialog, Transition, Listbox } from '@headlessui/react';
 import { ChevronUpDownIcon, CheckIcon } from '@heroicons/react/20/solid';
-
-// Utility function for currency formatting
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS'
-  }).format(amount);
-};
+import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
+import { StatusBadge } from '../components/ui/StatusBadge';
+import { Input } from '../components/ui/Input';
+import { formatCurrency, formatDate } from '../lib/formatters';
 
 // Account interface
 interface Account {
@@ -748,13 +745,13 @@ export function AccountsPage() {
               <h2 className="text-xl font-semibold text-gray-900">Cuentas</h2>
               <p className="text-sm text-gray-500">Gestiona tus cuentas bancarias y de efectivo</p>
             </div>
-            <button
+            <Button
               onClick={() => openAccountModal()}
-              className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              variant="primary"
             >
               <span className="mr-2">+</span>
               Nueva Cuenta
-            </button>
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -769,22 +766,26 @@ export function AccountsPage() {
                     </div>
                   </div>
                   <div className="flex space-x-1">
-                    <button
+                    <Button
                       onClick={() => openAccountModal(account)}
-                      className="text-blue-600 hover:text-blue-700 text-sm p-1 transition-colors"
+                      variant="ghost"
+                      size="icon"
+                      className="text-blue-600 hover:text-blue-700 h-8 w-8"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => handleDeleteAccount(account.id)}
-                      className="text-red-600 hover:text-red-700 text-sm p-1 transition-colors"
+                      variant="ghost"
+                      size="icon"
+                      className="text-red-600 hover:text-red-700 h-8 w-8"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 
@@ -800,7 +801,7 @@ export function AccountsPage() {
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Balance:</span>
                     <span className={`font-semibold ${account.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {account.currency === 'USD' ? '$' : '$'} {account.balance.toLocaleString()} {account.currency}
+                      {formatCurrency(account.balance, account.currency)}
                     </span>
                   </div>
                 </div>
@@ -822,29 +823,28 @@ export function AccountsPage() {
               <h2 className="text-xl font-semibold text-gray-900">Movimientos</h2>
               <p className="text-sm text-gray-500">Historial de transacciones</p>
             </div>
-            <button
+            <Button
               onClick={() => setIsTransactionModalOpen(true)}
-              className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              variant="primary"
             >
               <span className="mr-2">+</span>
               Nueva Transacción
-            </button>
+            </Button>
           </div>
 
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1 max-w-md">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
+              <Input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Buscar transacciones..."
+                icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>}
+                iconPosition="left"
+                className="block w-full"
               />
             </div>
             
@@ -897,7 +897,7 @@ export function AccountsPage() {
                     return (
                       <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {new Date(transaction.date).toLocaleDateString('es-AR')}
+                          {formatDate(new Date(transaction.date))}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">{account?.name}</div>
@@ -910,16 +910,16 @@ export function AccountsPage() {
                           {transaction.category}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            transaction.type === 'income'
-                              ? 'bg-green-100 text-green-800'
-                              : transaction.type === 'expense'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-blue-100 text-blue-800'
-                          }`}>
+                          <StatusBadge 
+                            variant={
+                              transaction.type === 'income' ? 'success' :
+                              transaction.type === 'expense' ? 'danger' : 'info'
+                            }
+                            dot
+                          >
                             {transaction.type === 'income' ? 'Ingreso' : 
                              transaction.type === 'expense' ? 'Egreso' : 'Transferencia'}
-                          </span>
+                          </StatusBadge>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <span className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}>

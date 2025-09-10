@@ -43,7 +43,10 @@
       "Bash(npx dotenv -e .env -- npx prisma db push:*)",
       "Bash(npm start)",
       "Bash(set DATABASE_URL=postgresql://postgres.bcpanxxwahxbvxueeioj:GRIDMANAGER_2025@aws-1-us-east-1.pooler.supabase.com:6543/postgres)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git rm:*)",
+      "Read(//c/Users/franc/Desktop/**)"
     ],
     "deny": [],
     "ask": []

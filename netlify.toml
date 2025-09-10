@@ -14,7 +14,7 @@
   status = 200
 
 [context.production]
-  environment = { VITE_API_URL = "https://your-railway-app-url.railway.app/api" }
+  environment = { VITE_API_URL = "https://gridmanager-production.up.railway.app/api" }
 
 [context.deploy-preview]  
-  environment = { VITE_API_URL = "https://your-railway-app-url.railway.app/api" }
+  environment = { VITE_API_URL = "https://gridmanager-production.up.railway.app/api" }

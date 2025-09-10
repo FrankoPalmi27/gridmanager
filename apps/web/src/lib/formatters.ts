@@ -43,24 +43,26 @@ export const formatDate = (date: Date | string, format: 'short' | 'medium' | 'lo
     return 'Fecha inválida';
   }
 
-  const options: Intl.DateTimeFormatOptions = {
+  const optionsMap = {
     short: { 
-      year: 'numeric', 
-      month: '2-digit', 
-      day: '2-digit' 
+      year: 'numeric' as const, 
+      month: '2-digit' as const, 
+      day: '2-digit' as const 
     },
     medium: { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+      year: 'numeric' as const, 
+      month: 'short' as const, 
+      day: 'numeric' as const 
     },
     long: { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      weekday: 'long'
+      year: 'numeric' as const, 
+      month: 'long' as const, 
+      day: 'numeric' as const,
+      weekday: 'long' as const
     }
-  }[format];
+  };
+  
+  const options = optionsMap[format];
 
   try {
     return dateObj.toLocaleDateString(locale, options);
@@ -95,11 +97,11 @@ export const formatDateTime = (date: Date | string, locale: string = 'es-AR'): s
 
   try {
     return dateObj.toLocaleString(locale, {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
+      year: 'numeric' as const,
+      month: '2-digit' as const,
+      day: '2-digit' as const,
+      hour: '2-digit' as const,
+      minute: '2-digit' as const,
     });
   } catch (error) {
     return dateObj.toLocaleString();

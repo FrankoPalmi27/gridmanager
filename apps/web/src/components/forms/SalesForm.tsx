@@ -17,6 +17,13 @@ interface SalesFormData {
   price: number;
 }
 
+interface SalesFormErrors {
+  client?: string;
+  product?: string;
+  quantity?: string;
+  price?: string;
+}
+
 const CLIENTS = [
   { id: '1', name: 'Juan Pérez', email: 'juan@email.com' },
   { id: '2', name: 'María García', email: 'maria@email.com' },
@@ -34,7 +41,7 @@ const PRODUCTS = [
 export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess }) => {
   const { addSale } = useSales();
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<SalesFormData>>({});
+  const [errors, setErrors] = useState<SalesFormErrors>({});
   
   const [formData, setFormData] = useState<SalesFormData>({
     client: '',
@@ -74,7 +81,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<SalesFormData> = {};
+    const newErrors: SalesFormErrors = {};
 
     if (!formData.client.trim()) {
       newErrors.client = 'Cliente es requerido';

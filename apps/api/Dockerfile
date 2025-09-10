@@ -20,4 +20,4 @@ COPY tsconfig.json ./
 EXPOSE 3001
 
 # Start application
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]

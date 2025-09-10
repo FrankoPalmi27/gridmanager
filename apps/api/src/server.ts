@@ -58,9 +58,23 @@ export function createApp() {
   app.use('/api/accounts', accountRoutes);
   app.use('/api/reports', reportRoutes);
 
-  // Health check
+  // Health check - simple and fast
   app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.status(200).json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      port: process.env.PORT || '3001'
+    });
+  });
+
+  // Root endpoint
+  app.get('/', (req, res) => {
+    res.json({ 
+      message: 'Grid Manager API', 
+      version: '1.0.0',
+      health: '/health',
+      docs: '/api-docs'
+    });
   });
 
   // Error handler
@@ -161,20 +175,44 @@ app.use('*', (req, res) => {
 
 async function startServer() {
   try {
-    // Connect to Redis (if available)
-    if (process.env.REDIS_URL) {
-      await redis.connect();
-      console.log('✅ Connected to Redis');
+    console.log(`🔧 Starting server on port ${PORT}...`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    
+    // Start server first (Railway needs this to respond to health checks)
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+      console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
+    });
+
+    // Handle server startup errors
+    server.on('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use`);
+      } else {
+        console.error('❌ Server error:', error);
+      }
+      process.exit(1);
+    });
+
+    // Connect to services after server is running
+    try {
+      // Connect to Redis (if available)
+      if (process.env.REDIS_URL) {
+        await redis.connect();
+        console.log('✅ Connected to Redis');
+      } else {
+        console.log('⚠️  Redis not configured - using memory cache');
+      }
+
+      // Test database connection
+      await prisma.$connect();
+      console.log('✅ Connected to PostgreSQL (Supabase)');
+    } catch (dbError) {
+      console.warn('⚠️  Database connection failed, but server is still running:', dbError);
+      // Don't exit - let the server run even if DB is not ready
     }
 
-    // Test database connection
-    await prisma.$connect();
-    console.log('✅ Connected to PostgreSQL (Supabase)');
-
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📚 API docs available at http://localhost:${PORT}/api-docs`);
-    });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);

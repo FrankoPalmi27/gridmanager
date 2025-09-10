@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useSales } from '../../store/SalesContext';
+import { formatAmount } from '../../lib/formatters';
 
 interface SalesFormProps {
   isOpen: boolean;
@@ -260,7 +261,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
           <div className="flex justify-between items-center mb-4">
             <span className="text-sm font-medium text-gray-700">Total:</span>
             <span className="text-lg font-bold text-green-600">
-              ${total.toFixed(2)}
+              {formatAmount(total)}
             </span>
           </div>
         </div>

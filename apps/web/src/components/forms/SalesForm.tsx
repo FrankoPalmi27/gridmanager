@@ -5,6 +5,7 @@ import { Input } from '../ui/Input';
 import { useSales } from '../../store/SalesContext';
 import { useProductsStore } from '../../store/productsStore';
 import { useAccountsStore } from '../../store/accountsStore';
+import { useCustomersStore } from '../../store/customersStore';
 import { formatAmount } from '../../lib/formatters';
 
 interface SalesFormProps {
@@ -33,12 +34,6 @@ interface SalesFormErrors {
   accountId?: string;
 }
 
-const CLIENTS = [
-  { id: '1', name: 'Juan Pérez', email: 'juan@email.com' },
-  { id: '2', name: 'María García', email: 'maria@email.com' },
-  { id: '3', name: 'Carlos López', email: 'carlos@email.com' },
-  { id: '4', name: 'Ana Martínez', email: 'ana@email.com' },
-];
 
 const SALES_CHANNELS = [
   { value: 'store', label: 'Tienda Física' },
@@ -67,12 +62,14 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
   const { addSale, updateSale } = useSales();
   const { products } = useProductsStore();
   const { accounts, getActiveAccounts } = useAccountsStore();
+  const { customers, getActiveCustomers } = useCustomersStore();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<SalesFormErrors>({});
   
-  // Get active products and accounts
+  // Get active products, accounts, and customers
   const activeProducts = products.filter(p => p.status === 'active');
   const activeAccounts = getActiveAccounts();
+  const activeCustomers = getActiveCustomers();
   
   const [formData, setFormData] = useState<SalesFormData>({
     client: '',
@@ -269,12 +266,21 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
             disabled={loading}
           >
             <option value="">Seleccionar cliente...</option>
-            {CLIENTS.map((client) => (
-              <option key={client.id} value={client.name}>
-                {client.name}
+            {activeCustomers.map((customer) => (
+              <option key={customer.id} value={customer.name}>
+                {customer.name} - {customer.email}
+                {customer.balance !== 0 && (
+                  <span> (Balance: {customer.balance.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })})</span>
+                )}
               </option>
             ))}
           </select>
+          {activeCustomers.length === 0 && (
+            <p className="text-sm text-gray-500 mt-1">
+              No hay clientes activos disponibles. 
+              <span className="text-blue-600 cursor-pointer hover:underline">Agregar clientes</span>
+            </p>
+          )}
           {errors.client && (
             <p className="text-sm text-red-600 mt-1">{errors.client}</p>
           )}

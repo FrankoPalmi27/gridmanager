@@ -398,6 +398,7 @@ export function ProductsPage() {
             categories={categories}
             onCategoriesUpdate={setCategories}
             productsByCategory={productsByCategory}
+            allCategoryNames={stats.categories}
           />
         </TabsContent>
 

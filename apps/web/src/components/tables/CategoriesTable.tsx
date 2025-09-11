@@ -9,16 +9,43 @@ interface CategoriesTableProps {
   categories: Category[];
   onCategoriesUpdate: (categories: Category[]) => void;
   productsByCategory: Record<string, number>;
+  allCategoryNames: string[];
 }
 
-export function CategoriesTable({ categories, onCategoriesUpdate, productsByCategory }: CategoriesTableProps) {
+export function CategoriesTable({ categories, onCategoriesUpdate, productsByCategory, allCategoryNames }: CategoriesTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const filteredCategories = categories.filter(category =>
+  // Combine all categories (custom + derived from products)
+  const getAllCategoriesForTable = () => {
+    const customCategoriesMap = new Map(categories.map(cat => [cat.name, cat]));
+    const allCategories: Category[] = [];
+
+    // Add all category names from allCategoryNames
+    allCategoryNames.forEach(categoryName => {
+      if (customCategoriesMap.has(categoryName)) {
+        // It's a custom category
+        allCategories.push(customCategoriesMap.get(categoryName)!);
+      } else {
+        // It's a category derived from products only
+        allCategories.push({
+          id: `derived-${categoryName}`,
+          name: categoryName,
+          description: 'Categoría automática (derivada de productos)',
+          createdAt: new Date().toISOString()
+        });
+      }
+    });
+
+    return allCategories;
+  };
+
+  const allCategories = getAllCategoriesForTable();
+
+  const filteredCategories = allCategories.filter(category =>
     category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (category.description && category.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -29,7 +56,7 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
       return 'El nombre de la categoría es requerido';
     }
     
-    const exists = categories.some(cat => 
+    const exists = allCategories.some(cat => 
       cat.name.toLowerCase() === trimmedName.toLowerCase() && cat.id !== excludeId
     );
     
@@ -54,13 +81,25 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
       return;
     }
 
-    const updatedCategories = categories.map(cat =>
-      cat.id === editingCategory?.id
-        ? { ...cat, name: editName.trim(), description: editDescription.trim() }
-        : cat
-    );
+    if (editingCategory?.id.startsWith('derived-')) {
+      // Converting a derived category to a custom category
+      const newCategory = {
+        id: Date.now().toString(),
+        name: editName.trim(),
+        description: editDescription.trim() || 'Convertida desde categoría automática',
+        createdAt: new Date().toISOString()
+      };
+      onCategoriesUpdate([...categories, newCategory]);
+    } else {
+      // Updating an existing custom category
+      const updatedCategories = categories.map(cat =>
+        cat.id === editingCategory?.id
+          ? { ...cat, name: editName.trim(), description: editDescription.trim() }
+          : cat
+      );
+      onCategoriesUpdate(updatedCategories);
+    }
 
-    onCategoriesUpdate(updatedCategories);
     setEditingCategory(null);
     setEditName('');
     setEditDescription('');
@@ -76,6 +115,12 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
 
   const handleDeleteCategory = (categoryId: string, categoryName: string) => {
     const productCount = productsByCategory[categoryName] || 0;
+    
+    if (categoryId.startsWith('derived-')) {
+      alert(`No puedes eliminar "${categoryName}" porque es una categoría automática derivada de productos existentes. Para eliminarla, primero cambia la categoría de todos los productos que la usan.`);
+      return;
+    }
+    
     const message = productCount > 0 
       ? `¿Estás seguro de eliminar la categoría "${categoryName}"? Esta categoría tiene ${productCount} producto(s). Los productos mantendrán el nombre de la categoría.`
       : `¿Estás seguro de eliminar la categoría "${categoryName}"?`;
@@ -231,13 +276,30 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
                     <>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                            </svg>
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${
+                            category.id.startsWith('derived-') 
+                              ? 'bg-gray-100' 
+                              : 'bg-blue-100'
+                          }`}>
+                            {category.id.startsWith('derived-') ? (
+                              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                              </svg>
+                            )}
                           </div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {category.name}
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {category.name}
+                            </div>
+                            {category.id.startsWith('derived-') && (
+                              <div className="text-xs text-gray-500">
+                                Categoría automática
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>

@@ -187,13 +187,21 @@ export const useProductsStore = () => {
     );
   };
 
+  // Get all unique categories (custom + from products)
+  const getAllCategories = () => {
+    const customCategoryNames = categories.map(cat => cat.name);
+    const productCategories = Array.from(new Set(products.map(p => p.category)));
+    const allCategoryNames = [...new Set([...customCategoryNames, ...productCategories])];
+    return allCategoryNames;
+  };
+
   // Estadísticas calculadas
   const stats = {
     totalProducts: products.length,
     activeProducts: products.filter(p => p.status === 'active').length,
     lowStockProducts: products.filter(p => p.stock <= p.minStock && p.status === 'active').length,
     totalValue: products.reduce((sum, p) => sum + (p.cost * p.stock), 0),
-    categories: Array.from(new Set(products.map(p => p.category)))
+    categories: getAllCategories()
   };
 
   return {

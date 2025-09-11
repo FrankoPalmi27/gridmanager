@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Tipo para las ventas
 export interface Sale {
@@ -28,10 +28,46 @@ export const initialDashboardStats = {
   monthlyGrowth: 18.5
 };
 
+// LocalStorage keys
+const SALES_STORAGE_KEY = 'gridmanager_sales';
+const STATS_STORAGE_KEY = 'gridmanager_dashboard_stats';
+
+// LocalStorage utilities
+const loadFromStorage = <T>(key: string, defaultValue: T): T => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch (error) {
+    console.error(`Error loading ${key} from localStorage:`, error);
+    return defaultValue;
+  }
+};
+
+const saveToStorage = <T>(key: string, value: T): void => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error(`Error saving ${key} to localStorage:`, error);
+  }
+};
+
 // Hook personalizado para manejar las ventas
 export const useSalesStore = () => {
-  const [dashboardStats, setDashboardStats] = useState(initialDashboardStats);
-  const [sales, setSales] = useState<Sale[]>([]);
+  const [dashboardStats, setDashboardStats] = useState(() => 
+    loadFromStorage(STATS_STORAGE_KEY, initialDashboardStats)
+  );
+  const [sales, setSales] = useState<Sale[]>(() => 
+    loadFromStorage(SALES_STORAGE_KEY, [])
+  );
+
+  // Save to localStorage whenever sales or stats change
+  useEffect(() => {
+    saveToStorage(SALES_STORAGE_KEY, sales);
+  }, [sales]);
+
+  useEffect(() => {
+    saveToStorage(STATS_STORAGE_KEY, dashboardStats);
+  }, [dashboardStats]);
 
   const addSale = (saleData: {
     client: string;

@@ -15,6 +15,7 @@ import { Button } from '../components/ui/Button';
 import { SaleStatusBadge } from '../components/ui/StatusBadge';
 import { SalesForm } from '../components/forms/SalesForm';
 import { formatCurrency } from '../lib/formatters';
+import { useSales } from '../store/SalesContext';
 
 // Mock data
 const salesData = [
@@ -143,8 +144,14 @@ export function SalesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
+  
+  // Get real sales data from context
+  const { sales } = useSales();
+  
+  // Combine mock data with real sales for display
+  const allSales = [...salesData, ...sales];
 
-  const filteredSales = salesData.filter(sale => {
+  const filteredSales = allSales.filter(sale => {
     if (activeFilter !== 'all' && sale.status !== activeFilter) return false;
     if (searchTerm && !sale.client.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;

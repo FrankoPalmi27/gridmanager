@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '../components/ui/Button';
 import { UserStatusBadge } from '../components/ui/StatusBadge';
 import { Modal } from '../components/ui/Modal';
 import { formatCurrency } from '../lib/formatters';
+import { useSales } from '../store/SalesContext';
 
 interface Customer {
   id: string;
@@ -49,11 +50,32 @@ const mockCustomers: Customer[] = [
 ];
 
 export function CustomersPage() {
-  const [customers] = useState<Customer[]>(mockCustomers);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Get sales data to calculate updated balances
+  const { sales } = useSales();
+  
+  // Calculate updated customer balances based on sales
+  const customersWithUpdatedBalances = useMemo(() => {
+    return mockCustomers.map(customer => {
+      // Find sales for this customer
+      const customerSales = sales.filter(sale => 
+        sale.client.name === customer.name
+      );
+      
+      // Calculate total sales amount for this customer
+      const totalSales = customerSales.reduce((sum, sale) => sum + sale.amount, 0);
+      
+      // Update balance (assuming sales increase customer debt/balance)
+      return {
+        ...customer,
+        balance: customer.balance + totalSales
+      };
+    });
+  }, [sales]);
 
-  const filteredCustomers = customers.filter(customer =>
+  const filteredCustomers = customersWithUpdatedBalances.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -185,7 +207,7 @@ export function CustomersPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Total Clientes</p>
-                <p className="text-lg font-semibold text-gray-900">{customers.length}</p>
+                <p className="text-lg font-semibold text-gray-900">{customersWithUpdatedBalances.length}</p>
               </div>
             </div>
           </div>
@@ -200,7 +222,7 @@ export function CustomersPage() {
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Activos</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {customers.filter(c => c.status === 'active').length}
+                  {customersWithUpdatedBalances.filter(c => c.status === 'active').length}
                 </p>
               </div>
             </div>
@@ -216,7 +238,7 @@ export function CustomersPage() {
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Balance Positivo</p>
                 <p className="text-lg font-semibold text-green-600">
-                  {formatCurrency(customers.filter(c => c.balance > 0).reduce((sum, c) => sum + c.balance, 0))}
+                  {formatCurrency(customersWithUpdatedBalances.filter(c => c.balance > 0).reduce((sum, c) => sum + c.balance, 0))}
                 </p>
               </div>
             </div>
@@ -232,7 +254,7 @@ export function CustomersPage() {
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Deuda Total</p>
                 <p className="text-lg font-semibold text-red-600">
-                  {formatCurrency(Math.abs(customers.filter(c => c.balance < 0).reduce((sum, c) => sum + c.balance, 0)))}
+                  {formatCurrency(Math.abs(customersWithUpdatedBalances.filter(c => c.balance < 0).reduce((sum, c) => sum + c.balance, 0)))}
                 </p>
               </div>
             </div>

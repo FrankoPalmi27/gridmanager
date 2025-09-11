@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { create } from 'zustand';
 
 // Tipo para los productos
 export interface Product {
@@ -107,35 +107,26 @@ const initialProducts: Product[] = [
   }
 ];
 
-// Hook personalizado para manejar los productos
-export const useProductsStore = () => {
-  const [products, setProducts] = useState<Product[]>(() => 
-    loadFromStorage(PRODUCTS_STORAGE_KEY, initialProducts)
-  );
+// Función para generar SKU automático
+const generateSKU = (category: string, name: string): string => {
+  const categoryPrefix = category.substring(0, 3).toUpperCase();
+  const namePrefix = name.substring(0, 3).toUpperCase();
+  const timestamp = Date.now().toString().slice(-4);
+  return `${categoryPrefix}-${namePrefix}-${timestamp}`;
+};
 
-  const [categories, setCategories] = useState<Category[]>(() => 
-    loadFromStorage(CATEGORIES_STORAGE_KEY, [])
-  );
+// Get all unique categories (custom + from products)
+const getAllCategories = (products: Product[], categories: Category[]) => {
+  const customCategoryNames = categories.map(cat => cat.name);
+  const productCategories = Array.from(new Set(products.map(p => p.category)));
+  const allCategoryNames = [...new Set([...customCategoryNames, ...productCategories])];
+  return allCategoryNames;
+};
 
-  // Save to localStorage whenever products change
-  useEffect(() => {
-    saveToStorage(PRODUCTS_STORAGE_KEY, products);
-  }, [products]);
-
-  // Save to localStorage whenever categories change
-  useEffect(() => {
-    saveToStorage(CATEGORIES_STORAGE_KEY, categories);
-  }, [categories]);
-
-  // Función para generar SKU automático
-  const generateSKU = (category: string, name: string): string => {
-    const categoryPrefix = category.substring(0, 3).toUpperCase();
-    const namePrefix = name.substring(0, 3).toUpperCase();
-    const timestamp = Date.now().toString().slice(-4);
-    return `${categoryPrefix}-${namePrefix}-${timestamp}`;
-  };
-
-  const addProduct = (productData: {
+interface ProductsStore {
+  products: Product[];
+  categories: Category[];
+  addProduct: (productData: {
     name: string;
     category: string;
     brand: string;
@@ -145,7 +136,26 @@ export const useProductsStore = () => {
     stock: number;
     minStock: number;
     status?: 'active' | 'inactive';
-  }) => {
+  }) => Product;
+  updateProduct: (id: string, updatedData: Partial<Product>) => void;
+  deleteProduct: (id: string) => void;
+  updateStock: (id: string, newStock: number) => void;
+  setProducts: (products: Product[]) => void;
+  setCategories: (categories: Category[]) => void;
+  stats: {
+    totalProducts: number;
+    activeProducts: number;
+    lowStockProducts: number;
+    totalValue: number;
+    categories: string[];
+  };
+}
+
+export const useProductsStore = create<ProductsStore>((set, get) => ({
+  products: loadFromStorage(PRODUCTS_STORAGE_KEY, initialProducts),
+  categories: loadFromStorage(CATEGORIES_STORAGE_KEY, []),
+
+  addProduct: (productData) => {
     const newProduct: Product = {
       id: Date.now().toString(),
       sku: generateSKU(productData.category, productData.name),
@@ -161,58 +171,61 @@ export const useProductsStore = () => {
       createdAt: new Date().toISOString()
     };
 
-    setProducts(prev => [newProduct, ...prev]);
+    set((state) => {
+      const newProducts = [newProduct, ...state.products];
+      saveToStorage(PRODUCTS_STORAGE_KEY, newProducts);
+      return { products: newProducts };
+    });
+    
     return newProduct;
-  };
+  },
 
-  const updateProduct = (id: string, updatedData: Partial<Product>) => {
-    setProducts(prevProducts =>
-      prevProducts.map(product =>
+  updateProduct: (id, updatedData) => {
+    set((state) => {
+      const newProducts = state.products.map(product =>
         product.id === id ? { ...product, ...updatedData } : product
-      )
-    );
-  };
+      );
+      saveToStorage(PRODUCTS_STORAGE_KEY, newProducts);
+      return { products: newProducts };
+    });
+  },
 
-  const deleteProduct = (id: string) => {
-    setProducts(prevProducts =>
-      prevProducts.filter(product => product.id !== id)
-    );
-  };
+  deleteProduct: (id) => {
+    set((state) => {
+      const newProducts = state.products.filter(product => product.id !== id);
+      saveToStorage(PRODUCTS_STORAGE_KEY, newProducts);
+      return { products: newProducts };
+    });
+  },
 
-  const updateStock = (id: string, newStock: number) => {
-    setProducts(prevProducts =>
-      prevProducts.map(product =>
+  updateStock: (id, newStock) => {
+    set((state) => {
+      const newProducts = state.products.map(product =>
         product.id === id ? { ...product, stock: newStock } : product
-      )
-    );
-  };
+      );
+      saveToStorage(PRODUCTS_STORAGE_KEY, newProducts);
+      return { products: newProducts };
+    });
+  },
 
-  // Get all unique categories (custom + from products)
-  const getAllCategories = () => {
-    const customCategoryNames = categories.map(cat => cat.name);
-    const productCategories = Array.from(new Set(products.map(p => p.category)));
-    const allCategoryNames = [...new Set([...customCategoryNames, ...productCategories])];
-    return allCategoryNames;
-  };
+  setProducts: (products) => {
+    set({ products });
+    saveToStorage(PRODUCTS_STORAGE_KEY, products);
+  },
 
-  // Estadísticas calculadas
-  const stats = {
-    totalProducts: products.length,
-    activeProducts: products.filter(p => p.status === 'active').length,
-    lowStockProducts: products.filter(p => p.stock <= p.minStock && p.status === 'active').length,
-    totalValue: products.reduce((sum, p) => sum + (p.cost * p.stock), 0),
-    categories: getAllCategories()
-  };
+  setCategories: (categories) => {
+    set({ categories });
+    saveToStorage(CATEGORIES_STORAGE_KEY, categories);
+  },
 
-  return {
-    products,
-    addProduct,
-    updateProduct,
-    deleteProduct,
-    updateStock,
-    stats,
-    setProducts,
-    categories,
-    setCategories
-  };
-};
+  get stats() {
+    const state = get();
+    return {
+      totalProducts: state.products.length,
+      activeProducts: state.products.filter(p => p.status === 'active').length,
+      lowStockProducts: state.products.filter(p => p.stock <= p.minStock && p.status === 'active').length,
+      totalValue: state.products.reduce((sum, p) => sum + (p.cost * p.stock), 0),
+      categories: getAllCategories(state.products, state.categories)
+    };
+  }
+}));

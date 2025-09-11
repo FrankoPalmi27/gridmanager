@@ -13,7 +13,7 @@ type SortField = 'name' | 'category' | 'brand' | 'price' | 'cost' | 'stock' | 's
 type SortOrder = 'asc' | 'desc';
 
 export function ProductsPage() {
-  const { products, stats, updateProduct, deleteProduct, categories, setCategories } = useProductsStore();
+  const { products, addProduct, stats, updateProduct, deleteProduct, categories, setCategories } = useProductsStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);

@@ -56,7 +56,7 @@ const ACCOUNTS_STORAGE_KEY = 'gridmanager_accounts';
 const TRANSACTIONS_STORAGE_KEY = 'gridmanager_transactions';
 
 // LocalStorage utilities
-const loadFromStorage = <T>(key: string, defaultValue: T): T => {
+const loadFromStorage = <T,>(key: string, defaultValue: T): T => {
   try {
     const item = localStorage.getItem(key);
     return item ? JSON.parse(item) : defaultValue;
@@ -66,7 +66,7 @@ const loadFromStorage = <T>(key: string, defaultValue: T): T => {
   }
 };
 
-const saveToStorage = <T>(key: string, value: T): void => {
+const saveToStorage = <T,>(key: string, value: T): void => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {

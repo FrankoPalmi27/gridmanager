@@ -11,7 +11,7 @@ interface ProductFormProps {
 }
 
 export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProps) {
-  const { addProduct, updateProduct, stats } = useProductsStore();
+  const { addProduct, updateProduct, stats, categories } = useProductsStore();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -211,12 +211,34 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
                 required
               >
                 <option value="">Selecciona una categoría</option>
-                {stats.categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-                {commonCategories.filter(cat => !stats.categories.includes(cat)).map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
+                
+                {/* Custom categories from store */}
+                {categories.length > 0 && (
+                  <optgroup label="Categorías Personalizadas">
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.name}>{cat.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                
+                {/* Existing categories from products */}
+                {stats.categories.length > 0 && (
+                  <optgroup label="Categorías Existentes">
+                    {stats.categories.filter(cat => !categories.some(customCat => customCat.name === cat)).map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </optgroup>
+                )}
+                
+                {/* Common predefined categories */}
+                <optgroup label="Categorías Predefinidas">
+                  {commonCategories.filter(cat => 
+                    !stats.categories.includes(cat) && 
+                    !categories.some(customCat => customCat.name === cat)
+                  ).map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </optgroup>
               </select>
               {errors.category && (
                 <p className="mt-1 text-sm text-red-600">{errors.category}</p>

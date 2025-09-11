@@ -1,26 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '../components/ui/Button';
 import { StatusBadge, StockStatusBadge } from '../components/ui/StatusBadge';
 import { Input } from '../components/ui/Input';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
 import { ProductForm } from '../components/forms/ProductForm';
+import { CategoryModal } from '../components/forms/CategoryModal';
+import { CategoriesTable } from '../components/tables/CategoriesTable';
 import { useProductsStore, Product } from '../store/productsStore';
 import { formatCurrency } from '../lib/formatters';
 
+type SortField = 'name' | 'category' | 'brand' | 'price' | 'cost' | 'stock' | 'status';
+type SortOrder = 'asc' | 'desc';
+
 export function ProductsPage() {
-  const { products, stats, updateProduct, deleteProduct } = useProductsStore();
+  const { products, stats, updateProduct, deleteProduct, categories, setCategories } = useProductsStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [activeTab, setActiveTab] = useState('productos');
 
-  const categories = ['all', ...stats.categories];
+  const allCategories = ['all', ...stats.categories];
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  // Calculate products by category for the categories table
+  const productsByCategory = useMemo(() => {
+    const counts: Record<string, number> = {};
+    products.forEach(product => {
+      counts[product.category] = (counts[product.category] || 0) + 1;
+    });
+    return counts;
+  }, [products]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const sortedAndFilteredProducts = products
+    .filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      let aValue: any = a[sortField];
+      let bValue: any = b[sortField];
+
+      // Handle different data types
+      if (sortField === 'price' || sortField === 'cost' || sortField === 'stock') {
+        aValue = Number(aValue);
+        bValue = Number(bValue);
+      } else {
+        aValue = String(aValue).toLowerCase();
+        bValue = String(bValue).toLowerCase();
+      }
+
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   const handleNewProduct = () => {
     setEditingProduct(null);
@@ -46,13 +92,54 @@ export function ProductsPage() {
             <h1 className="text-2xl font-bold text-gray-900">Productos</h1>
             <p className="text-gray-600">Gestiona tu catálogo de productos y stock</p>
           </div>
-          <Button
-            onClick={handleNewProduct}
-            variant="primary"
-          >
-            + Nuevo Producto
-          </Button>
+          <div className="flex gap-3">
+            {activeTab === 'productos' ? (
+              <>
+                <Button
+                  onClick={() => setIsCategoryModalOpen(true)}
+                  variant="secondary"
+                >
+                  Gestionar Categorías
+                </Button>
+                <Button
+                  onClick={handleNewProduct}
+                  variant="primary"
+                >
+                  + Nuevo Producto
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={() => {
+                  const newCategory = {
+                    id: Date.now().toString(),
+                    name: 'Nueva Categoría',
+                    description: '',
+                    createdAt: new Date().toISOString()
+                  };
+                  setCategories([...categories, newCategory]);
+                }}
+                variant="primary"
+              >
+                + Nueva Categoría
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="productos">
+              Productos ({products.length})
+            </TabsTrigger>
+            <TabsTrigger value="categorias">
+              Categorías ({categories.length})
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Products Tab Content */}
+          <TabsContent value="productos">
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -133,7 +220,7 @@ export function ProductsPage() {
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            {categories.map(category => (
+            {allCategories.map(category => (
               <option key={category} value={category}>
                 {category === 'all' ? 'Todas las categorías' : category}
               </option>
@@ -151,20 +238,70 @@ export function ProductsPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Producto
+                  <th 
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Producto</span>
+                      {sortField === 'name' && (
+                        <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Categoría
+                  <th 
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    onClick={() => handleSort('category')}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Categoría</span>
+                      {sortField === 'category' && (
+                        <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Precios
+                  <th 
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    onClick={() => handleSort('price')}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Precios</span>
+                      {sortField === 'price' && (
+                        <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stock
+                  <th 
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    onClick={() => handleSort('stock')}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Stock</span>
+                      {sortField === 'stock' && (
+                        <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                  <th 
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Estado</span>
+                      {sortField === 'status' && (
+                        <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      )}
+                    </div>
                   </th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
@@ -172,7 +309,7 @@ export function ProductsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredProducts.map((product) => (
+                {sortedAndFilteredProducts.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
@@ -240,7 +377,7 @@ export function ProductsPage() {
             </table>
           </div>
 
-          {filteredProducts.length === 0 && (
+          {sortedAndFilteredProducts.length === 0 && (
             <div className="text-center py-12">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -252,6 +389,19 @@ export function ProductsPage() {
             </div>
           )}
         </div>
+
+        </TabsContent>
+
+        {/* Categories Tab Content */}
+        <TabsContent value="categorias">
+          <CategoriesTable
+            categories={categories}
+            onCategoriesUpdate={setCategories}
+            productsByCategory={productsByCategory}
+          />
+        </TabsContent>
+
+        </Tabs>
       </div>
 
       {/* Product Form */}
@@ -259,6 +409,14 @@ export function ProductsPage() {
         isOpen={isProductFormOpen} 
         onClose={handleCloseForm}
         editingProduct={editingProduct}
+      />
+
+      {/* Category Modal */}
+      <CategoryModal
+        isOpen={isCategoryModalOpen}
+        closeModal={() => setIsCategoryModalOpen(false)}
+        categories={categories}
+        onCategoriesUpdate={setCategories}
       />
     </div>
   );

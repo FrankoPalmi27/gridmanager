@@ -16,8 +16,17 @@ export interface Product {
   createdAt: string;
 }
 
+// Tipo para las categorías
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+}
+
 // LocalStorage keys
 const PRODUCTS_STORAGE_KEY = 'gridmanager_products';
+const CATEGORIES_STORAGE_KEY = 'gridmanager_categories';
 
 // LocalStorage utilities
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
@@ -104,10 +113,19 @@ export const useProductsStore = () => {
     loadFromStorage(PRODUCTS_STORAGE_KEY, initialProducts)
   );
 
+  const [categories, setCategories] = useState<Category[]>(() => 
+    loadFromStorage(CATEGORIES_STORAGE_KEY, [])
+  );
+
   // Save to localStorage whenever products change
   useEffect(() => {
     saveToStorage(PRODUCTS_STORAGE_KEY, products);
   }, [products]);
+
+  // Save to localStorage whenever categories change
+  useEffect(() => {
+    saveToStorage(CATEGORIES_STORAGE_KEY, categories);
+  }, [categories]);
 
   // Función para generar SKU automático
   const generateSKU = (category: string, name: string): string => {
@@ -185,6 +203,8 @@ export const useProductsStore = () => {
     deleteProduct,
     updateStock,
     stats,
-    setProducts
+    setProducts,
+    categories,
+    setCategories
   };
 };

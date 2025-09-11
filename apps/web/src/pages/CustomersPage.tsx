@@ -5,50 +5,8 @@ import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { formatCurrency } from '../lib/formatters';
 import { useSales } from '../store/SalesContext';
+import { useCustomersStore, Customer } from '../store/customersStore';
 
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  balance: number;
-  status: 'active' | 'inactive';
-}
-
-const mockCustomers: Customer[] = [
-  {
-    id: '1',
-    name: 'Juan Pérez',
-    email: 'juan.perez@email.com',
-    phone: '+54 9 11 1234-5678',
-    balance: 15000,
-    status: 'active'
-  },
-  {
-    id: '2',
-    name: 'María García',
-    email: 'maria.garcia@email.com',
-    phone: '+54 9 11 8765-4321',
-    balance: -2500,
-    status: 'active'
-  },
-  {
-    id: '3',
-    name: 'Carlos López',
-    email: 'carlos.lopez@email.com',
-    phone: '+54 9 11 5555-0000',
-    balance: 8750,
-    status: 'active'
-  },
-  {
-    id: '4',
-    name: 'Ana Martínez',
-    email: 'ana.martinez@email.com',
-    phone: '+54 9 11 9999-1111',
-    balance: 0,
-    status: 'inactive'
-  }
-];
 
 export function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,7 +14,9 @@ export function CustomersPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
-  const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
+  
+  // Use the centralized customers store
+  const { customers, addCustomer, updateCustomer, deleteCustomer, stats } = useCustomersStore();
   const [loading, setLoading] = useState(false);
   
   // Form state
@@ -65,7 +25,9 @@ export function CustomersPage() {
     email: '',
     phone: '',
     balance: 0,
-    status: 'active' as 'active' | 'inactive'
+    status: 'active' as 'active' | 'inactive',
+    address: '',
+    notes: ''
   });
   
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -99,7 +61,9 @@ export function CustomersPage() {
       email: '',
       phone: '',
       balance: 0,
-      status: 'active'
+      status: 'active',
+      address: '',
+      notes: ''
     });
     setFormErrors({});
     setEditingCustomer(null);
@@ -150,18 +114,10 @@ export function CustomersPage() {
       
       if (editingCustomer) {
         // Update existing customer
-        setCustomers(prev => prev.map(customer => 
-          customer.id === editingCustomer.id 
-            ? { ...customer, ...formData }
-            : customer
-        ));
+        updateCustomer(editingCustomer.id, formData);
       } else {
         // Add new customer
-        const newCustomer: Customer = {
-          id: Date.now().toString(),
-          ...formData
-        };
-        setCustomers(prev => [...prev, newCustomer]);
+        addCustomer(formData);
       }
       
       handleCloseModal();
@@ -185,7 +141,9 @@ export function CustomersPage() {
       email: customer.email,
       phone: customer.phone,
       balance: customer.balance,
-      status: customer.status
+      status: customer.status,
+      address: customer.address || '',
+      notes: customer.notes || ''
     });
     setIsModalOpen(true);
   };
@@ -207,16 +165,18 @@ export function CustomersPage() {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
-            <p className="text-gray-600">Gestiona tu base de datos de clientes</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Clientes</h1>
+            <p className="text-sm sm:text-base text-gray-600">Gestiona tu base de datos de clientes</p>
           </div>
           <Button
             onClick={handleNewCustomer}
             variant="primary"
+            size="sm"
+            className="w-full sm:w-auto"
           >
             + Nuevo Cliente
           </Button>
@@ -242,11 +202,12 @@ export function CustomersPage() {
 
         {/* Customer List */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">Lista de Clientes</h3>
           </div>
           
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -324,66 +285,120 @@ export function CustomersPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Card Layout */}
+          <div className="lg:hidden">
+            {filteredCustomers.map((customer) => (
+              <div key={customer.id} className="border-b border-gray-200 p-4 hover:bg-gray-50">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3 flex-1">
+                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-base font-medium text-gray-600">
+                        {customer.name.charAt(0)}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-base font-medium text-gray-900 truncate">
+                        {customer.name}
+                      </div>
+                      <div className="text-sm text-gray-500 truncate">{customer.email}</div>
+                      <div className="text-sm text-gray-500">{customer.phone}</div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end space-y-2 ml-4">
+                    <UserStatusBadge status={customer.status} />
+                    <div className={`text-sm font-medium ${
+                      customer.balance > 0 
+                        ? 'text-green-600' 
+                        : customer.balance < 0 
+                          ? 'text-red-600' 
+                          : 'text-gray-900'
+                    }`}>
+                      {formatCurrency(customer.balance)}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex space-x-2 mt-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => handleEditCustomer(customer)}
+                  >
+                    Editar
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleViewCustomer(customer)}
+                  >
+                    Ver
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-6 sm:mt-8">
+          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200">
             <div className="flex items-center">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 sm:p-3 bg-blue-100 rounded-lg">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-500">Total Clientes</p>
-                <p className="text-lg font-semibold text-gray-900">{customersWithUpdatedBalances.length}</p>
+              <div className="ml-3 sm:ml-4">
+                <p className="text-xs sm:text-sm text-gray-500">Total Clientes</p>
+                <p className="text-base sm:text-lg font-semibold text-gray-900">{customersWithUpdatedBalances.length}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200">
             <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-500">Activos</p>
-                <p className="text-lg font-semibold text-gray-900">
+              <div className="ml-3 sm:ml-4">
+                <p className="text-xs sm:text-sm text-gray-500">Activos</p>
+                <p className="text-base sm:text-lg font-semibold text-gray-900">
                   {customersWithUpdatedBalances.filter(c => c.status === 'active').length}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200">
             <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-500">Balance Positivo</p>
-                <p className="text-lg font-semibold text-green-600">
+              <div className="ml-3 sm:ml-4">
+                <p className="text-xs sm:text-sm text-gray-500">Balance Positivo</p>
+                <p className="text-sm sm:text-lg font-semibold text-green-600">
                   {formatCurrency(customersWithUpdatedBalances.filter(c => c.balance > 0).reduce((sum, c) => sum + c.balance, 0))}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200">
             <div className="flex items-center">
-              <div className="p-3 bg-red-100 rounded-lg">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 sm:p-3 bg-red-100 rounded-lg">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-500">Deuda Total</p>
-                <p className="text-lg font-semibold text-red-600">
+              <div className="ml-3 sm:ml-4">
+                <p className="text-xs sm:text-sm text-gray-500">Deuda Total</p>
+                <p className="text-sm sm:text-lg font-semibold text-red-600">
                   {formatCurrency(Math.abs(customersWithUpdatedBalances.filter(c => c.balance < 0).reduce((sum, c) => sum + c.balance, 0)))}
                 </p>
               </div>
@@ -400,7 +415,7 @@ export function CustomersPage() {
         size="md"
         footer={
           <>
-            <Button variant="outline" onClick={handleCloseModal} disabled={loading}>
+            <Button variant="outline" onClick={handleCloseModal} disabled={loading} className="w-full sm:w-auto">
               Cancelar
             </Button>
             <Button 
@@ -408,6 +423,7 @@ export function CustomersPage() {
               onClick={handleSubmit}
               loading={loading}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               {editingCustomer ? "Actualizar" : "Crear"} Cliente
             </Button>
@@ -502,6 +518,7 @@ export function CustomersPage() {
               setIsViewModalOpen(false);
               setViewingCustomer(null);
             }}
+            className="w-full sm:w-auto"
           >
             Cerrar
           </Button>
@@ -521,7 +538,7 @@ export function CustomersPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-gray-500">Teléfono</label>
                 <p className="text-gray-900">{viewingCustomer.phone}</p>

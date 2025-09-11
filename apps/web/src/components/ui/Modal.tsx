@@ -56,7 +56,7 @@ export const Modal: React.FC<ModalProps> = ({
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4 text-center">
+          <div className="flex min-h-full items-center justify-center p-2 sm:p-4 text-center">
             <Transition.Child
               as={React.Fragment}
               enter="ease-out duration-300"
@@ -67,13 +67,13 @@ export const Modal: React.FC<ModalProps> = ({
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel
-                className={`w-full ${sizeClasses[size]} transform overflow-hidden rounded-xl bg-white p-6 text-left align-middle shadow-xl transition-all ${className}`}
+                className={`w-full ${sizeClasses[size]} transform overflow-hidden rounded-xl bg-white p-4 sm:p-6 text-left align-middle shadow-xl transition-all ${className}`}
               >
                 {/* Header */}
                 {(title || showCloseButton) && (
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-between mb-4 sm:mb-6">
                     {title && (
-                      <Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
+                      <Dialog.Title as="h3" className="text-base sm:text-lg font-semibold text-gray-900">
                         {title}
                       </Dialog.Title>
                     )}
@@ -92,13 +92,13 @@ export const Modal: React.FC<ModalProps> = ({
                 )}
 
                 {/* Body */}
-                <div className="mb-6">
+                <div className="mb-4 sm:mb-6">
                   {children}
                 </div>
 
                 {/* Footer */}
                 {footer && (
-                  <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                  <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t border-gray-200">
                     {footer}
                   </div>
                 )}

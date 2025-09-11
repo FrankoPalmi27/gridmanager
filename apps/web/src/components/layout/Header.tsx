@@ -48,7 +48,7 @@ function GlobalSearch() {
     <div className="relative">
       <button 
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200 min-w-64"
+        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200 w-full sm:min-w-64"
       >
         <MagnifyingGlassIcon className="h-4 w-4" />
         Buscar...
@@ -210,13 +210,13 @@ export function Header({ onMenuClick }: HeaderProps) {
             </div>
 
             {/* Global Search */}
-            <div className="hidden md:block">
+            <div className="hidden sm:block">
               <GlobalSearch />
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="hidden lg:block text-sm text-gray-500">
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <div className="hidden xl:block text-sm text-gray-500">
               Hola, <span className="font-medium text-gray-900">{user?.name}</span>
               <div className="flex items-center gap-1 mt-1">
                 <div className="w-2 h-2 bg-success-500 rounded-full animate-pulse-soft" />

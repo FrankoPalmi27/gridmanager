@@ -113,11 +113,18 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
 
     setLoading(true);
     
+    // Prevent double submission
+    if (loading) {
+      return;
+    }
+    
     try {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      console.log('Creating sale with data:', formData);
       const newSale = addSale(formData);
+      console.log('Sale created successfully:', newSale);
       
       if (onSuccess) {
         onSuccess(newSale);
@@ -128,6 +135,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
       handleClose();
     } catch (error) {
       console.error('Error creating sale:', error);
+      console.error('Form data was:', formData);
       alert('Error al crear la venta. Inténtalo de nuevo.');
     } finally {
       setLoading(false);

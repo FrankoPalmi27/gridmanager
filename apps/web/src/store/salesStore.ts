@@ -7,11 +7,17 @@ export interface Sale {
   client: {
     name: string;
     email: string;
+    avatar: string;
   };
   amount: number;
   date: string;
   status: 'completed' | 'pending' | 'cancelled';
   items: number;
+  seller?: {
+    name: string;
+    initials: string;
+  };
+  sparkline?: number[];
 }
 
 // Estado inicial del dashboard
@@ -33,17 +39,28 @@ export const useSalesStore = () => {
     quantity: number;
     price: number;
   }) => {
+    // Generate client avatar (initials)
+    const generateAvatar = (name: string) => {
+      return name.split(' ').map(n => n.charAt(0)).join('').toUpperCase();
+    };
+    
     const newSale: Sale = {
       id: Date.now(),
       number: `VTA-2024-${String(sales.length + 1).padStart(3, '0')}`,
       client: {
         name: saleData.client,
-        email: `${saleData.client.toLowerCase().replace(' ', '.')}@email.com`
+        email: `${saleData.client.toLowerCase().replace(' ', '.')}@email.com`,
+        avatar: generateAvatar(saleData.client)
       },
       amount: saleData.quantity * saleData.price,
       date: new Date().toISOString().split('T')[0],
       status: 'completed',
-      items: saleData.quantity
+      items: saleData.quantity,
+      seller: {
+        name: 'Usuario Actual',
+        initials: 'UA'
+      },
+      sparkline: [50, 80, 120, 150, saleData.quantity * saleData.price / 100]
     };
 
     // Agregar la nueva venta

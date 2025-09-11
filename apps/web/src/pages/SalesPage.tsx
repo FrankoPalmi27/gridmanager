@@ -10,6 +10,9 @@ import {
   DocumentDuplicateIcon,
   ArchiveBoxIcon,
   ShareIcon,
+  ClockIcon,
+  XMarkIcon,
+  CheckIcon,
 } from '@heroicons/react/24/outline';
 import { Button } from '../components/ui/Button';
 import { SaleStatusBadge } from '../components/ui/StatusBadge';
@@ -99,12 +102,36 @@ function MiniSparkline({ data }: { data: number[] }) {
 // Quick actions dropdown
 function QuickActions({ sale }: { sale: any }) {
   const [isOpen, setIsOpen] = useState(false);
+  const { updateSaleStatus } = useSales();
 
-  const actions = [
-    { icon: DocumentDuplicateIcon, label: 'Duplicar', action: () => console.log('Duplicar') },
-    { icon: ArchiveBoxIcon, label: 'Archivar', action: () => console.log('Archivar') },
-    { icon: ShareIcon, label: 'Compartir', action: () => console.log('Compartir') },
-  ];
+  const getStatusActions = () => {
+    const baseActions = [
+      { icon: DocumentDuplicateIcon, label: 'Duplicar', action: () => console.log('Duplicar', sale.id) },
+      { icon: ShareIcon, label: 'Compartir', action: () => console.log('Compartir', sale.id) },
+    ];
+
+    // Add status-specific actions
+    if (sale.status === 'completed') {
+      baseActions.push(
+        { icon: ClockIcon, label: 'Marcar Pendiente', action: () => updateSaleStatus(sale.id, 'pending') },
+        { icon: XMarkIcon, label: 'Cancelar', action: () => updateSaleStatus(sale.id, 'cancelled') }
+      );
+    } else if (sale.status === 'pending') {
+      baseActions.push(
+        { icon: CheckIcon, label: 'Completar', action: () => updateSaleStatus(sale.id, 'completed') },
+        { icon: XMarkIcon, label: 'Cancelar', action: () => updateSaleStatus(sale.id, 'cancelled') }
+      );
+    } else if (sale.status === 'cancelled') {
+      baseActions.push(
+        { icon: CheckIcon, label: 'Completar', action: () => updateSaleStatus(sale.id, 'completed') },
+        { icon: ClockIcon, label: 'Marcar Pendiente', action: () => updateSaleStatus(sale.id, 'pending') }
+      );
+    }
+
+    return baseActions;
+  };
+
+  const actions = getStatusActions();
 
   return (
     <div className="relative">
@@ -124,7 +151,10 @@ function QuickActions({ sale }: { sale: any }) {
               <Button
                 key={action.label}
                 variant="ghost"
-                onClick={action.action}
+                onClick={() => {
+                  action.action();
+                  setIsOpen(false);
+                }}
                 className="justify-start gap-2 w-full px-4 py-2 text-sm h-auto"
               >
                 <action.icon className="h-4 w-4" />

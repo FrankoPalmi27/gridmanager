@@ -15,6 +15,7 @@ interface SalesContextType {
     quantity: number;
     price: number;
   }) => Sale;
+  updateSaleStatus: (saleId: number, newStatus: 'completed' | 'pending' | 'cancelled') => void;
   updateDashboardStats: (newStats: any) => void;
   setSales: (sales: Sale[]) => void;
 }

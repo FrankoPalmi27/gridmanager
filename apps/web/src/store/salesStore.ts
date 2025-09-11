@@ -117,10 +117,21 @@ export const useSalesStore = () => {
     setDashboardStats(prev => ({ ...prev, ...newStats }));
   };
 
+  const updateSaleStatus = (saleId: number, newStatus: 'completed' | 'pending' | 'cancelled') => {
+    setSales(prevSales => 
+      prevSales.map(sale => 
+        sale.id === saleId 
+          ? { ...sale, status: newStatus }
+          : sale
+      )
+    );
+  };
+
   return {
     dashboardStats,
     sales,
     addSale,
+    updateSaleStatus,
     updateDashboardStats,
     setSales
   };

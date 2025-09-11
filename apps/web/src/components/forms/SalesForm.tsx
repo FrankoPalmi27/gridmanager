@@ -3,6 +3,8 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useSales } from '../../store/SalesContext';
+import { useProductsStore } from '../../store/productsStore';
+import { useAccountsStore } from '../../store/accountsStore';
 import { formatAmount } from '../../lib/formatters';
 
 interface SalesFormProps {
@@ -38,13 +40,6 @@ const CLIENTS = [
   { id: '4', name: 'Ana Martínez', email: 'ana@email.com' },
 ];
 
-const PRODUCTS = [
-  { id: '1', name: 'Producto A', price: 500 },
-  { id: '2', name: 'Producto B', price: 750 },
-  { id: '3', name: 'Producto C', price: 1200 },
-  { id: '4', name: 'Servicio D', price: 300 },
-];
-
 const SALES_CHANNELS = [
   { value: 'store', label: 'Tienda Física' },
   { value: 'online', label: 'Tienda Online' },
@@ -67,18 +62,17 @@ const PAYMENT_METHODS = [
   { value: 'other', label: 'Otro' },
 ];
 
-// Cuentas disponibles (importamos de localStorage o mock)
-const AVAILABLE_ACCOUNTS = [
-  { id: '1', name: 'Cuenta Principal', type: 'Cuenta Corriente' },
-  { id: '2', name: 'Caja Fuerte', type: 'Efectivo' },
-  { id: '3', name: 'Cuenta USD', type: 'Cuenta USD' },
-  { id: '4', name: 'Tarjeta Empresarial', type: 'Tarjeta de Crédito' },
-];
 
 export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess, editingSale }) => {
   const { addSale, updateSale } = useSales();
+  const { products } = useProductsStore();
+  const { accounts, getActiveAccounts } = useAccountsStore();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<SalesFormErrors>({});
+  
+  // Get active products and accounts
+  const activeProducts = products.filter(p => p.status === 'active');
+  const activeAccounts = getActiveAccounts();
   
   const [formData, setFormData] = useState<SalesFormData>({
     client: '',
@@ -96,7 +90,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
     if (editingSale && isOpen) {
       // Find the product name from the sale amount/quantity
       const unitPrice = editingSale.amount / editingSale.items;
-      const matchingProduct = PRODUCTS.find(p => p.price === unitPrice);
+      const matchingProduct = activeProducts.find(p => p.price === unitPrice);
       
       setFormData({
         client: editingSale.client.name,
@@ -134,7 +128,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
   };
 
   const handleProductChange = (productName: string) => {
-    const product = PRODUCTS.find(p => p.name === productName);
+    const product = activeProducts.find(p => p.name === productName);
     const price = product ? product.price : 0;
     
     setFormData(prev => ({ 
@@ -301,12 +295,21 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
             disabled={loading}
           >
             <option value="">Seleccionar producto...</option>
-            {PRODUCTS.map((product) => (
+            {activeProducts.map((product) => (
               <option key={product.id} value={product.name}>
-                {product.name} - ${product.price.toLocaleString()}
+                {product.name} - {product.price.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
+                {product.stock <= product.minStock && (
+                  <span> (Stock bajo: {product.stock})</span>
+                )}
               </option>
             ))}
           </select>
+          {activeProducts.length === 0 && (
+            <p className="text-sm text-gray-500 mt-1">
+              No hay productos activos disponibles. 
+              <span className="text-blue-600 cursor-pointer hover:underline">Agregar productos</span>
+            </p>
+          )}
           {errors.product && (
             <p className="text-sm text-red-600 mt-1">{errors.product}</p>
           )}
@@ -428,12 +431,18 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
               disabled={loading}
             >
               <option value="">Seleccionar cuenta...</option>
-              {AVAILABLE_ACCOUNTS.map((account) => (
+              {activeAccounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.name} ({account.type})
+                  {account.name} ({account.accountType}) - Balance: {account.balance.toLocaleString('es-AR', { style: 'currency', currency: account.currency })}
                 </option>
               ))}
             </select>
+            {activeAccounts.length === 0 && (
+              <p className="text-sm text-gray-500 mt-1">
+                No hay cuentas activas disponibles. 
+                <span className="text-blue-600 cursor-pointer hover:underline">Agregar cuentas</span>
+              </p>
+            )}
             {errors.accountId && (
               <p className="text-sm text-red-600 mt-1">{errors.accountId}</p>
             )}

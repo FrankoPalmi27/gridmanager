@@ -20,6 +20,7 @@ import { SaleStatusBadge } from '../components/ui/StatusBadge';
 import { SalesForm } from '../components/forms/SalesForm';
 import { formatCurrency } from '../lib/formatters';
 import { useSales } from '../store/SalesContext';
+import { useProductsStore } from '../store/productsStore';
 
 // Mock data
 const salesData = [
@@ -171,15 +172,21 @@ function QuickActions({ sale, onEdit }: { sale: any; onEdit: (sale: any) => void
 }
 
 
+type SortField = 'number' | 'client' | 'date' | 'amount' | 'status';
+type SortOrder = 'asc' | 'desc';
+
 export function SalesPage() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<any>(null);
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   
   // Get real sales data from context
   const { sales } = useSales();
+  const { products } = useProductsStore();
   
   // Combine mock data with real sales for display
   const allSales = [...salesData, ...sales];
@@ -187,11 +194,44 @@ export function SalesPage() {
   // Calculate pending sales count dynamically
   const pendingSalesCount = allSales.filter(sale => sale.status === 'pending').length;
 
-  const filteredSales = allSales.filter(sale => {
-    if (activeFilter !== 'all' && sale.status !== activeFilter) return false;
-    if (searchTerm && !sale.client.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    return true;
-  });
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const filteredAndSortedSales = allSales
+    .filter(sale => {
+      if (activeFilter !== 'all' && sale.status !== activeFilter) return false;
+      if (searchTerm && !sale.client.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      let aValue: any = a[sortField];
+      let bValue: any = b[sortField];
+
+      // Handle different data types
+      if (sortField === 'amount') {
+        aValue = Number(aValue);
+        bValue = Number(bValue);
+      } else if (sortField === 'date') {
+        aValue = new Date(aValue).getTime();
+        bValue = new Date(bValue).getTime();
+      } else if (sortField === 'client') {
+        aValue = String(a.client.name).toLowerCase();
+        bValue = String(b.client.name).toLowerCase();
+      } else {
+        aValue = String(aValue).toLowerCase();
+        bValue = String(bValue).toLowerCase();
+      }
+
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   const handleEditSale = (sale: any) => {
     setEditingSale(sale);
@@ -274,23 +314,73 @@ export function SalesPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Venta
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('number')}
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Venta</span>
+                    {sortField === 'number' && (
+                      <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    )}
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cliente
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('client')}
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Cliente</span>
+                    {sortField === 'client' && (
+                      <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    )}
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('date')}
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Fecha</span>
+                    {sortField === 'date' && (
+                      <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    )}
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Items
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('amount')}
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Total</span>
+                    {sortField === 'amount' && (
+                      <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    )}
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('status')}
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Estado</span>
+                    {sortField === 'status' && (
+                      <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    )}
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acciones
@@ -298,7 +388,7 @@ export function SalesPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredSales.map((sale) => (
+              {filteredAndSortedSales.map((sale) => (
                 <tr key={sale.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -376,7 +466,7 @@ export function SalesPage() {
           </table>
         </div>
 
-        {filteredSales.length === 0 && (
+        {filteredAndSortedSales.length === 0 && (
           <div className="text-center py-12">
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

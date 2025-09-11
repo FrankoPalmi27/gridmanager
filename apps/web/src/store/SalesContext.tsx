@@ -14,7 +14,21 @@ interface SalesContextType {
     product: string;
     quantity: number;
     price: number;
+    salesChannel?: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
+    paymentStatus?: 'paid' | 'pending' | 'partial';
+    paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other';
+    accountId?: string;
   }) => Sale;
+  updateSale: (saleId: number, updatedData: {
+    client: string;
+    product: string;
+    quantity: number;
+    price: number;
+    salesChannel?: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
+    paymentStatus?: 'paid' | 'pending' | 'partial';
+    paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other';
+    accountId?: string;
+  }) => void;
   updateSaleStatus: (saleId: number, newStatus: 'completed' | 'pending' | 'cancelled') => void;
   updateDashboardStats: (newStats: any) => void;
   setSales: (sales: Sale[]) => void;

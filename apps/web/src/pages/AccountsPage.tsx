@@ -1,4 +1,4 @@
-import React, { useState, Fragment } from 'react';
+import React, { useState, Fragment, useEffect } from 'react';
 import { Dialog, Transition, Listbox } from '@headlessui/react';
 import { ChevronUpDownIcon, CheckIcon } from '@heroicons/react/20/solid';
 import { Button } from '../components/ui/Button';
@@ -48,6 +48,29 @@ const transactionCategories = {
   income: ['Ventas', 'Servicios', 'Inversiones', 'Otros Ingresos'],
   expense: ['Proveedores', 'Gastos Operativos', 'Impuestos', 'Servicios', 'Otros Gastos'],
   transfer: ['Transferencia Entre Cuentas']
+};
+
+// LocalStorage keys (same as in salesStore.ts)
+const ACCOUNTS_STORAGE_KEY = 'gridmanager_accounts';
+const TRANSACTIONS_STORAGE_KEY = 'gridmanager_transactions';
+
+// LocalStorage utilities
+const loadFromStorage = <T>(key: string, defaultValue: T): T => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch (error) {
+    console.error(`Error loading ${key} from localStorage:`, error);
+    return defaultValue;
+  }
+};
+
+const saveToStorage = <T>(key: string, value: T): void => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error(`Error saving ${key} to localStorage:`, error);
+  }
 };
 
 // Mock data for accounts
@@ -580,13 +603,76 @@ function TransactionModal({ isOpen, closeModal, accounts, onTransactionSaved }: 
 }
 
 export function AccountsPage() {
-  const [accounts, setAccounts] = useState<Account[]>(mockAccounts);
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  // Initialize state from localStorage, falling back to mock data
+  const [accounts, setAccounts] = useState<Account[]>(() => {
+    const storedAccounts = loadFromStorage(ACCOUNTS_STORAGE_KEY, mockAccounts);
+    // If localStorage is empty (first time), initialize with mock accounts
+    if (storedAccounts.length === 0 || JSON.stringify(storedAccounts) === JSON.stringify([])) {
+      saveToStorage(ACCOUNTS_STORAGE_KEY, mockAccounts);
+      return mockAccounts;
+    }
+    return storedAccounts;
+  });
+  
+  const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    const storedTransactions = loadFromStorage(TRANSACTIONS_STORAGE_KEY, mockTransactions);
+    // If localStorage is empty (first time), initialize with mock transactions
+    if (storedTransactions.length === 0 || JSON.stringify(storedTransactions) === JSON.stringify([])) {
+      saveToStorage(TRANSACTIONS_STORAGE_KEY, mockTransactions);
+      return mockTransactions;
+    }
+    return storedTransactions;
+  });
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | undefined>();
+
+  // Save accounts to localStorage whenever they change
+  useEffect(() => {
+    saveToStorage(ACCOUNTS_STORAGE_KEY, accounts);
+  }, [accounts]);
+
+  // Save transactions to localStorage whenever they change
+  useEffect(() => {
+    saveToStorage(TRANSACTIONS_STORAGE_KEY, transactions);
+  }, [transactions]);
+
+  // Periodically sync with localStorage (to pick up changes from sales)
+  useEffect(() => {
+    const syncWithStorage = () => {
+      const storedAccounts = loadFromStorage(ACCOUNTS_STORAGE_KEY, accounts);
+      const storedTransactions = loadFromStorage(TRANSACTIONS_STORAGE_KEY, transactions);
+      
+      // Only update if the data has actually changed to avoid infinite loops
+      if (JSON.stringify(storedAccounts) !== JSON.stringify(accounts)) {
+        setAccounts(storedAccounts);
+      }
+      if (JSON.stringify(storedTransactions) !== JSON.stringify(transactions)) {
+        setTransactions(storedTransactions);
+      }
+    };
+
+    // Sync when the component mounts and when the window gains focus
+    syncWithStorage();
+    
+    const handleFocus = () => syncWithStorage();
+    window.addEventListener('focus', handleFocus);
+    
+    // Also sync periodically every 5 seconds when the tab is active
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        syncWithStorage();
+      }
+    }, 5000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, []); // Empty dependency array to run only on mount
 
   const openAccountModal = (account?: Account) => {
     setEditingAccount(account);

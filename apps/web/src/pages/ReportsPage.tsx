@@ -296,6 +296,75 @@ export function ReportsPage() {
     }, [])
     .sort((a, b) => b.value - a.value);
 
+  // Export functions
+  const exportToCSV = () => {
+    let csvContent = '';
+    let filename = '';
+    
+    switch (activeTab) {
+      case 'sales':
+        csvContent = 'Fecha,Cliente,Vendedor,Productos,Monto\n';
+        csvContent += metrics.filteredSales.map(sale => 
+          `${sale.date},${sale.client},${sale.seller},${sale.products},${sale.amount}`
+        ).join('\n');
+        filename = `ventas_${selectedPeriod}.csv`;
+        break;
+      
+      case 'financial':
+        csvContent = 'Categoría,Descripción,Fecha,Monto\n';
+        csvContent += metrics.filteredExpenses.map(expense => 
+          `${expense.category},${expense.description},${expense.date},${expense.amount}`
+        ).join('\n');
+        filename = `gastos_${selectedPeriod}.csv`;
+        break;
+        
+      case 'customers':
+        csvContent = 'Cliente,Total Compras,Cantidad Órdenes,Última Compra,Promedio por Orden\n';
+        csvContent += mockCustomersData.map(customer => 
+          `${customer.name},${customer.totalPurchases},${customer.purchaseCount},${customer.lastPurchase},${customer.totalPurchases / customer.purchaseCount}`
+        ).join('\n');
+        filename = `clientes_${selectedPeriod}.csv`;
+        break;
+        
+      case 'inventory':
+        csvContent = 'Producto,Categoría,Stock,Vendidos,Ingresos,Rotación\n';
+        csvContent += mockProductsData.map(product => 
+          `${product.name},${product.category},${product.stock},${product.sales},${product.revenue},${((product.sales / (product.stock + product.sales)) * 100).toFixed(1)}%`
+        ).join('\n');
+        filename = `inventario_${selectedPeriod}.csv`;
+        break;
+        
+      default:
+        csvContent = 'Métrica,Valor\n';
+        csvContent += `Ventas Totales,${metrics.totalSales}\n`;
+        csvContent += `Gastos Totales,${metrics.totalExpenses}\n`;
+        csvContent += `Ganancia Neta,${metrics.profit}\n`;
+        csvContent += `Valor Promedio,${metrics.avgOrderValue}\n`;
+        filename = `resumen_${selectedPeriod}.csv`;
+    }
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToPDF = () => {
+    alert(`Funcionalidad de PDF en desarrollo. Los datos del período ${selectedPeriod} para la pestaña ${activeTab} se exportarán próximamente.`);
+  };
+
+  const sendByEmail = () => {
+    const subject = `Reporte ${activeTab} - ${selectedPeriod}`;
+    const body = `Reporte de ${activeTab} para el período ${selectedPeriod}.\n\nMétricas principales:\n- Ventas: ${formatCurrency(metrics.totalSales)}\n- Gastos: ${formatCurrency(metrics.totalExpenses)}\n- Ganancia: ${formatCurrency(metrics.profit)}`;
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoLink);
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
@@ -619,19 +688,19 @@ export function ReportsPage() {
               <p className="text-sm text-gray-500">Descarga los datos para análisis externo</p>
             </div>
             <div className="flex space-x-3">
-              <Button variant="secondary">
+              <Button variant="secondary" onClick={exportToCSV}>
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 Exportar CSV
               </Button>
-              <Button variant="secondary">
+              <Button variant="secondary" onClick={exportToPDF}>
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Exportar PDF
               </Button>
-              <Button variant="primary">
+              <Button variant="primary" onClick={sendByEmail}>
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>

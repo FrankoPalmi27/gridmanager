@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Button } from '../components/ui/Button';
 import { UserStatusBadge } from '../components/ui/StatusBadge';
 import { Modal } from '../components/ui/Modal';
+import { Input } from '../components/ui/Input';
 import { formatCurrency } from '../lib/formatters';
 import { useSales } from '../store/SalesContext';
 
@@ -52,13 +53,29 @@ const mockCustomers: Customer[] = [
 export function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
+  const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
+  const [loading, setLoading] = useState(false);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    balance: 0,
+    status: 'active' as 'active' | 'inactive'
+  });
+  
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   
   // Get sales data to calculate updated balances
   const { sales } = useSales();
   
   // Calculate updated customer balances based on sales
   const customersWithUpdatedBalances = useMemo(() => {
-    return mockCustomers.map(customer => {
+    return customers.map(customer => {
       // Find sales for this customer
       const customerSales = sales.filter(sale => 
         sale.client.name === customer.name
@@ -73,7 +90,110 @@ export function CustomersPage() {
         balance: customer.balance + totalSales
       };
     });
-  }, [sales]);
+  }, [customers, sales]);
+
+  // Form handlers
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      balance: 0,
+      status: 'active'
+    });
+    setFormErrors({});
+    setEditingCustomer(null);
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = 'El nombre es requerido';
+    }
+    
+    if (!formData.email.trim()) {
+      errors.email = 'El email es requerido';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'El email no es válido';
+    }
+    
+    if (!formData.phone.trim()) {
+      errors.phone = 'El teléfono es requerido';
+    }
+    
+    // Check if email already exists (excluding current customer when editing)
+    const emailExists = customers.some(customer => 
+      customer.email === formData.email && customer.id !== editingCustomer?.id
+    );
+    
+    if (emailExists) {
+      errors.email = 'Este email ya está registrado';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (editingCustomer) {
+        // Update existing customer
+        setCustomers(prev => prev.map(customer => 
+          customer.id === editingCustomer.id 
+            ? { ...customer, ...formData }
+            : customer
+        ));
+      } else {
+        // Add new customer
+        const newCustomer: Customer = {
+          id: Date.now().toString(),
+          ...formData
+        };
+        setCustomers(prev => [...prev, newCustomer]);
+      }
+      
+      handleCloseModal();
+      
+    } catch (error) {
+      console.error('Error saving customer:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    resetForm();
+    setIsModalOpen(false);
+  };
+
+  const handleEditCustomer = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setFormData({
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+      balance: customer.balance,
+      status: customer.status
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleViewCustomer = (customer: Customer) => {
+    setViewingCustomer(customer);
+    setIsViewModalOpen(true);
+  };
 
   const filteredCustomers = customersWithUpdatedBalances.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -81,6 +201,7 @@ export function CustomersPage() {
   );
 
   const handleNewCustomer = () => {
+    resetForm();
     setIsModalOpen(true);
   };
 
@@ -182,10 +303,19 @@ export function CustomersPage() {
                       <UserStatusBadge status={customer.status} />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Button variant="ghost" size="sm" className="mr-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="mr-2"
+                        onClick={() => handleEditCustomer(customer)}
+                      >
                         Editar
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleViewCustomer(customer)}
+                      >
                         Ver
                       </Button>
                     </td>
@@ -262,13 +392,185 @@ export function CustomersPage() {
         </div>
       </div>
 
+      {/* Create/Edit Customer Modal */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Nuevo Cliente"
+        onClose={handleCloseModal}
+        title={editingCustomer ? "Editar Cliente" : "Nuevo Cliente"}
         size="md"
+        footer={
+          <>
+            <Button variant="outline" onClick={handleCloseModal} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={handleSubmit}
+              loading={loading}
+              disabled={loading}
+            >
+              {editingCustomer ? "Actualizar" : "Crear"} Cliente
+            </Button>
+          </>
+        }
       >
-        <p className="text-gray-600 mb-4">Funcionalidad en desarrollo...</p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            label="Nombre Completo"
+            value={formData.name}
+            onChange={(e) => {
+              setFormData(prev => ({ ...prev, name: e.target.value }));
+              if (formErrors.name) {
+                setFormErrors(prev => ({ ...prev, name: '' }));
+              }
+            }}
+            error={formErrors.name}
+            disabled={loading}
+            required
+          />
+
+          <Input
+            label="Email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => {
+              setFormData(prev => ({ ...prev, email: e.target.value }));
+              if (formErrors.email) {
+                setFormErrors(prev => ({ ...prev, email: '' }));
+              }
+            }}
+            error={formErrors.email}
+            disabled={loading}
+            required
+          />
+
+          <Input
+            label="Teléfono"
+            value={formData.phone}
+            onChange={(e) => {
+              setFormData(prev => ({ ...prev, phone: e.target.value }));
+              if (formErrors.phone) {
+                setFormErrors(prev => ({ ...prev, phone: '' }));
+              }
+            }}
+            error={formErrors.phone}
+            disabled={loading}
+            required
+          />
+
+          <Input
+            label="Balance Inicial"
+            type="number"
+            step="0.01"
+            value={formData.balance.toString()}
+            onChange={(e) => {
+              setFormData(prev => ({ ...prev, balance: parseFloat(e.target.value) || 0 }));
+            }}
+            disabled={loading}
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Estado
+            </label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
+            >
+              <option value="active">Activo</option>
+              <option value="inactive">Inactivo</option>
+            </select>
+          </div>
+        </form>
+      </Modal>
+
+      {/* View Customer Modal */}
+      <Modal
+        isOpen={isViewModalOpen}
+        onClose={() => {
+          setIsViewModalOpen(false);
+          setViewingCustomer(null);
+        }}
+        title="Detalles del Cliente"
+        size="md"
+        footer={
+          <Button 
+            variant="primary" 
+            onClick={() => {
+              setIsViewModalOpen(false);
+              setViewingCustomer(null);
+            }}
+          >
+            Cerrar
+          </Button>
+        }
+      >
+        {viewingCustomer && (
+          <div className="space-y-4">
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
+                <span className="text-xl font-medium text-gray-600">
+                  {viewingCustomer.name.charAt(0)}
+                </span>
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">{viewingCustomer.name}</h3>
+                <p className="text-gray-500">{viewingCustomer.email}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Teléfono</label>
+                <p className="text-gray-900">{viewingCustomer.phone}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Estado</label>
+                <div className="mt-1">
+                  <UserStatusBadge status={viewingCustomer.status} />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Balance Actual</label>
+                <p className={`text-lg font-semibold ${
+                  viewingCustomer.balance > 0 
+                    ? 'text-green-600' 
+                    : viewingCustomer.balance < 0 
+                      ? 'text-red-600' 
+                      : 'text-gray-900'
+                }`}>
+                  {formatCurrency(customersWithUpdatedBalances.find(c => c.id === viewingCustomer.id)?.balance || 0)}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Ventas Realizadas</label>
+                <p className="text-gray-900">
+                  {sales.filter(sale => sale.client.name === viewingCustomer.name).length} ventas
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Historial de Ventas</h4>
+              <div className="max-h-32 overflow-y-auto">
+                {sales.filter(sale => sale.client.name === viewingCustomer.name).length > 0 ? (
+                  <div className="space-y-2">
+                    {sales.filter(sale => sale.client.name === viewingCustomer.name).map(sale => (
+                      <div key={sale.id} className="flex justify-between text-sm">
+                        <span>{sale.number}</span>
+                        <span>{formatCurrency(sale.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">No hay ventas registradas</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

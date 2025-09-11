@@ -13,6 +13,7 @@ import {
   ClockIcon,
   XMarkIcon,
   CheckIcon,
+  PencilIcon,
 } from '@heroicons/react/24/outline';
 import { Button } from '../components/ui/Button';
 import { SaleStatusBadge } from '../components/ui/StatusBadge';
@@ -71,10 +72,10 @@ const productsData = [
 ];
 
 const filters = [
-  { id: 'all', label: 'Todas', count: 15 },
-  { id: 'pending', label: 'Pendientes', count: 5 },
-  { id: 'completed', label: 'Completadas', count: 8 },
-  { id: 'cancelled', label: 'Canceladas', count: 2 },
+  { id: 'all', label: 'Todas' },
+  { id: 'pending', label: 'Pendientes' },
+  { id: 'completed', label: 'Completadas' },
+  { id: 'cancelled', label: 'Canceladas' },
 ];
 
 // Mini sparkline component
@@ -100,12 +101,13 @@ function MiniSparkline({ data }: { data: number[] }) {
 
 
 // Quick actions dropdown
-function QuickActions({ sale }: { sale: any }) {
+function QuickActions({ sale, onEdit }: { sale: any; onEdit: (sale: any) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const { updateSaleStatus } = useSales();
 
   const getStatusActions = () => {
     const baseActions = [
+      { icon: PencilIcon, label: 'Editar', action: () => onEdit(sale) },
       { icon: DocumentDuplicateIcon, label: 'Duplicar', action: () => console.log('Duplicar', sale.id) },
       { icon: ShareIcon, label: 'Compartir', action: () => console.log('Compartir', sale.id) },
     ];
@@ -174,18 +176,32 @@ export function SalesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
+  const [editingSale, setEditingSale] = useState<any>(null);
   
   // Get real sales data from context
   const { sales } = useSales();
   
   // Combine mock data with real sales for display
   const allSales = [...salesData, ...sales];
+  
+  // Calculate pending sales count dynamically
+  const pendingSalesCount = allSales.filter(sale => sale.status === 'pending').length;
 
   const filteredSales = allSales.filter(sale => {
     if (activeFilter !== 'all' && sale.status !== activeFilter) return false;
     if (searchTerm && !sale.client.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
+
+  const handleEditSale = (sale: any) => {
+    setEditingSale(sale);
+    setIsNewSaleModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsNewSaleModalOpen(false);
+    setEditingSale(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -196,7 +212,10 @@ export function SalesPage() {
           <p className="text-gray-600">Gestiona tus ventas, presupuestos y clientes</p>
         </div>
         <Button 
-          onClick={() => setIsNewSaleModalOpen(true)}
+          onClick={() => {
+            setEditingSale(null);
+            setIsNewSaleModalOpen(true);
+          }}
           variant="primary"
           className="flex items-center gap-2"
         >
@@ -217,9 +236,11 @@ export function SalesPage() {
               className="flex items-center gap-2"
             >
               {filter.label}
-              <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">
-                {filter.count}
-              </span>
+              {filter.id === 'pending' && (
+                <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">
+                  {pendingSalesCount}
+                </span>
+              )}
             </Button>
           ))}
         </div>
@@ -307,7 +328,7 @@ export function SalesPage() {
               </div>
 
               {/* Quick actions */}
-              <QuickActions sale={sale} />
+              <QuickActions sale={sale} onEdit={handleEditSale} />
             </div>
           </div>
         ))}
@@ -326,7 +347,10 @@ export function SalesPage() {
               : 'Crea tu primera venta para comenzar'}
           </p>
           <Button 
-            onClick={() => setIsNewSaleModalOpen(true)}
+            onClick={() => {
+              setEditingSale(null);
+              setIsNewSaleModalOpen(true);
+            }}
             variant="primary"
             className="inline-flex items-center gap-2"
           >
@@ -338,7 +362,8 @@ export function SalesPage() {
       
       <SalesForm 
         isOpen={isNewSaleModalOpen} 
-        onClose={() => setIsNewSaleModalOpen(false)} 
+        onClose={handleCloseModal}
+        editingSale={editingSale}
       />
     </div>
   );

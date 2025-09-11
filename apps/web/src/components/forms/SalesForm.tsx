@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -9,6 +9,7 @@ interface SalesFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (sale: any) => void;
+  editingSale?: any; // Sale object to edit
 }
 
 interface SalesFormData {
@@ -16,6 +17,10 @@ interface SalesFormData {
   product: string;
   quantity: number;
   price: number;
+  salesChannel: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
+  paymentStatus: 'paid' | 'pending' | 'partial';
+  paymentMethod: 'cash' | 'transfer' | 'card' | 'check' | 'other';
+  accountId: string;
 }
 
 interface SalesFormErrors {
@@ -23,6 +28,7 @@ interface SalesFormErrors {
   product?: string;
   quantity?: string;
   price?: string;
+  accountId?: string;
 }
 
 const CLIENTS = [
@@ -39,8 +45,38 @@ const PRODUCTS = [
   { id: '4', name: 'Servicio D', price: 300 },
 ];
 
-export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess }) => {
-  const { addSale } = useSales();
+const SALES_CHANNELS = [
+  { value: 'store', label: 'Tienda Física' },
+  { value: 'online', label: 'Tienda Online' },
+  { value: 'phone', label: 'Teléfono' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'other', label: 'Otro' },
+];
+
+const PAYMENT_STATUS = [
+  { value: 'paid', label: 'Pagado' },
+  { value: 'pending', label: 'Pendiente' },
+  { value: 'partial', label: 'Pago Parcial' },
+];
+
+const PAYMENT_METHODS = [
+  { value: 'cash', label: 'Efectivo' },
+  { value: 'transfer', label: 'Transferencia' },
+  { value: 'card', label: 'Tarjeta' },
+  { value: 'check', label: 'Cheque' },
+  { value: 'other', label: 'Otro' },
+];
+
+// Cuentas disponibles (importamos de localStorage o mock)
+const AVAILABLE_ACCOUNTS = [
+  { id: '1', name: 'Cuenta Principal', type: 'Cuenta Corriente' },
+  { id: '2', name: 'Caja Fuerte', type: 'Efectivo' },
+  { id: '3', name: 'Cuenta USD', type: 'Cuenta USD' },
+  { id: '4', name: 'Tarjeta Empresarial', type: 'Tarjeta de Crédito' },
+];
+
+export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess, editingSale }) => {
+  const { addSale, updateSale } = useSales();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<SalesFormErrors>({});
   
@@ -49,7 +85,34 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
     product: '',
     quantity: 1,
     price: 0,
+    salesChannel: 'store',
+    paymentStatus: 'paid',
+    paymentMethod: 'cash',
+    accountId: '2', // Caja Fuerte como default para efectivo
   });
+
+  // Populate form when editing a sale
+  useEffect(() => {
+    if (editingSale && isOpen) {
+      // Find the product name from the sale amount/quantity
+      const unitPrice = editingSale.amount / editingSale.items;
+      const matchingProduct = PRODUCTS.find(p => p.price === unitPrice);
+      
+      setFormData({
+        client: editingSale.client.name,
+        product: matchingProduct?.name || '',
+        quantity: editingSale.items,
+        price: unitPrice,
+        salesChannel: editingSale.salesChannel || 'store',
+        paymentStatus: editingSale.paymentStatus || 'pending',
+        paymentMethod: editingSale.paymentMethod || 'cash',
+        accountId: editingSale.accountId || '2'
+      });
+    } else if (!editingSale && isOpen) {
+      // Reset form for new sale
+      handleReset();
+    }
+  }, [editingSale, isOpen]);
 
   const handleReset = () => {
     setFormData({
@@ -57,6 +120,10 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
       product: '',
       quantity: 1,
       price: 0,
+      salesChannel: 'store',
+      paymentStatus: 'paid',
+      paymentMethod: 'cash',
+      accountId: '2',
     });
     setErrors({});
   };
@@ -100,6 +167,10 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
       newErrors.price = 'Precio debe ser mayor a 0';
     }
 
+    if (formData.paymentStatus === 'paid' && !formData.accountId.trim()) {
+      newErrors.accountId = 'Cuenta es requerida para pagos marcados como pagados';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -122,21 +193,35 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      console.log('Creating sale with data:', formData);
-      const newSale = addSale(formData);
-      console.log('Sale created successfully:', newSale);
-      
-      if (onSuccess) {
-        onSuccess(newSale);
+      if (editingSale) {
+        // Update existing sale
+        console.log('Updating sale with data:', formData);
+        updateSale(editingSale.id, formData);
+        console.log('Sale updated successfully');
+        
+        if (onSuccess) {
+          onSuccess(editingSale);
+        } else {
+          alert(`¡Venta actualizada exitosamente! Nº ${editingSale.number}`);
+        }
       } else {
-        alert(`¡Venta registrada exitosamente! Nº ${newSale.number}`);
+        // Create new sale
+        console.log('Creating sale with data:', formData);
+        const newSale = addSale(formData);
+        console.log('Sale created successfully:', newSale);
+        
+        if (onSuccess) {
+          onSuccess(newSale);
+        } else {
+          alert(`¡Venta registrada exitosamente! Nº ${newSale.number}`);
+        }
       }
       
       handleClose();
     } catch (error) {
-      console.error('Error creating sale:', error);
+      console.error(`Error ${editingSale ? 'updating' : 'creating'} sale:`, error);
       console.error('Form data was:', formData);
-      alert('Error al crear la venta. Inténtalo de nuevo.');
+      alert(`Error al ${editingSale ? 'actualizar' : 'crear'} la venta. Inténtalo de nuevo.`);
     } finally {
       setLoading(false);
     }
@@ -155,7 +240,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
         loading={loading}
         disabled={loading}
       >
-        Crear Venta
+{editingSale ? 'Actualizar Venta' : 'Crear Venta'}
       </Button>
     </>
   );
@@ -164,7 +249,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Nueva Venta"
+      title={editingSale ? "Editar Venta" : "Nueva Venta"}
       size="md"
       closeOnBackdrop={!loading}
       footer={footer}
@@ -263,6 +348,100 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
           disabled={loading}
           error={errors.price}
         />
+
+        {/* Canal de Venta */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Canal de Venta
+          </label>
+          <select
+            value={formData.salesChannel}
+            onChange={(e) => setFormData(prev => ({ ...prev, salesChannel: e.target.value as any }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={loading}
+          >
+            {SALES_CHANNELS.map((channel) => (
+              <option key={channel.value} value={channel.value}>
+                {channel.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Estado de Pago */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Estado de Pago
+            <span className="text-red-500 ml-1">*</span>
+          </label>
+          <select
+            value={formData.paymentStatus}
+            onChange={(e) => setFormData(prev => ({ ...prev, paymentStatus: e.target.value as any }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={loading}
+          >
+            {PAYMENT_STATUS.map((status) => (
+              <option key={status.value} value={status.value}>
+                {status.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Método de Pago */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Método de Pago
+          </label>
+          <select
+            value={formData.paymentMethod}
+            onChange={(e) => setFormData(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={loading}
+          >
+            {PAYMENT_METHODS.map((method) => (
+              <option key={method.value} value={method.value}>
+                {method.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Cuenta (solo si el pago está marcado como pagado) */}
+        {formData.paymentStatus === 'paid' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Cuenta de Depósito
+              <span className="text-red-500 ml-1">*</span>
+            </label>
+            <select
+              value={formData.accountId}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, accountId: e.target.value }));
+                if (errors.accountId) {
+                  setErrors(prev => ({ ...prev, accountId: undefined }));
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.accountId ? 'border-red-500' : 'border-gray-300'
+              }`}
+              disabled={loading}
+            >
+              <option value="">Seleccionar cuenta...</option>
+              {AVAILABLE_ACCOUNTS.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name} ({account.type})
+                </option>
+              ))}
+            </select>
+            {errors.accountId && (
+              <p className="text-sm text-red-600 mt-1">{errors.accountId}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              El monto se agregará automáticamente al balance de esta cuenta
+            </p>
+          </div>
+        )}
 
         {/* Total */}
         <div className="border-t pt-4">

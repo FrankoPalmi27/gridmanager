@@ -14,8 +14,21 @@ export interface Account {
   description?: string;
 }
 
+// Transaction interface
+export interface Transaction {
+  id: string;
+  accountId: string;
+  type: 'income' | 'expense';
+  amount: number;
+  description: string;
+  date: string;
+  category?: string;
+  reference?: string;
+}
+
 // LocalStorage keys
 const ACCOUNTS_STORAGE_KEY = 'gridmanager_accounts';
+const TRANSACTIONS_STORAGE_KEY = 'gridmanager_transactions';
 
 // LocalStorage utilities
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
@@ -88,17 +101,76 @@ const initialAccounts: Account[] = [
   }
 ];
 
+// Initial transactions data
+const initialTransactions: Transaction[] = [
+  {
+    id: '1',
+    accountId: '1',
+    type: 'income',
+    amount: 25000,
+    description: 'Venta VTA-2024-001 - Juan Pérez',
+    date: '2024-01-20',
+    category: 'Ventas',
+    reference: 'VTA-2024-001'
+  },
+  {
+    id: '2',
+    accountId: '1',
+    type: 'expense',
+    amount: 5000,
+    description: 'Compra insumos oficina',
+    date: '2024-01-19',
+    category: 'Gastos Operativos',
+    reference: 'FAC-001'
+  },
+  {
+    id: '3',
+    accountId: '2',
+    type: 'income',
+    amount: 15000,
+    description: 'Pago en efectivo - María García',
+    date: '2024-01-18',
+    category: 'Ventas',
+    reference: 'VTA-2024-002'
+  },
+  {
+    id: '4',
+    accountId: '1',
+    type: 'expense',
+    amount: 8000,
+    description: 'Servicios públicos',
+    date: '2024-01-17',
+    category: 'Servicios',
+    reference: 'SERV-001'
+  },
+  {
+    id: '5',
+    accountId: '3',
+    type: 'income',
+    amount: 1200,
+    description: 'Venta internacional',
+    date: '2024-01-16',
+    category: 'Ventas',
+    reference: 'VTA-2024-003'
+  }
+];
+
 interface AccountsStore {
   accounts: Account[];
+  transactions: Transaction[];
   addAccount: (accountData: Omit<Account, 'id' | 'createdDate'>) => Account;
   updateAccount: (id: string, updatedData: Partial<Account>) => void;
   deleteAccount: (id: string) => void;
   setAccounts: (accounts: Account[]) => void;
   getActiveAccounts: () => Account[];
+  addTransaction: (transactionData: Omit<Transaction, 'id'>) => Transaction;
+  getTransactionsByAccount: (accountId: string) => Transaction[];
+  getAllTransactions: () => Transaction[];
 }
 
 export const useAccountsStore = create<AccountsStore>((set, get) => ({
   accounts: loadFromStorage(ACCOUNTS_STORAGE_KEY, initialAccounts),
+  transactions: loadFromStorage(TRANSACTIONS_STORAGE_KEY, initialTransactions),
 
   addAccount: (accountData) => {
     const newAccount: Account = {
@@ -142,5 +214,30 @@ export const useAccountsStore = create<AccountsStore>((set, get) => ({
   getActiveAccounts: () => {
     const state = get();
     return state.accounts.filter(account => account.active);
+  },
+
+  addTransaction: (transactionData) => {
+    const newTransaction: Transaction = {
+      ...transactionData,
+      id: Date.now().toString()
+    };
+
+    set((state) => {
+      const newTransactions = [newTransaction, ...state.transactions];
+      saveToStorage(TRANSACTIONS_STORAGE_KEY, newTransactions);
+      return { transactions: newTransactions };
+    });
+    
+    return newTransaction;
+  },
+
+  getTransactionsByAccount: (accountId) => {
+    const state = get();
+    return state.transactions.filter(transaction => transaction.accountId === accountId);
+  },
+
+  getAllTransactions: () => {
+    const state = get();
+    return state.transactions;
   }
 }));

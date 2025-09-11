@@ -264,101 +264,143 @@ export function SalesPage() {
         </div>
       </div>
 
-      {/* Sales List */}
-      <div className="space-y-4">
-        {filteredSales.map((sale, index) => (
-          <div
-            key={sale.id}
-            className="card p-6 hover:shadow-lg transition-all duration-300 group animate-stagger"
-            style={{ animationDelay: `${index * 50}ms` }}
-          >
-            <div className="flex items-center justify-between">
-              {/* Main info */}
-              <div className="flex items-center gap-4 flex-1">
-                {/* Client avatar */}
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
-                    <span className="text-primary-700 font-semibold text-sm">
-                      {sale.client.avatar}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Sale details */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-1">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {sale.number}
-                    </h3>
+      {/* Sales Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Lista de Ventas</h3>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Venta
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cliente
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Fecha
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Items
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estado
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredSales.map((sale) => (
+                <tr key={sale.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">{sale.number}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-primary-700 font-semibold text-xs">
+                          {sale.client.avatar}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-900">{sale.client.name}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {new Date(sale.date).toLocaleDateString('es-AR')}
+                    </div>
+                    {sale.seller && (
+                      <div className="text-sm text-gray-500">
+                        Vendedor: {sale.seller.initials}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{sale.items} productos</div>
+                    {sale.salesChannel && (
+                      <div className="text-sm text-gray-500 capitalize">
+                        Canal: {sale.salesChannel === 'store' ? 'Tienda' : 
+                               sale.salesChannel === 'online' ? 'Online' :
+                               sale.salesChannel === 'phone' ? 'Teléfono' :
+                               sale.salesChannel === 'whatsapp' ? 'WhatsApp' : 'Otro'}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {formatCurrency(sale.amount)}
+                    </div>
+                    {sale.paymentMethod && (
+                      <div className="text-sm text-gray-500 capitalize">
+                        {sale.paymentMethod === 'cash' ? 'Efectivo' :
+                         sale.paymentMethod === 'transfer' ? 'Transferencia' :
+                         sale.paymentMethod === 'card' ? 'Tarjeta' :
+                         sale.paymentMethod === 'check' ? 'Cheque' : 'Otro'}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <SaleStatusBadge status={sale.status as 'completed' | 'pending' | 'cancelled' | 'draft'} />
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <UserCircleIcon className="h-4 w-4" />
-                      {sale.client.name}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <CalendarDaysIcon className="h-4 w-4" />
-                      {new Date(sale.date).toLocaleDateString()}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <CurrencyDollarIcon className="h-4 w-4" />
-                      {sale.items} artículos
-                    </span>
-                  </div>
-                </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-blue-600 hover:text-blue-900 mr-2"
+                      onClick={() => handleEditSale(sale)}
+                    >
+                      Editar
+                    </Button>
+                    <QuickActions sale={sale} onEdit={handleEditSale} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-                {/* Sparkline */}
-                <div className="hidden md:flex items-center gap-3">
-                  <div className="text-right">
-                    <div className="text-sm text-gray-500">Tendencia 7 días</div>
-                    <MiniSparkline data={sale.sparkline} />
-                  </div>
-                </div>
-
-                {/* Amount */}
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(sale.amount)}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Vendedor: {sale.seller.initials}
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick actions */}
-              <QuickActions sale={sale} onEdit={handleEditSale} />
+        {filteredSales.length === 0 && (
+          <div className="text-center py-12">
+            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No hay ventas</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {searchTerm || activeFilter !== 'all' ? 'No se encontraron ventas con esos filtros.' : 'Comienza registrando tu primera venta.'}
+            </p>
+            <div className="mt-6">
+              <Button 
+                onClick={() => {
+                  setEditingSale(null);
+                  setIsNewSaleModalOpen(true);
+                }}
+                variant="primary"
+                className="inline-flex items-center gap-2"
+              >
+                <PlusIcon className="h-5 w-5" />
+                Nueva Venta
+              </Button>
             </div>
           </div>
-        ))}
+        )}
       </div>
-
-      {/* Empty state */}
-      {filteredSales.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-6xl mb-4">🛒</div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No se encontraron ventas
-          </h3>
-          <p className="text-gray-500 mb-6">
-            {searchTerm
-              ? `No hay ventas que coincidan con "${searchTerm}"`
-              : 'Crea tu primera venta para comenzar'}
-          </p>
-          <Button 
-            onClick={() => {
-              setEditingSale(null);
-              setIsNewSaleModalOpen(true);
-            }}
-            variant="primary"
-            className="inline-flex items-center gap-2"
-          >
-            <PlusIcon className="h-5 w-5" />
-            Nueva Venta
-          </Button>
-        </div>
-      )}
       
       <SalesForm 
         isOpen={isNewSaleModalOpen} 

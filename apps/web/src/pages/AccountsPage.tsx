@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { Input } from '../components/ui/Input';
+import { TransferModal } from '../components/forms/TransferModal';
 import { formatCurrency, formatDate } from '../lib/formatters';
 
 // Account interface
@@ -628,6 +629,7 @@ export function AccountsPage() {
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | undefined>();
 
   // Save accounts to localStorage whenever they change
@@ -706,6 +708,52 @@ export function AccountsPage() {
           ...acc,
           balance: acc.balance + balanceChange
         };
+      }
+      return acc;
+    }));
+  };
+
+  const handleTransferCompleted = (transfer: {
+    fromAccountId: string;
+    toAccountId: string;
+    amount: number;
+    description: string;
+    date: string;
+    reference: string;
+  }) => {
+    // Create two transactions: one outgoing from source, one incoming to destination
+    const outgoingTransaction: Transaction = {
+      id: `${Date.now()}-out`,
+      accountId: transfer.fromAccountId,
+      type: 'expense',
+      amount: transfer.amount,
+      description: `${transfer.description} (Transferencia a otra cuenta)`,
+      date: transfer.date,
+      category: 'Transferencia Entre Cuentas',
+      reference: transfer.reference
+    };
+
+    const incomingTransaction: Transaction = {
+      id: `${Date.now()}-in`,
+      accountId: transfer.toAccountId,
+      type: 'income',
+      amount: transfer.amount,
+      description: `${transfer.description} (Transferencia desde otra cuenta)`,
+      date: transfer.date,
+      category: 'Transferencia Entre Cuentas',
+      reference: transfer.reference
+    };
+
+    // Add both transactions
+    setTransactions(prev => [incomingTransaction, outgoingTransaction, ...prev]);
+    
+    // Update both account balances
+    setAccounts(prev => prev.map(acc => {
+      if (acc.id === transfer.fromAccountId) {
+        return { ...acc, balance: acc.balance - transfer.amount };
+      }
+      if (acc.id === transfer.toAccountId) {
+        return { ...acc, balance: acc.balance + transfer.amount };
       }
       return acc;
     }));
@@ -909,13 +957,25 @@ export function AccountsPage() {
               <h2 className="text-xl font-semibold text-gray-900">Movimientos</h2>
               <p className="text-sm text-gray-500">Historial de transacciones</p>
             </div>
-            <Button
-              onClick={() => setIsTransactionModalOpen(true)}
-              variant="primary"
-            >
-              <span className="mr-2">+</span>
-              Nueva Transacción
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setIsTransferModalOpen(true)}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                Transferir
+              </Button>
+              <Button
+                onClick={() => setIsTransactionModalOpen(true)}
+                variant="primary"
+              >
+                <span className="mr-2">+</span>
+                Nueva Transacción
+              </Button>
+            </div>
           </div>
 
           {/* Filters */}
@@ -1051,6 +1111,13 @@ export function AccountsPage() {
           closeModal={() => setIsTransactionModalOpen(false)}
           accounts={accounts}
           onTransactionSaved={handleTransactionSaved}
+        />
+
+        <TransferModal
+          isOpen={isTransferModalOpen}
+          closeModal={() => setIsTransferModalOpen(false)}
+          accounts={accounts}
+          onTransferCompleted={handleTransferCompleted}
         />
       </div>
     </div>

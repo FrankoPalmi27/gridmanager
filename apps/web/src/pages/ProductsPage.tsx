@@ -1,81 +1,19 @@
 import React, { useState } from 'react';
 import { Button } from '../components/ui/Button';
-import { Modal } from '../components/ui/Modal';
 import { StatusBadge, StockStatusBadge } from '../components/ui/StatusBadge';
 import { Input } from '../components/ui/Input';
+import { ProductForm } from '../components/forms/ProductForm';
+import { useProductsStore, Product } from '../store/productsStore';
 import { formatCurrency } from '../lib/formatters';
 
-interface Product {
-  id: string;
-  sku: string;
-  name: string;
-  category: string;
-  brand: string;
-  cost: number;
-  price: number;
-  stock: number;
-  minStock: number;
-  status: 'active' | 'inactive';
-}
-
-const mockProducts: Product[] = [
-  {
-    id: '1',
-    sku: 'PROD-001',
-    name: 'Producto Ejemplo A',
-    category: 'Electrónicos',
-    brand: 'Marca A',
-    cost: 100,
-    price: 150,
-    stock: 25,
-    minStock: 10,
-    status: 'active'
-  },
-  {
-    id: '2',
-    sku: 'PROD-002',
-    name: 'Producto Ejemplo B',
-    category: 'Hogar',
-    brand: 'Marca B',
-    cost: 50,
-    price: 75,
-    stock: 5,
-    minStock: 15,
-    status: 'active'
-  },
-  {
-    id: '3',
-    sku: 'PROD-003',
-    name: 'Producto Ejemplo C',
-    category: 'Ropa',
-    brand: 'Marca C',
-    cost: 30,
-    price: 50,
-    stock: 100,
-    minStock: 20,
-    status: 'active'
-  },
-  {
-    id: '4',
-    sku: 'PROD-004',
-    name: 'Producto Descontinuado',
-    category: 'Varios',
-    brand: 'Marca D',
-    cost: 20,
-    price: 40,
-    stock: 0,
-    minStock: 5,
-    status: 'inactive'
-  }
-];
-
 export function ProductsPage() {
-  const [products] = useState<Product[]>(mockProducts);
+  const { products, stats, updateProduct, deleteProduct } = useProductsStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProductFormOpen, setIsProductFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
+  const categories = ['all', ...stats.categories];
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -84,12 +22,19 @@ export function ProductsPage() {
     return matchesSearch && matchesCategory;
   });
 
-  const lowStockProducts = products.filter(p => p.stock <= p.minStock && p.status === 'active');
-  const activeProducts = products.filter(p => p.status === 'active');
-  const totalValue = products.reduce((sum, p) => sum + (p.cost * p.stock), 0);
-
   const handleNewProduct = () => {
-    setIsModalOpen(true);
+    setEditingProduct(null);
+    setIsProductFormOpen(true);
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setIsProductFormOpen(true);
+  };
+
+  const handleCloseForm = () => {
+    setIsProductFormOpen(false);
+    setEditingProduct(null);
   };
 
   return (
@@ -120,7 +65,7 @@ export function ProductsPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Total Productos</p>
-                <p className="text-lg font-semibold text-gray-900">{products.length}</p>
+                <p className="text-lg font-semibold text-gray-900">{stats.totalProducts}</p>
               </div>
             </div>
           </div>
@@ -134,7 +79,7 @@ export function ProductsPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Productos Activos</p>
-                <p className="text-lg font-semibold text-gray-900">{activeProducts.length}</p>
+                <p className="text-lg font-semibold text-gray-900">{stats.activeProducts}</p>
               </div>
             </div>
           </div>
@@ -148,7 +93,7 @@ export function ProductsPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Stock Bajo</p>
-                <p className="text-lg font-semibold text-red-600">{lowStockProducts.length}</p>
+                <p className="text-lg font-semibold text-red-600">{stats.lowStockProducts}</p>
               </div>
             </div>
           </div>
@@ -162,7 +107,7 @@ export function ProductsPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Valor Inventario</p>
-                <p className="text-lg font-semibold text-green-600">{formatCurrency(totalValue)}</p>
+                <p className="text-lg font-semibold text-green-600">{formatCurrency(stats.totalValue)}</p>
               </div>
             </div>
           </div>
@@ -206,22 +151,22 @@ export function ProductsPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Producto
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Categoría
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Precios
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Stock
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
@@ -229,50 +174,63 @@ export function ProductsPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredProducts.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
-                          <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                           </svg>
                         </div>
-                        <div className="ml-4">
+                        <div className="ml-3">
                           <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                          <div className="text-sm text-gray-500">SKU: {product.sku}</div>
+                          <div className="text-xs text-gray-500">SKU: {product.sku}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{product.category}</div>
-                      <div className="text-sm text-gray-500">{product.brand}</div>
+                      <div className="text-xs text-gray-500">{product.brand}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">Venta: {formatCurrency(product.price)}</div>
-                      <div className="text-sm text-gray-500">Costo: {formatCurrency(product.cost)}</div>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{formatCurrency(product.price)}</div>
+                      <div className="text-xs text-gray-500">Costo: {formatCurrency(product.cost)}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className={`text-sm font-medium ${
                         product.stock <= product.minStock 
                           ? 'text-red-600' 
                           : 'text-gray-900'
                       }`}>
-                        {product.stock} unidades
+                        {product.stock}
                       </div>
-                      <div className="text-sm text-gray-500">Mín: {product.minStock}</div>
-                      <div className="mt-1">
-                        <StockStatusBadge currentStock={product.stock} minStock={product.minStock} />
-                      </div>
+                      <div className="text-xs text-gray-500">Mín: {product.minStock}</div>
+                      <StockStatusBadge currentStock={product.stock} minStock={product.minStock} />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <StatusBadge variant={product.status === 'active' ? 'active' : 'inactive'} dot>
                         {product.status === 'active' ? 'Activo' : 'Inactivo'}
                       </StatusBadge>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-900 mr-2">
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-blue-600 hover:text-blue-900 mr-1 px-2 py-1"
+                        onClick={() => handleEditProduct(product)}
+                      >
                         Editar
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-gray-600 hover:text-gray-900 px-2 py-1"
+                        onClick={() => {
+                          const newStock = prompt('Nuevo stock:', product.stock.toString());
+                          if (newStock !== null && !isNaN(Number(newStock))) {
+                            updateProduct(product.id, { stock: parseInt(newStock) });
+                          }
+                        }}
+                      >
                         Stock
                       </Button>
                     </td>
@@ -296,23 +254,12 @@ export function ProductsPage() {
         </div>
       </div>
 
-      {/* New Product Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Nuevo Producto"
-        size="md"
-        footer={
-          <Button
-            onClick={() => setIsModalOpen(false)}
-            variant="secondary"
-          >
-            Cerrar
-          </Button>
-        }
-      >
-        <p className="text-gray-600">Funcionalidad en desarrollo...</p>
-      </Modal>
+      {/* Product Form */}
+      <ProductForm 
+        isOpen={isProductFormOpen} 
+        onClose={handleCloseForm}
+        editingProduct={editingProduct}
+      />
     </div>
   );
 }

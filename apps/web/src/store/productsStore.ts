@@ -810,6 +810,7 @@ interface ProductsStore {
   updateStock: (id: string, newStock: number) => void;
   setProducts: (products: Product[]) => void;
   setCategories: (categories: Category[]) => void;
+  resetToInitialProducts: () => void;
   stats: {
     totalProducts: number;
     activeProducts: number;
@@ -884,6 +885,11 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
   setCategories: (categories) => {
     set({ categories });
     saveToStorage(CATEGORIES_STORAGE_KEY, categories);
+  },
+
+  resetToInitialProducts: () => {
+    set({ products: initialProducts });
+    saveToStorage(PRODUCTS_STORAGE_KEY, initialProducts);
   },
 
   get stats() {

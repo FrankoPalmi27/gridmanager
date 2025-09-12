@@ -13,7 +13,7 @@ type SortField = 'name' | 'category' | 'brand' | 'price' | 'cost' | 'stock' | 's
 type SortOrder = 'asc' | 'desc';
 
 export function ProductsPage() {
-  const { products, addProduct, stats, updateProduct, deleteProduct, categories, setCategories } = useProductsStore();
+  const { products, addProduct, stats, updateProduct, deleteProduct, categories, setCategories, resetToInitialProducts } = useProductsStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
@@ -95,6 +95,13 @@ export function ProductsPage() {
           <div className="flex gap-3">
             {activeTab === 'productos' ? (
               <>
+                <Button
+                  onClick={() => resetToInitialProducts()}
+                  variant="outline"
+                  className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                >
+                  Cargar Productos CSV
+                </Button>
                 <Button
                   onClick={() => setIsCategoryModalOpen(true)}
                   variant="secondary"

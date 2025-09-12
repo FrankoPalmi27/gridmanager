@@ -278,6 +278,9 @@ export function ProductsPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    SKU
+                  </th>
                   <th 
                     className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('name')}
@@ -291,6 +294,9 @@ export function ProductsPage() {
                       )}
                     </div>
                   </th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Descripción
+                  </th>
                   <th 
                     className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('category')}
@@ -298,6 +304,19 @@ export function ProductsPage() {
                     <div className="flex items-center gap-1">
                       <span>Categoría</span>
                       {sortField === 'category' && (
+                        <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    onClick={() => handleSort('brand')}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Marca</span>
+                      {sortField === 'brand' && (
                         <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                         </svg>
@@ -352,6 +371,9 @@ export function ProductsPage() {
                 {sortedAndFilteredProducts.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{product.sku}</div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center">
                           <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -360,13 +382,19 @@ export function ProductsPage() {
                         </div>
                         <div className="ml-3">
                           <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                          <div className="text-xs text-gray-500">SKU: {product.sku}</div>
                         </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-900 max-w-xs truncate">
+                        {product.description || <span className="text-gray-400 italic">Sin descripción</span>}
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{product.category}</div>
-                      <div className="text-xs text-gray-500">{product.brand}</div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{product.brand}</div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{formatCurrency(product.price)}</div>
@@ -439,6 +467,7 @@ export function ProductsPage() {
             onCategoriesUpdate={setCategories}
             productsByCategory={productsByCategory}
             allCategoryNames={stats.categories}
+            products={products}
           />
         </TabsContent>
 

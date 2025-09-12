@@ -2,22 +2,24 @@ import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { StatusBadge } from '../ui/StatusBadge';
-import { Category } from '../../store/productsStore';
-import { formatDate } from '../../lib/formatters';
+import { Category, Product } from '../../store/productsStore';
+import { formatDate, formatCurrency } from '../../lib/formatters';
 
 interface CategoriesTableProps {
   categories: Category[];
   onCategoriesUpdate: (categories: Category[]) => void;
   productsByCategory: Record<string, number>;
   allCategoryNames: string[];
+  products: Product[]; // Add products array to show category details
 }
 
-export function CategoriesTable({ categories, onCategoriesUpdate, productsByCategory, allCategoryNames }: CategoriesTableProps) {
+export function CategoriesTable({ categories, onCategoriesUpdate, productsByCategory, allCategoryNames, products }: CategoriesTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   // Combine all categories (custom + derived from products)
   const getAllCategoriesForTable = () => {
@@ -146,6 +148,20 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
     setEditingCategory(newCategory);
     setEditName('Nueva Categoría');
     setEditDescription('');
+  };
+
+  const toggleCategoryExpansion = (categoryName: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(categoryName)) {
+      newExpanded.delete(categoryName);
+    } else {
+      newExpanded.add(categoryName);
+    }
+    setExpandedCategories(newExpanded);
+  };
+
+  const getCategoryProducts = (categoryName: string) => {
+    return products.filter(product => product.category === categoryName);
   };
 
   return (
@@ -311,13 +327,32 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-2">
                           <StatusBadge 
                             variant={productsByCategory[category.name] > 0 ? 'active' : 'inactive'}
                             dot
                           >
                             {productsByCategory[category.name] || 0} productos
                           </StatusBadge>
+                          {productsByCategory[category.name] > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleCategoryExpansion(category.name)}
+                              className="p-1 h-6 w-6 text-gray-500 hover:text-gray-700"
+                            >
+                              <svg 
+                                className={`h-4 w-4 transition-transform ${
+                                  expandedCategories.has(category.name) ? 'rotate-180' : ''
+                                }`} 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </Button>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -346,6 +381,46 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
                     </>
                   )}
                 </tr>
+                {expandedCategories.has(category.name) && (
+                  <tr className="bg-gray-50">
+                    <td colSpan={5} className="px-4 py-4">
+                      <div className="pl-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">
+                          Productos en "{category.name}":
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {getCategoryProducts(category.name).map((product) => (
+                            <div key={product.id} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                              <div className="flex justify-between items-start mb-2">
+                                <h5 className="text-sm font-medium text-gray-900 truncate pr-2">
+                                  {product.name}
+                                </h5>
+                                <StatusBadge variant={product.status === 'active' ? 'active' : 'inactive'}>
+                                  {product.status === 'active' ? 'Activo' : 'Inactivo'}
+                                </StatusBadge>
+                              </div>
+                              <div className="space-y-1 text-xs text-gray-600">
+                                <div><span className="font-medium">SKU:</span> {product.sku}</div>
+                                <div><span className="font-medium">Marca:</span> {product.brand}</div>
+                                <div><span className="font-medium">Precio:</span> {formatCurrency(product.price)}</div>
+                                <div><span className="font-medium">Stock:</span> {product.stock} unidades</div>
+                                {product.description && (
+                                  <div className="mt-2">
+                                    <span className="font-medium">Descripción:</span>
+                                    <p className="text-gray-500 mt-1 line-clamp-2">{product.description}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {getCategoryProducts(category.name).length === 0 && (
+                          <p className="text-sm text-gray-500 italic">No hay productos en esta categoría</p>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
               ))}
             </tbody>
           </table>

@@ -46,7 +46,9 @@
       "Bash(find:*)",
       "Bash(npx tsc:*)",
       "Bash(git rm:*)",
-      "Read(//c/Users/franc/Desktop/**)"
+      "Read(//c/Users/franc/Desktop/**)",
+      "Bash(del calculadoraMELI.html)",
+      "Bash(npm audit --audit-level=moderate)"
     ],
     "deny": [],
     "ask": []

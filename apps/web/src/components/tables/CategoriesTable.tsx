@@ -220,7 +220,8 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredCategories.map((category) => (
-                <tr key={category.id} className="hover:bg-gray-50">
+                <React.Fragment key={category.id}>
+                  <tr className="hover:bg-gray-50">
                   {editingCategory?.id === category.id ? (
                     <>
                       <td className="px-4 py-3">
@@ -380,47 +381,48 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
                       </td>
                     </>
                   )}
-                </tr>
-                {expandedCategories.has(category.name) && (
-                  <tr className="bg-gray-50">
-                    <td colSpan={5} className="px-4 py-4">
-                      <div className="pl-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-3">
-                          Productos en "{category.name}":
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {getCategoryProducts(category.name).map((product) => (
-                            <div key={product.id} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-                              <div className="flex justify-between items-start mb-2">
-                                <h5 className="text-sm font-medium text-gray-900 truncate pr-2">
-                                  {product.name}
-                                </h5>
-                                <StatusBadge variant={product.status === 'active' ? 'active' : 'inactive'}>
-                                  {product.status === 'active' ? 'Activo' : 'Inactivo'}
-                                </StatusBadge>
-                              </div>
-                              <div className="space-y-1 text-xs text-gray-600">
-                                <div><span className="font-medium">SKU:</span> {product.sku}</div>
-                                <div><span className="font-medium">Marca:</span> {product.brand}</div>
-                                <div><span className="font-medium">Precio:</span> {formatCurrency(product.price)}</div>
-                                <div><span className="font-medium">Stock:</span> {product.stock} unidades</div>
-                                {product.description && (
-                                  <div className="mt-2">
-                                    <span className="font-medium">Descripción:</span>
-                                    <p className="text-gray-500 mt-1 line-clamp-2">{product.description}</p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        {getCategoryProducts(category.name).length === 0 && (
-                          <p className="text-sm text-gray-500 italic">No hay productos en esta categoría</p>
-                        )}
-                      </div>
-                    </td>
                   </tr>
-                )}
+                  {expandedCategories.has(category.name) && (
+                    <tr className="bg-gray-50">
+                      <td colSpan={5} className="px-4 py-4">
+                        <div className="pl-4">
+                          <h4 className="text-sm font-medium text-gray-700 mb-3">
+                            Productos en "{category.name}":
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {getCategoryProducts(category.name).map((product) => (
+                              <div key={product.id} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                                <div className="flex justify-between items-start mb-2">
+                                  <h5 className="text-sm font-medium text-gray-900 truncate pr-2">
+                                    {product.name}
+                                  </h5>
+                                  <StatusBadge variant={product.status === 'active' ? 'active' : 'inactive'}>
+                                    {product.status === 'active' ? 'Activo' : 'Inactivo'}
+                                  </StatusBadge>
+                                </div>
+                                <div className="space-y-1 text-xs text-gray-600">
+                                  <div><span className="font-medium">SKU:</span> {product.sku}</div>
+                                  <div><span className="font-medium">Marca:</span> {product.brand}</div>
+                                  <div><span className="font-medium">Precio:</span> {formatCurrency(product.price)}</div>
+                                  <div><span className="font-medium">Stock:</span> {product.stock} unidades</div>
+                                  {product.description && (
+                                    <div className="mt-2">
+                                      <span className="font-medium">Descripción:</span>
+                                      <p className="text-gray-500 mt-1 line-clamp-2">{product.description}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {getCategoryProducts(category.name).length === 0 && (
+                            <p className="text-sm text-gray-500 italic">No hay productos en esta categoría</p>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

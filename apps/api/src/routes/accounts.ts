@@ -41,7 +41,13 @@ router.get('/', authenticate, allRoles, async (req: AuthenticatedRequest, res, n
       active: z.string().transform((val) => val === 'true').optional(),
     }).parse(req.query);
 
-    const { skip, take, page, limit, search, sortBy, sortOrder } = getPaginationParams(filters);
+    const { skip, take, search, sortBy, sortOrder } = getPaginationParams({
+      page: filters.page ?? 1,
+      limit: filters.limit ?? 10,
+      search: filters.search,
+      sortBy: filters.sortBy,
+      sortOrder: filters.sortOrder
+    });
 
     const where = {
       ...(filters.type ? { type: filters.type } : {}),
@@ -73,8 +79,8 @@ router.get('/', authenticate, allRoles, async (req: AuthenticatedRequest, res, n
           currentBalance: Number(account.currentBalance),
         })),
         total,
-        page,
-        limit
+        filters.page ?? 1,
+        filters.limit ?? 10
       ),
     });
   } catch (error) {
@@ -87,7 +93,7 @@ router.get('/:id', authenticate, allRoles, validateParams(IdParamSchema), async 
     const { id } = req.params;
 
     const account = await prisma.account.findUnique({
-      where: { id },
+      where: { id: id! },
     });
 
     if (!account) {
@@ -235,7 +241,7 @@ router.post('/:id/movements', authenticate, allRoles, validateParams(IdParamSche
     const { amount, description, reference } = req.body;
 
     const account = await prisma.account.findUnique({
-      where: { id },
+      where: { id: id! },
     });
 
     if (!account) {

@@ -9,15 +9,15 @@ export interface ApiError extends Error {
 
 export const errorHandler = (
   error: ApiError,
-  req: Request,
+  _req: Request,
   res: Response,
-  next: NextFunction
-) => {
+  _next: NextFunction
+): void => {
   console.error('Error:', error);
 
   // Zod validation errors
   if (error instanceof ZodError) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       error: 'Validation error',
       details: error.errors.map(err => ({
@@ -25,38 +25,43 @@ export const errorHandler = (
         message: err.message,
       })),
     });
+    return;
   }
 
   // Prisma errors
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     switch (error.code) {
       case 'P2002':
-        return res.status(409).json({
+        res.status(409).json({
           success: false,
           error: 'Unique constraint violation',
           details: error.meta,
         });
+        return;
       case 'P2025':
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           error: 'Record not found',
         });
+        return;
       default:
-        return res.status(500).json({
+        res.status(500).json({
           success: false,
           error: 'Database error',
           details: process.env.NODE_ENV === 'development' ? error.message : undefined,
         });
+        return;
     }
   }
 
   // Custom API errors
   if (error.statusCode) {
-    return res.status(error.statusCode).json({
+    res.status(error.statusCode).json({
       success: false,
       error: error.message,
       details: error.details,
     });
+    return;
   }
 
   // Default error

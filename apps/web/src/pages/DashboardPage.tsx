@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSales } from '../store/SalesContext';
 import { useProductsStore } from '../store/productsStore';
+import { useCustomersStore } from '../store/customersStore';
 import { useSuppliersStore } from '../stores/suppliersStore';
 import { SalesForm } from '../components/forms/SalesForm';
+import { ProductForm } from '../components/forms/ProductForm';
 import { Button } from '../components/ui/Button';
 import { formatCurrency } from '../lib/formatters';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface DashboardPageProps {
   onNavigate?: (page: string) => void;
@@ -14,10 +17,12 @@ interface ExchangeRate {
   compra: number;
   venta: number;
   fecha: string;
+  hora: string;
 }
 
 export function DashboardPage({ onNavigate }: DashboardPageProps) {
   const [showNewSaleModal, setShowNewSaleModal] = useState(false);
+  const [showNewProductModal, setShowNewProductModal] = useState(false);
   const [exchangeRate, setExchangeRate] = useState<ExchangeRate | null>(null);
   const [realStats, setRealStats] = useState({
     totalAvailable: 0,
@@ -25,9 +30,41 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
     clientDebts: 0,
     supplierDebts: 0
   });
-  const { dashboardStats } = useSales();
+  const { dashboardStats, sales } = useSales();
   const { products } = useProductsStore();
+  const { customers } = useCustomersStore();
   const { suppliers } = useSuppliersStore();
+
+  // Generate sales evolution data
+  const salesEvolutionData = useMemo(() => {
+    const last30Days = Array.from({ length: 30 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (29 - i));
+      return date;
+    });
+
+    return last30Days.map(date => {
+      const dayStart = new Date(date);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(date);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const daySales = sales.filter(sale => {
+        const saleDate = new Date(sale.date);
+        return saleDate >= dayStart && saleDate <= dayEnd;
+      });
+
+      const totalAmount = daySales.reduce((sum, sale) => sum + sale.amount, 0);
+      const totalQuantity = daySales.reduce((sum, sale) => sum + sale.items, 0);
+
+      return {
+        date: date.toLocaleDateString('es-AR', { month: 'short', day: 'numeric' }),
+        facturado: totalAmount,
+        cantidad: totalQuantity,
+        ventas: daySales.length
+      };
+    });
+  }, [sales]);
 
   // Get low stock products
   const lowStockProducts = products.filter(p => p.stock <= p.minStock && p.status === 'active');
@@ -40,19 +77,23 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
         const response = await fetch('https://api.bluelytics.com.ar/v2/latest');
         const data = await response.json();
         if (data.oficial) {
+          const now = new Date();
           setExchangeRate({
             compra: data.oficial.value_buy,
             venta: data.oficial.value_sell,
-            fecha: new Date().toLocaleDateString()
+            fecha: now.toLocaleDateString(),
+            hora: now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
           });
         }
       } catch (error) {
         console.error('Error fetching exchange rate:', error);
         // Fallback data
+        const now = new Date();
         setExchangeRate({
           compra: 920.00,
           venta: 940.00,
-          fecha: new Date().toLocaleDateString()
+          fecha: now.toLocaleDateString(),
+          hora: now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
         });
       }
     };
@@ -241,6 +282,28 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           <p className="text-gray-600">Resumen de tu negocio en tiempo real</p>
         </div>
 
+        {/* Exchange Rate - Moved to top */}
+        {exchangeRate && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-2xl border border-blue-200 shadow-sm mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">💵 Tipo de Cambio USD - Banco Nación</h3>
+                <p className="text-sm text-gray-600">Actualizado: {exchangeRate.fecha} a las {exchangeRate.hora}</p>
+              </div>
+              <div className="flex gap-6">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Compra</p>
+                  <p className="text-2xl font-bold text-green-600">${exchangeRate.compra.toFixed(2)}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Venta</p>
+                  <p className="text-2xl font-bold text-blue-600">${exchangeRate.venta.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Enhanced Stats Cards - Bigger */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
           {enhancedStats.map((stat, index) => (
@@ -270,27 +333,6 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           ))}
         </div>
 
-        {/* Exchange Rate from Banco Nación */}
-        {exchangeRate && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-2xl border border-blue-200 shadow-sm mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">💵 Tipo de Cambio USD - Banco Nación</h3>
-                <p className="text-sm text-gray-600">Actualizado: {exchangeRate.fecha}</p>
-              </div>
-              <div className="flex gap-6">
-                <div className="text-center">
-                  <p className="text-sm text-gray-600">Compra</p>
-                  <p className="text-2xl font-bold text-green-600">${exchangeRate.compra.toFixed(2)}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-gray-600">Venta</p>
-                  <p className="text-2xl font-bold text-blue-600">${exchangeRate.venta.toFixed(2)}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Stock Alerts - Moved Higher */}
         {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
@@ -353,80 +395,122 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           </div>
         )}
 
-        {/* Recent Activity & Quick Actions */}
+        {/* Quick Actions */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">⚡ Acciones Rápidas</h3>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Button 
+              onClick={() => setShowNewSaleModal(true)}
+              variant="outline"
+              className="flex flex-col items-center p-4 h-auto bg-green-50 hover:bg-green-100 border-green-200 text-gray-700"
+            >
+              <span className="text-2xl mb-2">💰</span>
+              <span className="text-sm font-medium">Nueva Venta</span>
+            </Button>
+            <Button 
+              onClick={() => handleModuleClick('customers')}
+              variant="outline"
+              className="flex flex-col items-center p-4 h-auto bg-blue-50 hover:bg-blue-100 border-blue-200 text-gray-700"
+            >
+              <span className="text-2xl mb-2">👤</span>
+              <span className="text-sm font-medium">Nuevo Cliente</span>
+            </Button>
+            <Button 
+              onClick={() => setShowNewProductModal(true)}
+              variant="outline"
+              className="flex flex-col items-center p-4 h-auto bg-purple-50 hover:bg-purple-100 border-purple-200 text-gray-700"
+            >
+              <span className="text-2xl mb-2">📦</span>
+              <span className="text-sm font-medium">Nuevo Producto</span>
+            </Button>
+            <Button 
+              onClick={() => handleModuleClick('reports')}
+              variant="outline"
+              className="flex flex-col items-center p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200 text-gray-700"
+            >
+              <span className="text-2xl mb-2">📊</span>
+              <span className="text-sm font-medium">Ver Reportes</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Sales Evolution Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Recent Activity */}
+          {/* Sales by Amount Chart */}
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">📊 Actividad Reciente</h3>
-              <span className="text-sm text-gray-500">Últimas 24h</span>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">📈 Evolución de Ventas por Facturado</h3>
+              <p className="text-sm text-gray-500">Últimos 30 días - Total facturado por día</p>
             </div>
-            <div className="space-y-4">
-              <div className="flex items-center p-3 bg-green-50 rounded-lg">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Nueva venta registrada</p>
-                  <p className="text-xs text-gray-500">Cliente: Juan Pérez - $2,500</p>
-                </div>
-                <span className="text-xs text-gray-400">10:30 AM</span>
-              </div>
-              <div className="flex items-center p-3 bg-blue-50 rounded-lg">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Producto agregado al inventario</p>
-                  <p className="text-xs text-gray-500">SKU-001 - Stock: 50 unidades</p>
-                </div>
-                <span className="text-xs text-gray-400">09:15 AM</span>
-              </div>
-              <div className="flex items-center p-3 bg-orange-50 rounded-lg">
-                <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Stock bajo detectado</p>
-                  <p className="text-xs text-gray-500">Producto B - Solo quedan 5 unidades</p>
-                </div>
-                <span className="text-xs text-gray-400">08:45 AM</span>
-              </div>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={salesEvolutionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 12 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => [formatCurrency(value), 'Facturado']}
+                    labelStyle={{ color: '#374151' }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="facturado" 
+                    stroke="#10b981" 
+                    strokeWidth={3}
+                    dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Quick Actions */}
+          {/* Sales by Quantity Chart */}
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">⚡ Acciones Rápidas</h3>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">📊 Evolución de Ventas por Cantidad</h3>
+              <p className="text-sm text-gray-500">Últimos 30 días - Productos vendidos por día</p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Button 
-                onClick={() => setShowNewSaleModal(true)}
-                variant="outline"
-                className="flex flex-col items-center p-4 h-auto bg-green-50 hover:bg-green-100 border-green-200 text-gray-700"
-              >
-                <span className="text-2xl mb-2">💰</span>
-                <span className="text-sm font-medium">Nueva Venta</span>
-              </Button>
-              <Button 
-                onClick={() => handleModuleClick('customers')}
-                variant="outline"
-                className="flex flex-col items-center p-4 h-auto bg-blue-50 hover:bg-blue-100 border-blue-200 text-gray-700"
-              >
-                <span className="text-2xl mb-2">👤</span>
-                <span className="text-sm font-medium">Nuevo Cliente</span>
-              </Button>
-              <Button 
-                onClick={() => handleModuleClick('products')}
-                variant="outline"
-                className="flex flex-col items-center p-4 h-auto bg-purple-50 hover:bg-purple-100 border-purple-200 text-gray-700"
-              >
-                <span className="text-2xl mb-2">📦</span>
-                <span className="text-sm font-medium">Nuevo Producto</span>
-              </Button>
-              <Button 
-                onClick={() => handleModuleClick('reports')}
-                variant="outline"
-                className="flex flex-col items-center p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200 text-gray-700"
-              >
-                <span className="text-2xl mb-2">📊</span>
-                <span className="text-sm font-medium">Ver Reportes</span>
-              </Button>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={salesEvolutionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 12 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => `${value}`}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => [value, 'Productos vendidos']}
+                    labelStyle={{ color: '#374151' }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="cantidad" 
+                    stroke="#3b82f6" 
+                    strokeWidth={3}
+                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
@@ -458,12 +542,54 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
             ))}
           </div>
         </div>
+
+        {/* Recent Activity - Moved to bottom, responsive */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm order-last lg:order-none">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">📊 Actividad Reciente</h3>
+            <span className="text-sm text-gray-500">Últimas 24h</span>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center p-3 bg-green-50 rounded-lg">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">Nueva venta registrada</p>
+                <p className="text-xs text-gray-500">Cliente: Juan Pérez - $2,500</p>
+              </div>
+              <span className="text-xs text-gray-400">10:30 AM</span>
+            </div>
+            <div className="flex items-center p-3 bg-blue-50 rounded-lg">
+              <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">Producto agregado al inventario</p>
+                <p className="text-xs text-gray-500">SKU-001 - Stock: 50 unidades</p>
+              </div>
+              <span className="text-xs text-gray-400">09:15 AM</span>
+            </div>
+            <div className="flex items-center p-3 bg-orange-50 rounded-lg">
+              <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">Stock bajo detectado</p>
+                <p className="text-xs text-gray-500">Producto B - Solo quedan 5 unidades</p>
+              </div>
+              <span className="text-xs text-gray-400">08:45 AM</span>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Modal Forms */}
       <SalesForm 
         isOpen={showNewSaleModal}
         onClose={() => setShowNewSaleModal(false)}
       />
+      
+      <ProductForm 
+        isOpen={showNewProductModal}
+        onClose={() => setShowNewProductModal(false)}
+        editingProduct={null}
+      />
+      
     </div>
   );
 }

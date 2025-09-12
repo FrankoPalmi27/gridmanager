@@ -23,7 +23,7 @@ export function CustomersPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
+    celular: '',
     balance: 0,
     status: 'active' as 'active' | 'inactive',
     address: '',
@@ -59,7 +59,7 @@ export function CustomersPage() {
     setFormData({
       name: '',
       email: '',
-      phone: '',
+      celular: '',
       balance: 0,
       status: 'active',
       address: '',
@@ -82,8 +82,8 @@ export function CustomersPage() {
       errors.email = 'El email no es válido';
     }
     
-    if (!formData.phone.trim()) {
-      errors.phone = 'El teléfono es requerido';
+    if (!formData.celular.trim()) {
+      errors.celular = 'El celular es requerido';
     }
     
     // Check if email already exists (excluding current customer when editing)
@@ -139,7 +139,7 @@ export function CustomersPage() {
     setFormData({
       name: customer.name,
       email: customer.email,
-      phone: customer.phone,
+      celular: customer.celular || customer.phone,
       balance: customer.balance,
       status: customer.status,
       address: customer.address || '',
@@ -182,6 +182,65 @@ export function CustomersPage() {
           </Button>
         </div>
 
+        {/* Customer Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-500">Total Clientes</h3>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalCustomers}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-500">Clientes Activos</h3>
+                <p className="text-2xl font-bold text-gray-900">{stats.activeCustomers}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-500">Balance Positivo</h3>
+                <p className="text-2xl font-bold text-gray-900">{stats.positiveBalance}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-500">Balance Negativo</h3>
+                <p className="text-2xl font-bold text-gray-900">{stats.negativeBalance}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Search */}
         <div className="mb-6">
           <div className="relative">
@@ -215,7 +274,10 @@ export function CustomersPage() {
                     Cliente
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Contacto
+                    Mail
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Celular
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Balance
@@ -232,22 +294,15 @@ export function CustomersPage() {
                 {filteredCustomers.map((customer) => (
                   <tr key={customer.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-600">
-                            {customer.name.charAt(0)}
-                          </span>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {customer.name}
-                          </div>
-                        </div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {customer.name}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{customer.email}</div>
-                      <div className="text-sm text-gray-500">{customer.phone}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{customer.celular || customer.phone}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className={`text-sm font-medium ${
@@ -291,19 +346,12 @@ export function CustomersPage() {
             {filteredCustomers.map((customer) => (
               <div key={customer.id} className="border-b border-gray-200 p-4 hover:bg-gray-50">
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3 flex-1">
-                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-base font-medium text-gray-600">
-                        {customer.name.charAt(0)}
-                      </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-base font-medium text-gray-900 truncate">
+                      {customer.name}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-base font-medium text-gray-900 truncate">
-                        {customer.name}
-                      </div>
-                      <div className="text-sm text-gray-500 truncate">{customer.email}</div>
-                      <div className="text-sm text-gray-500">{customer.phone}</div>
-                    </div>
+                    <div className="text-sm text-gray-500 truncate">{customer.email}</div>
+                    <div className="text-sm text-gray-500">{customer.celular || customer.phone}</div>
                   </div>
                   <div className="flex flex-col items-end space-y-2 ml-4">
                     <UserStatusBadge status={customer.status} />
@@ -462,22 +510,34 @@ export function CustomersPage() {
       >
         {viewingCustomer && (
           <div className="space-y-4">
-            <div className="flex items-center space-x-4 mb-6">
-              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
-                <span className="text-xl font-medium text-gray-600">
-                  {viewingCustomer.name.charAt(0)}
-                </span>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">{viewingCustomer.name}</h3>
-                <p className="text-gray-500">{viewingCustomer.email}</p>
-              </div>
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">{viewingCustomer.name}</h3>
+              <p className="text-gray-500">{viewingCustomer.email}</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Teléfono</label>
-                <p className="text-gray-900">{viewingCustomer.phone}</p>
+                <label className="text-sm font-medium text-gray-500">Email</label>
+                <p className="text-gray-900">{viewingCustomer.email}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Celular</label>
+                <div className="flex items-center gap-2">
+                  <p className="text-gray-900">{viewingCustomer.celular || viewingCustomer.phone}</p>
+                  {(viewingCustomer.celular || viewingCustomer.phone) && (
+                    <a
+                      href={`https://wa.me/${(viewingCustomer.celular || viewingCustomer.phone).replace(/\s/g, '').replace(/[^\d]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-md hover:bg-green-200 transition-colors"
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                      </svg>
+                      WhatsApp
+                    </a>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Estado</label>

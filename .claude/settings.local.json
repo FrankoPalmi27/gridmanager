@@ -48,7 +48,8 @@
       "Bash(git rm:*)",
       "Read(//c/Users/franc/Desktop/**)",
       "Bash(del calculadoraMELI.html)",
-      "Bash(npm audit --audit-level=moderate)"
+      "Bash(npm audit --audit-level=moderate)",
+      "Bash(git clean:*)"
     ],
     "deny": [],
     "ask": []

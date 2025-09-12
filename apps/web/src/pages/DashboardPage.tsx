@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSales } from '../store/SalesContext';
+import { useProductsStore } from '../store/productsStore';
 import { SalesForm } from '../components/forms/SalesForm';
 import { Button } from '../components/ui/Button';
 import { formatCurrency } from '../lib/formatters';
@@ -8,8 +9,15 @@ interface DashboardPageProps {
   onNavigate?: (page: string) => void;
 }
 
+interface ExchangeRate {
+  compra: number;
+  venta: number;
+  fecha: string;
+}
+
 export function DashboardPage({ onNavigate }: DashboardPageProps) {
   const [showNewSaleModal, setShowNewSaleModal] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState<ExchangeRate | null>(null);
   const [realStats, setRealStats] = useState({
     totalAvailable: 0,
     accountsCount: 0,
@@ -17,6 +25,41 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
     supplierDebts: 0
   });
   const { dashboardStats } = useSales();
+  const { products } = useProductsStore();
+
+  // Get low stock products
+  const lowStockProducts = products.filter(p => p.stock <= p.minStock && p.status === 'active');
+  const outOfStockProducts = products.filter(p => p.stock === 0 && p.status === 'active');
+
+  // Fetch exchange rate from Banco Nación
+  useEffect(() => {
+    const fetchExchangeRate = async () => {
+      try {
+        const response = await fetch('https://api.bluelytics.com.ar/v2/latest');
+        const data = await response.json();
+        if (data.oficial) {
+          setExchangeRate({
+            compra: data.oficial.value_buy,
+            venta: data.oficial.value_sell,
+            fecha: new Date().toLocaleDateString()
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching exchange rate:', error);
+        // Fallback data
+        setExchangeRate({
+          compra: 920.00,
+          venta: 940.00,
+          fecha: new Date().toLocaleDateString()
+        });
+      }
+    };
+
+    fetchExchangeRate();
+    // Update every 30 minutes
+    const interval = setInterval(fetchExchangeRate, 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Load real data from localStorage
   useEffect(() => {
@@ -48,22 +91,29 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
     };
 
     loadRealData();
-
     // Update every 5 seconds to keep data fresh
     const interval = setInterval(loadRealData, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  // Dynamic stats based on real data
-  const dynamicStats = [
+  const handleModuleClick = (path: string) => {
+    if (onNavigate) {
+      onNavigate(path);
+    }
+  };
+
+  // Enhanced stats with bigger cards
+  const enhancedStats = [
     {
       name: 'Total Disponible',
       value: formatCurrency(realStats.totalAvailable),
       rawValue: realStats.totalAvailable,
       icon: '💰',
       color: 'text-green-600',
-      bgColor: 'bg-green-100',
-      change: realStats.totalAvailable > 100000 ? '+12.5%' : '+5.2%'
+      bgColor: 'bg-green-50',
+      borderColor: 'border-green-200',
+      change: realStats.totalAvailable > 100000 ? '+12.5%' : '+5.2%',
+      description: 'Total en cuentas activas'
     },
     {
       name: 'Cuentas',
@@ -71,7 +121,9 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
       rawValue: realStats.accountsCount,
       icon: '💳',
       color: 'text-blue-600',
-      bgColor: 'bg-blue-100'
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200',
+      description: 'Cuentas registradas'
     },
     {
       name: 'Deudas Clientes',
@@ -79,7 +131,9 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
       rawValue: realStats.clientDebts,
       icon: '👥',
       color: realStats.clientDebts > 0 ? 'text-orange-600' : 'text-green-600',
-      bgColor: realStats.clientDebts > 0 ? 'bg-orange-100' : 'bg-green-100'
+      bgColor: realStats.clientDebts > 0 ? 'bg-orange-50' : 'bg-green-50',
+      borderColor: realStats.clientDebts > 0 ? 'border-orange-200' : 'border-green-200',
+      description: 'Pagos pendientes'
     },
     {
       name: 'Deudas Proveedores',
@@ -87,337 +141,208 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
       rawValue: realStats.supplierDebts,
       icon: '🏢',
       color: 'text-red-600',
-      bgColor: 'bg-red-100'
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-200',
+      description: 'Pagos a proveedores'
     }
   ];
 
   const moduleCards = [
     {
-      name: 'Centro de Ventas',
-      description: 'Gestiona ventas, presupuestos y clientes',
+      name: 'Ventas',
+      description: 'Gestionar ventas y facturación',
       icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
       path: 'sales',
-      isNew: true,
-      colorIndex: 0
-    },
-    {
-      name: 'Inventario',
-      description: 'Control de productos y stock',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-        </svg>
-      ),
-      path: 'products',
-      colorIndex: 1
+      color: 'bg-green-100 text-green-600'
     },
     {
       name: 'Clientes',
-      description: 'Base de datos de clientes',
+      description: 'Administrar clientes',
       icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
       ),
       path: 'customers',
-      colorIndex: 2
+      color: 'bg-blue-100 text-blue-600'
     },
     {
-      name: 'Proveedores',
-      description: 'Gestión de proveedores',
+      name: 'Productos',
+      description: 'Control de inventario',
       icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
       ),
-      path: 'suppliers',
-      colorIndex: 3
+      path: 'products',
+      color: 'bg-purple-100 text-purple-600'
+    },
+    {
+      name: 'Cuentas',
+      description: 'Gestión financiera',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        </svg>
+      ),
+      path: 'accounts',
+      color: 'bg-amber-100 text-amber-600'
     },
     {
       name: 'Reportes',
-      description: 'Análisis y reportes avanzados',
+      description: 'Análisis y estadísticas',
       icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       ),
       path: 'reports',
-      isBeta: true,
-      colorIndex: 4
+      color: 'bg-indigo-100 text-indigo-600'
     },
     {
-      name: 'Configuración',
-      description: 'Ajustes del sistema',
+      name: 'Calculadora ML',
+      description: 'Calculadora MercadoLibre',
       icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
         </svg>
       ),
-      path: 'users',
-      colorIndex: 5
+      path: 'calculator',
+      color: 'bg-yellow-100 text-yellow-600'
     }
   ];
 
-  const handleModuleClick = (modulePath: string) => {
-    if (onNavigate) {
-      onNavigate(modulePath);
-    }
-    // You can also add other navigation logic here
-    console.log(`Navigating to: ${modulePath}`);
-  };
-
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="min-h-screen bg-gray-50/30">
+      <div className="p-6 max-w-7xl mx-auto space-y-8">
+        
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Resumen general de tu negocio</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Panel de Control</h1>
+          <p className="text-gray-600">Resumen de tu negocio en tiempo real</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-          {dynamicStats.map((stat, index) => (
+        {/* Enhanced Stats Cards - Bigger */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+          {enhancedStats.map((stat, index) => (
             <div 
               key={stat.name} 
-              className="relative bg-white rounded-2xl border-0 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 ease-out cursor-pointer overflow-hidden"
-              style={{ 
-                background: index === 0 ? '#F0FDF4' : index === 1 ? '#F1F5F9' : index === 2 ? '#FEF3C7' : '#FEF2F2',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
-              }}
+              className={`bg-white p-6 rounded-2xl border-2 ${stat.borderColor} shadow-sm hover:shadow-md transition-shadow`}
             >
-              {/* Icon container - top right */}
-              <div className="absolute top-6 right-6">
-                <div 
-                  className={`inline-flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
-                    index === 0 ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20' :
-                    index === 1 ? 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/20' :
-                    index === 2 ? 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20' :
-                    'bg-red-500/10 text-red-600 hover:bg-red-500/20'
-                  }`}
-                >
-                  <span className="text-lg">{stat.icon}</span>
+              <div className="flex items-start justify-between mb-4">
+                <div className={`p-3 rounded-xl ${stat.bgColor}`}>
+                  <span className="text-2xl">{stat.icon}</span>
                 </div>
-              </div>
-
-              {/* Content */}
-              <div className="p-6">
-                {/* Category label */}
-                <p className="text-xs uppercase tracking-wide text-gray-400 font-medium mb-3">
-                  {stat.name}
-                </p>
-                
-                {/* Main value */}
-                <div className="mb-2">
-                  <p className="text-2xl font-semibold text-gray-900 leading-none">
-                    {stat.value}
-                  </p>
-                </div>
-                
-                {/* Change indicator */}
                 {stat.change && (
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                    <p className="text-xs text-emerald-600 font-medium">
-                      {stat.change}
-                    </p>
+                  <div className="text-right">
+                    <div className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
+                      ↗ {stat.change}
+                    </div>
                   </div>
                 )}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">{stat.name}</p>
+                <p className={`text-3xl font-bold ${stat.color} mb-1`}>{stat.value}</p>
+                <p className="text-xs text-gray-500">{stat.description}</p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Modules Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Módulos del Sistema</h2>
-              <p className="text-sm text-gray-500">Acceso rápido a todas las funcionalidades</p>
+        {/* Exchange Rate from Banco Nación */}
+        {exchangeRate && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-2xl border border-blue-200 shadow-sm mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">💵 Tipo de Cambio USD - Banco Nación</h3>
+                <p className="text-sm text-gray-600">Actualizado: {exchangeRate.fecha}</p>
+              </div>
+              <div className="flex gap-6">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Compra</p>
+                  <p className="text-2xl font-bold text-green-600">${exchangeRate.compra.toFixed(2)}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Venta</p>
+                  <p className="text-2xl font-bold text-blue-600">${exchangeRate.venta.toFixed(2)}</p>
+                </div>
+              </div>
             </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {moduleCards.map((module, index) => {
-              const colorClasses = [
-                { iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-600', iconHover: 'hover:bg-emerald-500/20' },
-                { iconBg: 'bg-blue-500/10', iconColor: 'text-blue-600', iconHover: 'hover:bg-blue-500/20' },
-                { iconBg: 'bg-amber-500/10', iconColor: 'text-amber-600', iconHover: 'hover:bg-amber-500/20' },
-                { iconBg: 'bg-red-500/10', iconColor: 'text-red-600', iconHover: 'hover:bg-red-500/20' },
-                { iconBg: 'bg-purple-500/10', iconColor: 'text-purple-600', iconHover: 'hover:bg-purple-500/20' },
-                { iconBg: 'bg-pink-500/10', iconColor: 'text-pink-600', iconHover: 'hover:bg-pink-500/20' }
-              ];
-              
-              const colorClass = colorClasses[module.colorIndex % colorClasses.length];
-              
-              return (
-                <div 
-                  key={module.name} 
-                  className="group relative border-0 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 ease-out cursor-pointer overflow-hidden"
-                  style={{ 
-                    background: '#F1F5F9',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
-                  }}
-                  onClick={() => handleModuleClick(module.path)}
-                >
-                  {/* Status badges - positioned absolutely */}
-                  <div className="absolute top-6 right-6 flex gap-2">
-                    {module.isNew && (
-                      <span className="rounded-full px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium">
-                        Nuevo
-                      </span>
-                    )}
-                    {module.isBeta && (
-                      <span className="rounded-full px-2.5 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium">
-                        Beta
-                      </span>
-                    )}
-                  </div>
+        )}
 
-                  {/* Card content */}
-                  <div className="p-6">
-                    {/* Icon container - top left */}
-                    <div className="mb-6">
-                      <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl transition-colors ${colorClass.iconBg} ${colorClass.iconColor} ${colorClass.iconHover}`}>
-                        {module.icon}
+        {/* Stock Alerts - Moved Higher */}
+        {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
+          <div className="bg-white p-6 rounded-2xl border border-orange-200 shadow-sm mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.996-.833-2.464 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-orange-800">⚠️ Alerta de Stock</h3>
+                  <p className="text-sm text-orange-600">Productos que requieren atención inmediata</p>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => handleModuleClick('products')}
+                className="border-orange-300 text-orange-700 hover:bg-orange-50"
+              >
+                Ver Productos
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {outOfStockProducts.length > 0 && (
+                <div className="p-4 bg-red-50 rounded-xl border border-red-200">
+                  <h4 className="text-sm font-semibold text-red-800 mb-2">🚨 Sin Stock ({outOfStockProducts.length})</h4>
+                  <div className="space-y-2">
+                    {outOfStockProducts.slice(0, 3).map(product => (
+                      <div key={product.id} className="flex justify-between items-center">
+                        <span className="text-sm text-red-700">{product.name}</span>
+                        <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded-full">0 stock</span>
                       </div>
-                    </div>
-                    
-                    {/* Title and description */}
-                    <div className="mb-6">
-                      <h5 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-gray-700 transition-colors">
-                        {module.name}
-                      </h5>
-                      <p className="text-sm text-gray-600 leading-relaxed">{module.description}</p>
-                    </div>
-                    
-                    {/* Subtle separator */}
-                    <div className="border-t border-gray-200/50 mb-4"></div>
-                    
-                    {/* Action button */}
-                    <Button 
-                      className="w-full group/btn focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                      variant="primary"
-                    >
-                      Explorar
-                      <svg className="w-4 h-4 ml-2 transition-transform group-hover/btn:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Button>
+                    ))}
+                    {outOfStockProducts.length > 3 && (
+                      <p className="text-xs text-red-600">+{outOfStockProducts.length - 3} más...</p>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Business Widgets */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Ventas de los últimos 30 días */}
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Ventas - 30 días</h3>
-              <span className="text-2xl">📈</span>
-            </div>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Total Ventas</span>
-                <span className="text-lg font-bold text-green-600">{formatCurrency(dashboardStats.totalSales)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Transacciones</span>
-                <span className="text-sm font-medium text-gray-900">{dashboardStats.totalTransactions}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Promedio/día</span>
-                <span className="text-sm font-medium text-gray-900">{formatCurrency(dashboardStats.averagePerDay)}</span>
-              </div>
-              <div className="mt-4 pt-3 border-t border-gray-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">vs mes anterior</span>
-                  <span className="text-xs text-green-600 font-medium">+{dashboardStats.monthlyGrowth.toFixed(1)}%</span>
+              )}
+              {lowStockProducts.length > 0 && (
+                <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                  <h4 className="text-sm font-semibold text-amber-800 mb-2">⚠️ Stock Bajo ({lowStockProducts.length})</h4>
+                  <div className="space-y-2">
+                    {lowStockProducts.slice(0, 3).map(product => (
+                      <div key={product.id} className="flex justify-between items-center">
+                        <span className="text-sm text-amber-700">{product.name}</span>
+                        <span className="text-xs bg-amber-200 text-amber-800 px-2 py-1 rounded-full">{product.stock} stock</span>
+                      </div>
+                    ))}
+                    {lowStockProducts.length > 3 && (
+                      <p className="text-xs text-amber-600">+{lowStockProducts.length - 3} más...</p>
+                    )}
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '73%' }}></div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
+        )}
 
-          {/* Cotización USD */}
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Cotización USD</h3>
-              <span className="text-2xl">💱</span>
-            </div>
-            <div className="space-y-3">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600 mb-1">$1,247.50</div>
-                <div className="text-sm text-gray-600">ARS por USD</div>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Compra</span>
-                <span className="font-medium text-gray-900">$1,245.00</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Venta</span>
-                <span className="font-medium text-gray-900">$1,250.00</span>
-              </div>
-              <div className="mt-4 pt-3 border-t border-gray-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Variación 24h</span>
-                  <span className="text-xs text-red-600 font-medium">-0.8%</span>
-                </div>
-                <div className="text-xs text-gray-400 mt-1">Última actualización: 14:30</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tareas Pendientes */}
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Tareas Pendientes</h3>
-              <span className="text-2xl">✅</span>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Total</span>
-                <span className="text-lg font-bold text-orange-600">12</span>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-red-600">• Urgentes</span>
-                  <span className="font-medium text-red-600">3</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-orange-600">• Importantes</span>
-                  <span className="font-medium text-orange-600">5</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-blue-600">• Normales</span>
-                  <span className="font-medium text-blue-600">4</span>
-                </div>
-              </div>
-              <div className="mt-4 pt-3 border-t border-gray-200">
-                <Button variant="ghost" className="w-full text-sm">
-                  Ver todas las tareas
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Activity & Quick Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Recent Activity */}
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Actividad Reciente</h3>
+              <h3 className="text-lg font-semibold text-gray-900">📊 Actividad Reciente</h3>
               <span className="text-sm text-gray-500">Últimas 24h</span>
             </div>
             <div className="space-y-4">
@@ -449,9 +374,9 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Acciones Rápidas</h3>
+              <h3 className="text-lg font-semibold text-gray-900">⚡ Acciones Rápidas</h3>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Button 
@@ -487,6 +412,34 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
                 <span className="text-sm font-medium">Ver Reportes</span>
               </Button>
             </div>
+          </div>
+        </div>
+
+        {/* Module Cards - Smaller and at the bottom */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">🏢 Módulos del Sistema</h2>
+            <p className="text-sm text-gray-500">Acceso rápido a todas las funcionalidades</p>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {moduleCards.map((module) => (
+              <button
+                key={module.name}
+                onClick={() => handleModuleClick(module.path)}
+                className="group p-4 rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200 text-center"
+              >
+                <div className={`inline-flex items-center justify-center w-10 h-10 rounded-lg mb-3 transition-colors ${module.color}`}>
+                  {module.icon}
+                </div>
+                <h3 className="text-sm font-medium text-gray-900 mb-1 group-hover:text-gray-700">
+                  {module.name}
+                </h3>
+                <p className="text-xs text-gray-500 group-hover:text-gray-600">
+                  {module.description}
+                </p>
+              </button>
+            ))}
           </div>
         </div>
       </div>

@@ -244,71 +244,77 @@ export function SalesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Centro de Ventas</h1>
-          <p className="text-gray-600">Gestiona tus ventas, presupuestos y clientes</p>
-        </div>
-        <Button 
-          onClick={() => {
-            setEditingSale(null);
-            setIsNewSaleModalOpen(true);
-          }}
-          variant="primary"
-          className="flex items-center gap-2"
-        >
-          <PlusIcon className="h-5 w-5" />
-          Nueva Venta
-        </Button>
-      </div>
-
-      {/* Filters and Search */}
-      <div className="flex flex-col lg:flex-row gap-4">
-        {/* Quick filters */}
-        <div className="flex gap-2 flex-wrap">
-          {filters.map((filter) => (
-            <Button
-              key={filter.id}
-              onClick={() => setActiveFilter(filter.id)}
-              variant={activeFilter === filter.id ? "primary" : "ghost"}
-              className="flex items-center gap-2"
-            >
-              {filter.label}
-              {filter.id === 'pending' && (
-                <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">
-                  {pendingSalesCount}
-                </span>
-              )}
-            </Button>
-          ))}
-        </div>
-
-        {/* Search and filters */}
-        <div className="flex gap-3 lg:ml-auto">
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar por cliente..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
+    <div className="flex-1 overflow-auto">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Ventas</h1>
+            <p className="text-gray-600">Gestiona tus ventas, presupuestos y clientes</p>
           </div>
-          <Button variant="outline" className="flex items-center gap-2">
-            <FunnelIcon className="h-5 w-5" />
-            Filtros
+          <Button 
+            onClick={() => {
+              setEditingSale(null);
+              setIsNewSaleModalOpen(true);
+            }}
+            variant="primary"
+          >
+            + Nueva Venta
           </Button>
         </div>
-      </div>
 
-      {/* Sales Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Lista de Ventas</h3>
+        {/* Filters and Search */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          {/* Quick filters */}
+          <div className="flex gap-2 flex-wrap">
+            {filters.map((filter) => (
+              <Button
+                key={filter.id}
+                onClick={() => setActiveFilter(filter.id)}
+                variant={activeFilter === filter.id ? "primary" : "ghost"}
+                className="flex items-center gap-2"
+              >
+                {filter.label}
+                {filter.id === 'pending' && (
+                  <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">
+                    {pendingSalesCount}
+                  </span>
+                )}
+              </Button>
+            ))}
+          </div>
+
+          {/* Search and filters */}
+          <div className="flex gap-3 lg:ml-auto">
+            <div className="relative flex-1 sm:flex-none">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar por cliente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
+              />
+            </div>
+            <select
+              value={activeFilter}
+              onChange={(e) => setActiveFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {filters.map((filter) => (
+                <option key={filter.id} value={filter.id}>
+                  {filter.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+
+        {/* Sales Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Lista de Ventas</h3>
+          </div>
         
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -394,7 +400,7 @@ export function SalesPage() {
                     <div className="flex items-center">
                       <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                         <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c0 .621-.504 1.125-1.125 1.125H18a2.25 2.25 0 01-2.25-2.25M6 7.5H3v11.25A2.25 2.25 0 005.25 21h11.25A2.25 2.25 0 0018 18.75v-1.875" />
                         </svg>
                       </div>
                       <div className="ml-4">
@@ -404,12 +410,15 @@ export function SalesPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center mr-3">
-                        <span className="text-primary-700 font-semibold text-xs">
+                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-gray-600">
                           {sale.client.avatar}
                         </span>
                       </div>
-                      <div className="text-sm text-gray-900">{sale.client.name}</div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">{sale.client.name}</div>
+                        <div className="text-sm text-gray-500">{sale.client.email}</div>
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -450,15 +459,17 @@ export function SalesPage() {
                     <SaleStatusBadge status={sale.status as 'completed' | 'pending' | 'cancelled' | 'draft'} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-blue-600 hover:text-blue-900 mr-2"
+                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-900 mr-2"
                       onClick={() => handleEditSale(sale)}
                     >
                       Editar
                     </Button>
-                    <QuickActions sale={sale} onEdit={handleEditSale} />
+                    <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-900 mr-2">
+                      Facturar
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
+                      Ver
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -490,6 +501,7 @@ export function SalesPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
       
       <SalesForm 

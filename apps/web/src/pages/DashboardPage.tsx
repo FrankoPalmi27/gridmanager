@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSales } from '../store/SalesContext';
 import { useProductsStore } from '../store/productsStore';
+import { useSuppliersStore } from '../stores/suppliersStore';
 import { SalesForm } from '../components/forms/SalesForm';
 import { Button } from '../components/ui/Button';
 import { formatCurrency } from '../lib/formatters';
@@ -26,6 +27,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
   });
   const { dashboardStats } = useSales();
   const { products } = useProductsStore();
+  const { suppliers } = useSuppliersStore();
 
   // Get low stock products
   const lowStockProducts = products.filter(p => p.stock <= p.minStock && p.status === 'active');
@@ -76,8 +78,10 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           .filter((sale: any) => sale.paymentStatus === 'pending' || sale.paymentStatus === 'partial')
           .reduce((sum: number, sale: any) => sum + sale.amount, 0);
 
-        // For now, use mock data for supplier debts (this would come from a purchases module)
-        const supplierDebts = 18500;
+        // Calculate real supplier debts from suppliers store
+        const supplierDebts = suppliers
+          .filter(supplier => supplier.active && supplier.currentBalance < 0) // Solo balances negativos (les debemos)
+          .reduce((sum: number, supplier: any) => sum + Math.abs(supplier.currentBalance), 0);
 
         setRealStats({
           totalAvailable,
@@ -94,7 +98,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
     // Update every 5 seconds to keep data fresh
     const interval = setInterval(loadRealData, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [suppliers]);
 
   const handleModuleClick = (path: string) => {
     if (onNavigate) {
@@ -204,6 +208,17 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
       color: 'bg-indigo-100 text-indigo-600'
     },
     {
+      name: 'Proveedores',
+      description: 'Gestión de proveedores',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      ),
+      path: 'suppliers',
+      color: 'bg-orange-100 text-orange-600'
+    },
+    {
       name: 'Calculadora ML',
       description: 'Calculadora MercadoLibre',
       icon: (
@@ -231,7 +246,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           {enhancedStats.map((stat, index) => (
             <div 
               key={stat.name} 
-              className={`bg-white p-6 rounded-2xl border-2 ${stat.borderColor} shadow-sm hover:shadow-md transition-shadow`}
+              className={`bg-white p-6 rounded-2xl border-2 ${stat.borderColor} shadow-sm hover:shadow-md transition-all ${stat.name === 'Deudas Proveedores' ? 'cursor-pointer hover:scale-105' : ''}`}
+              onClick={stat.name === 'Deudas Proveedores' ? () => handleModuleClick('suppliers') : undefined}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className={`p-3 rounded-xl ${stat.bgColor}`}>

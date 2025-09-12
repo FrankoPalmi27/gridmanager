@@ -49,7 +49,8 @@
       "Read(//c/Users/franc/Desktop/**)",
       "Bash(del calculadoraMELI.html)",
       "Bash(npm audit --audit-level=moderate)",
-      "Bash(git clean:*)"
+      "Bash(git clean:*)",
+      "Bash(del \"C:\\Users\\franc\\Desktop\\JOINT FORCE\\OBSIDIAN\\APPS\\Grid Manager\\vision_tenis.csv\")"
     ],
     "deny": [],
     "ask": []

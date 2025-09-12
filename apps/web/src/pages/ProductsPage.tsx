@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs'
 import { ProductForm } from '../components/forms/ProductForm';
 import { CategoryModal } from '../components/forms/CategoryModal';
 import { CategoriesTable } from '../components/tables/CategoriesTable';
+import BulkProductImport from '../components/BulkProductImport';
 import { useProductsStore, Product } from '../store/productsStore';
 import { formatCurrency } from '../lib/formatters';
 
@@ -22,6 +23,7 @@ export function ProductsPage() {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [activeTab, setActiveTab] = useState('productos');
+  const [showBulkImport, setShowBulkImport] = useState(false);
 
   const allCategories = ['all', ...stats.categories];
 
@@ -96,11 +98,11 @@ export function ProductsPage() {
             {activeTab === 'productos' ? (
               <>
                 <Button
-                  onClick={() => resetToInitialProducts()}
+                  onClick={() => setShowBulkImport(true)}
                   variant="outline"
                   className="text-orange-600 border-orange-600 hover:bg-orange-50"
                 >
-                  Cargar Productos CSV
+                  Importar CSV
                 </Button>
                 <Button
                   onClick={() => setIsCategoryModalOpen(true)}
@@ -147,6 +149,37 @@ export function ProductsPage() {
 
           {/* Products Tab Content */}
           <TabsContent value="productos">
+        
+        {/* Bulk Import Modal */}
+        {showBulkImport && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-0 m-4 max-w-4xl w-full max-h-[90vh] overflow-auto">
+              <div className="flex justify-between items-center p-6 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-900">Importación Masiva de Productos</h2>
+                <button
+                  onClick={() => setShowBulkImport(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="p-6">
+                <BulkProductImport 
+                  onImportComplete={(result) => {
+                    console.log('Import completed:', result);
+                    if (result.success.length > 0) {
+                      setTimeout(() => {
+                        setShowBulkImport(false);
+                      }, 2000);
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

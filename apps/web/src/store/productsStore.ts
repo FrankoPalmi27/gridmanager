@@ -805,6 +805,17 @@ interface ProductsStore {
     minStock: number;
     status?: 'active' | 'inactive';
   }) => Product;
+  addBulkProducts: (productsData: {
+    name: string;
+    category: string;
+    brand: string;
+    description?: string;
+    cost: number;
+    price: number;
+    stock: number;
+    minStock: number;
+    status?: 'active' | 'inactive';
+  }[]) => Product[];
   updateProduct: (id: string, updatedData: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
   updateStock: (id: string, newStock: number) => void;
@@ -847,6 +858,39 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
     });
     
     return newProduct;
+  },
+
+  addBulkProducts: (productsData) => {
+    const newProducts: Product[] = [];
+    let currentTimestamp = Date.now();
+
+    productsData.forEach((productData) => {
+      const newProduct: Product = {
+        id: currentTimestamp.toString(),
+        sku: generateSKU(productData.category, productData.name),
+        name: productData.name,
+        category: productData.category,
+        brand: productData.brand,
+        description: productData.description || '',
+        cost: productData.cost,
+        price: productData.price,
+        stock: productData.stock,
+        minStock: productData.minStock,
+        status: productData.status || 'active',
+        createdAt: new Date().toISOString()
+      };
+      
+      newProducts.push(newProduct);
+      currentTimestamp += 1; // Ensure unique IDs
+    });
+
+    set((state) => {
+      const updatedProducts = [...newProducts, ...state.products];
+      saveToStorage(PRODUCTS_STORAGE_KEY, updatedProducts);
+      return { products: updatedProducts };
+    });
+    
+    return newProducts;
   },
 
   updateProduct: (id, updatedData) => {

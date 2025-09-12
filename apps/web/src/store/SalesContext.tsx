@@ -30,6 +30,7 @@ interface SalesContextType {
     accountId?: string;
   }) => void;
   updateSaleStatus: (saleId: number, newStatus: 'completed' | 'pending' | 'cancelled') => void;
+  deleteSale: (saleId: number) => void;
   updateDashboardStats: (newStats: any) => void;
   setSales: (sales: Sale[]) => void;
 }

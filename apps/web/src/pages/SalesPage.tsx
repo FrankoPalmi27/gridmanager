@@ -14,6 +14,8 @@ import {
   XMarkIcon,
   CheckIcon,
   PencilIcon,
+  TrashIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 import { Button } from '../components/ui/Button';
 import { SaleStatusBadge } from '../components/ui/StatusBadge';
@@ -21,6 +23,7 @@ import { SalesForm } from '../components/forms/SalesForm';
 import { formatCurrency } from '../lib/formatters';
 import { useSales } from '../store/SalesContext';
 import { useProductsStore } from '../store/productsStore';
+import { generateInvoicePDF } from '../utils/pdfGenerator';
 
 // Mock data
 const salesData = [
@@ -34,6 +37,8 @@ const salesData = [
     seller: { name: 'Ana García', initials: 'AG' },
     items: 3,
     sparkline: [120, 150, 180, 200, 250],
+    cobrado: 25000,
+    aCobrar: 0,
   },
   {
     id: 2,
@@ -45,6 +50,8 @@ const salesData = [
     seller: { name: 'Carlos Ruiz', initials: 'CR' },
     items: 7,
     sparkline: [80, 100, 120, 140, 450],
+    cobrado: 20000,
+    aCobrar: 25000,
   },
   {
     id: 3,
@@ -56,6 +63,8 @@ const salesData = [
     seller: { name: 'Ana García', initials: 'AG' },
     items: 2,
     sparkline: [150, 140, 130, 120, 185],
+    cobrado: 0,
+    aCobrar: 18500,
   },
 ];
 
@@ -104,13 +113,20 @@ function MiniSparkline({ data }: { data: number[] }) {
 // Quick actions dropdown
 function QuickActions({ sale, onEdit }: { sale: any; onEdit: (sale: any) => void }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { updateSaleStatus } = useSales();
+  const { updateSaleStatus, deleteSale } = useSales();
+
+  const handleDeleteSale = () => {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar la venta ${sale.number}? Esta acción no se puede deshacer.`)) {
+      deleteSale(sale.id);
+    }
+  };
 
   const getStatusActions = () => {
     const baseActions = [
       { icon: PencilIcon, label: 'Editar', action: () => onEdit(sale) },
       { icon: DocumentDuplicateIcon, label: 'Duplicar', action: () => console.log('Duplicar', sale.id) },
       { icon: ShareIcon, label: 'Compartir', action: () => console.log('Compartir', sale.id) },
+      { icon: TrashIcon, label: 'Eliminar', action: handleDeleteSale, className: 'text-red-600 hover:text-red-700' },
     ];
 
     // Add status-specific actions
@@ -158,7 +174,9 @@ function QuickActions({ sale, onEdit }: { sale: any; onEdit: (sale: any) => void
                   action.action();
                   setIsOpen(false);
                 }}
-                className="justify-start gap-2 w-full px-4 py-2 text-sm h-auto"
+                className={`justify-start gap-2 w-full px-4 py-2 text-sm h-auto ${
+                  action.className || ''
+                }`}
               >
                 <action.icon className="h-4 w-4" />
                 {action.label}
@@ -175,6 +193,35 @@ function QuickActions({ sale, onEdit }: { sale: any; onEdit: (sale: any) => void
 type SortField = 'number' | 'client' | 'date' | 'amount' | 'status';
 type SortOrder = 'asc' | 'desc';
 
+// Status dropdown component
+function StatusDropdown({ sale }: { sale: any }) {
+  const { updateSaleStatus } = useSales();
+  
+  const handleStatusChange = (newStatus: 'completed' | 'pending' | 'cancelled') => {
+    updateSaleStatus(sale.id, newStatus);
+  };
+
+  const statusOptions = [
+    { value: 'completed', label: 'Completada', color: 'bg-green-100 text-green-800' },
+    { value: 'pending', label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800' },
+    { value: 'cancelled', label: 'Cancelada', color: 'bg-red-100 text-red-800' },
+  ];
+
+  return (
+    <select
+      value={sale.status}
+      onChange={(e) => handleStatusChange(e.target.value as 'completed' | 'pending' | 'cancelled')}
+      className="px-3 py-1 rounded-full text-sm font-medium border-0 bg-transparent focus:ring-2 focus:ring-blue-500"
+    >
+      {statusOptions.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export function SalesPage() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -188,8 +235,17 @@ export function SalesPage() {
   const { sales } = useSales();
   const { products } = useProductsStore();
   
+  // Migrate existing sales to include new payment fields if missing
+  const migratedSales = sales.map(sale => ({
+    ...sale,
+    cobrado: sale.cobrado !== undefined ? sale.cobrado : 
+             (sale.paymentStatus === 'paid' ? sale.amount : 0),
+    aCobrar: sale.aCobrar !== undefined ? sale.aCobrar : 
+             (sale.paymentStatus === 'paid' ? 0 : sale.amount)
+  }));
+
   // Combine mock data with real sales for display
-  const allSales = [...salesData, ...sales];
+  const allSales = [...salesData, ...migratedSales];
   
   // Calculate pending sales count dynamically
   const pendingSalesCount = allSales.filter(sale => sale.status === 'pending').length;
@@ -375,6 +431,12 @@ export function SalesPage() {
                     )}
                   </div>
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cobrado
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  A Cobrar
+                </th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort('status')}
@@ -398,23 +460,22 @@ export function SalesPage() {
                 <tr key={sale.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c0 .621-.504 1.125-1.125 1.125H18a2.25 2.25 0 01-2.25-2.25M6 7.5H3v11.25A2.25 2.25 0 005.25 21h11.25A2.25 2.25 0 0018 18.75v-1.875" />
-                        </svg>
-                      </div>
-                      <div className="ml-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => generateInvoicePDF(sale)}
+                        className="w-10 h-10 bg-blue-100 hover:bg-blue-200 rounded-lg flex items-center justify-center mr-4"
+                        title="Descargar proforma PDF"
+                      >
+                        <DocumentTextIcon className="w-5 h-5 text-blue-600" />
+                      </Button>
+                      <div>
                         <div className="text-sm font-medium text-gray-900">{sale.number}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-gray-600">
-                          {sale.client.avatar}
-                        </span>
-                      </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">{sale.client.name}</div>
                         <div className="text-sm text-gray-500">{sale.client.email}</div>
@@ -456,7 +517,17 @@ export function SalesPage() {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <SaleStatusBadge status={sale.status as 'completed' | 'pending' | 'cancelled' | 'draft'} />
+                    <div className="text-sm font-medium text-green-600">
+                      {formatCurrency(sale.cobrado || 0)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-orange-600">
+                      {formatCurrency(sale.aCobrar || 0)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <StatusDropdown sale={sale} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-900 mr-2"

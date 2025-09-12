@@ -23,6 +23,9 @@ export interface Sale {
   paymentStatus?: 'paid' | 'pending' | 'partial';
   paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other';
   accountId?: string; // ID de la cuenta donde se registró el pago
+  // Nuevos campos de tracking de pagos
+  cobrado: number; // Monto cobrado
+  aCobrar: number; // Monto pendiente de cobro
 }
 
 // Estado inicial del dashboard
@@ -133,6 +136,7 @@ export const useSalesStore = () => {
       return name.split(' ').map(n => n.charAt(0)).join('').toUpperCase();
     };
     
+    const totalAmount = saleData.quantity * saleData.price;
     const newSale: Sale = {
       id: Date.now(),
       number: `VTA-2024-${String(sales.length + 1).padStart(3, '0')}`,
@@ -141,7 +145,7 @@ export const useSalesStore = () => {
         email: `${saleData.client.toLowerCase().replace(' ', '.')}@email.com`,
         avatar: generateAvatar(saleData.client)
       },
-      amount: saleData.quantity * saleData.price,
+      amount: totalAmount,
       date: new Date().toISOString().split('T')[0],
       status: saleData.paymentStatus === 'paid' ? 'completed' : 'pending',
       items: saleData.quantity,
@@ -149,12 +153,15 @@ export const useSalesStore = () => {
         name: 'Usuario Actual',
         initials: 'UA'
       },
-      sparkline: [50, 80, 120, 150, saleData.quantity * saleData.price / 100],
+      sparkline: [50, 80, 120, 150, totalAmount / 100],
       // Nuevos campos
       salesChannel: saleData.salesChannel || 'store',
       paymentStatus: saleData.paymentStatus || 'pending',
       paymentMethod: saleData.paymentMethod || 'cash',
-      accountId: saleData.accountId
+      accountId: saleData.accountId,
+      // Inicializar campos de tracking de pagos
+      cobrado: saleData.paymentStatus === 'paid' ? totalAmount : 0,
+      aCobrar: saleData.paymentStatus === 'paid' ? 0 : totalAmount
     };
 
     // Agregar la nueva venta
@@ -192,6 +199,32 @@ export const useSalesStore = () => {
           : sale
       )
     );
+  };
+
+  const deleteSale = (saleId: number) => {
+    setSales(prevSales => {
+      const saleToDelete = prevSales.find(sale => sale.id === saleId);
+      if (saleToDelete) {
+        // Actualizar estadísticas del dashboard
+        setDashboardStats(prev => ({
+          totalSales: prev.totalSales - saleToDelete.amount,
+          totalTransactions: prev.totalTransactions - 1,
+          averagePerDay: Math.round((prev.totalSales - saleToDelete.amount) / 30),
+          monthlyGrowth: prev.monthlyGrowth
+        }));
+
+        // Si la venta tenía pagos registrados, revertir cambios en cuenta
+        if (saleToDelete.paymentStatus === 'paid' && saleToDelete.accountId) {
+          updateAccountBalance(
+            saleToDelete.accountId, 
+            -saleToDelete.amount, 
+            `Eliminación venta ${saleToDelete.number} - ${saleToDelete.client.name}`
+          );
+        }
+      }
+      
+      return prevSales.filter(sale => sale.id !== saleId);
+    });
   };
 
   const updateSale = (saleId: number, updatedData: {
@@ -256,7 +289,10 @@ export const useSalesStore = () => {
             salesChannel: updatedData.salesChannel || sale.salesChannel,
             paymentStatus: updatedData.paymentStatus || sale.paymentStatus,
             paymentMethod: updatedData.paymentMethod || sale.paymentMethod,
-            accountId: updatedData.accountId
+            accountId: updatedData.accountId,
+            // Actualizar campos de tracking de pagos
+            cobrado: updatedData.paymentStatus === 'paid' ? newAmount : (sale.cobrado || 0),
+            aCobrar: updatedData.paymentStatus === 'paid' ? 0 : newAmount - (sale.cobrado || 0)
           };
         }
         return sale;
@@ -270,6 +306,7 @@ export const useSalesStore = () => {
     addSale,
     updateSale,
     updateSaleStatus,
+    deleteSale,
     updateDashboardStats,
     setSales
   };

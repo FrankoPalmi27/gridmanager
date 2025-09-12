@@ -5,7 +5,8 @@ export interface Customer {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  phone: string; // Keep for compatibility, will be migrated to celular
+  celular?: string; // New field for mobile phone
   balance: number;
   status: 'active' | 'inactive';
   createdAt: string;
@@ -41,7 +42,8 @@ const initialCustomers: Customer[] = [
     id: '1',
     name: 'Juan Pérez',
     email: 'juan.perez@email.com',
-    phone: '+54 9 11 1234-5678',
+    phone: 'juan.perez@email.com', // Keeping email here for compatibility
+    celular: '+54 9 11 1234-5678',
     balance: 15000,
     status: 'active',
     createdAt: '2023-01-15',
@@ -52,7 +54,8 @@ const initialCustomers: Customer[] = [
     id: '2',
     name: 'María García',
     email: 'maria.garcia@email.com',
-    phone: '+54 9 11 8765-4321',
+    phone: 'maria.garcia@email.com',
+    celular: '+54 9 11 8765-4321',
     balance: -2500,
     status: 'active',
     createdAt: '2023-01-20',
@@ -62,7 +65,8 @@ const initialCustomers: Customer[] = [
     id: '3',
     name: 'Carlos López',
     email: 'carlos.lopez@email.com',
-    phone: '+54 9 11 5555-0000',
+    phone: 'carlos.lopez@email.com',
+    celular: '+54 9 11 5555-0000',
     balance: 8750,
     status: 'active',
     createdAt: '2023-02-01',
@@ -72,7 +76,8 @@ const initialCustomers: Customer[] = [
     id: '4',
     name: 'Ana Martínez',
     email: 'ana.martinez@email.com',
-    phone: '+54 9 11 9999-1111',
+    phone: 'ana.martinez@email.com',
+    celular: '+54 9 11 9999-1111',
     balance: 0,
     status: 'inactive',
     createdAt: '2023-02-10',

@@ -341,70 +341,6 @@ export function CustomersPage() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-6 sm:mt-8">
-          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-lg">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <div className="ml-3 sm:ml-4">
-                <p className="text-xs sm:text-sm text-gray-500">Total Clientes</p>
-                <p className="text-base sm:text-lg font-semibold text-gray-900">{customersWithUpdatedBalances.length}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-3 sm:ml-4">
-                <p className="text-xs sm:text-sm text-gray-500">Activos</p>
-                <p className="text-base sm:text-lg font-semibold text-gray-900">
-                  {customersWithUpdatedBalances.filter(c => c.status === 'active').length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-3 sm:ml-4">
-                <p className="text-xs sm:text-sm text-gray-500">Balance Positivo</p>
-                <p className="text-sm sm:text-lg font-semibold text-green-600">
-                  {formatCurrency(customersWithUpdatedBalances.filter(c => c.balance > 0).reduce((sum, c) => sum + c.balance, 0))}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-2 sm:p-3 bg-red-100 rounded-lg">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-3 sm:ml-4">
-                <p className="text-xs sm:text-sm text-gray-500">Deuda Total</p>
-                <p className="text-sm sm:text-lg font-semibold text-red-600">
-                  {formatCurrency(Math.abs(customersWithUpdatedBalances.filter(c => c.balance < 0).reduce((sum, c) => sum + c.balance, 0)))}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Create/Edit Customer Modal */}
@@ -461,15 +397,15 @@ export function CustomersPage() {
           />
 
           <Input
-            label="Teléfono"
-            value={formData.phone}
+            label="Celular"
+            value={formData.celular}
             onChange={(e) => {
-              setFormData(prev => ({ ...prev, phone: e.target.value }));
-              if (formErrors.phone) {
-                setFormErrors(prev => ({ ...prev, phone: '' }));
+              setFormData(prev => ({ ...prev, celular: e.target.value }));
+              if (formErrors.celular) {
+                setFormErrors(prev => ({ ...prev, celular: '' }));
               }
             }}
-            error={formErrors.phone}
+            error={formErrors.celular}
             disabled={loading}
             required
           />

@@ -84,7 +84,7 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
     <>
       {/* Mobile sidebar */}
       <Transition.Root show={open} as={Fragment}>
-        <Dialog as="div" className="relative z-50 lg:hidden" onClose={setOpen}>
+        <Dialog as="div" className="fixed inset-0 z-50 lg:hidden" onClose={setOpen}>
           <Transition.Child
             as={Fragment}
             enter="transition-opacity ease-linear duration-300"
@@ -108,8 +108,18 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
               leaveTo="-translate-x-full"
             >
               <Dialog.Panel className="relative mr-16 flex w-full max-w-xs flex-1">
-                <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white">
+                <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white shadow-xl">
                   <SidebarContent />
+                </div>
+                <div className="absolute top-0 right-0 -mr-12 pt-2">
+                  <button
+                    type="button"
+                    className="ml-1 flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                    onClick={() => setOpen(false)}
+                  >
+                    <span className="sr-only">Close sidebar</span>
+                    <XMarkIcon className="h-6 w-6 text-white" aria-hidden="true" />
+                  </button>
                 </div>
               </Dialog.Panel>
             </Transition.Child>
@@ -119,7 +129,7 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
 
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-gray-200">
+        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-gray-200 shadow-sm">
           <SidebarContent />
         </div>
       </div>

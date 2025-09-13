@@ -1,16 +1,23 @@
-import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  // Close sidebar when route changes (mobile navigation)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="h-screen bg-gray-50 lg:flex">
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       
-      <div className="flex flex-col flex-1 overflow-hidden lg:ml-72">
+      {/* Main content area */}
+      <div className="flex flex-col flex-1 min-h-0 lg:ml-72">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         
         <main className="flex-1 overflow-y-auto bg-gray-50">

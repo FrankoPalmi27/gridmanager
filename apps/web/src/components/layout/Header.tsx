@@ -192,7 +192,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       {/* Main header */}
-      <div className="px-6 py-4">
+      <div className="px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-6">
             <button
@@ -215,7 +215,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-1 sm:space-x-4">
             <div className="hidden xl:block text-sm text-gray-500">
               Hola, <span className="font-medium text-gray-900">{user?.name}</span>
               <div className="flex items-center gap-1 mt-1">
@@ -224,11 +224,15 @@ export function Header({ onMenuClick }: HeaderProps) {
               </div>
             </div>
             
-            {/* Notifications */}
-            <NotificationsDropdown />
+            {/* Notifications - Hidden on mobile to save space */}
+            <div className="hidden sm:block">
+              <NotificationsDropdown />
+            </div>
             
-            {/* Theme switcher */}
-            <ThemeSwitcher />
+            {/* Theme switcher - Hidden on mobile to save space */}
+            <div className="hidden sm:block">
+              <ThemeSwitcher />
+            </div>
             
             {/* User menu */}
             <Menu as="div" className="relative">
@@ -321,7 +325,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       </div>
       
       {/* Breadcrumbs */}
-      <div className="px-6 py-2 bg-gray-50 border-t border-gray-100">
+      <div className="px-4 sm:px-6 py-2 bg-gray-50 border-t border-gray-100">
         <Breadcrumbs items={breadcrumbItems} />
       </div>
     </header>

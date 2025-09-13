@@ -164,8 +164,8 @@ export function CustomersPage() {
   };
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+    <div className="w-full">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-4">
           <div>

@@ -13,9 +13,11 @@ export function Layout() {
       <div className="flex flex-col flex-1 overflow-hidden lg:ml-72">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-6">
-          <div className="max-w-7xl mx-auto">
-            <Outlet />
+        <main className="flex-1 overflow-y-auto bg-gray-50">
+          <div className="p-4 sm:p-6">
+            <div className="max-w-7xl mx-auto">
+              <Outlet />
+            </div>
           </div>
         </main>
       </div>

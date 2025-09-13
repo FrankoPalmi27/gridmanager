@@ -319,25 +319,28 @@ export function ProductsPage() {
             <h3 className="text-lg font-semibold text-gray-900">Lista de Productos</h3>
           </div>
           
-          {/* Scrollable table container with custom scrollbar */}
+          {/* Scrollable table container with custom scrollbar and fixed width */}
           <div className="relative">
             <div 
               ref={tableScrollRef}
-              className="overflow-x-auto overflow-y-visible scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400" 
+              className="overflow-x-auto overflow-y-visible scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
               style={{ 
                 scrollbarWidth: 'thin',
-                scrollbarColor: '#D1D5DB #F3F4F6'
+                scrollbarColor: '#D1D5DB #F3F4F6',
+                maxWidth: '100%',
+                width: '100%'
               }}
             >
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="divide-y divide-gray-200" style={{ minWidth: '1200px', width: 'max-content' }}>
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '120px', minWidth: '120px' }}>
                     SKU
                   </th>
                   <th 
                     className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('name')}
+                    style={{ width: '200px', minWidth: '200px' }}
                   >
                     <div className="flex items-center gap-1">
                       <span>Producto</span>
@@ -348,12 +351,13 @@ export function ProductsPage() {
                       )}
                     </div>
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '180px', minWidth: '180px' }}>
                     Descripción
                   </th>
                   <th 
                     className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('category')}
+                    style={{ width: '140px', minWidth: '140px' }}
                   >
                     <div className="flex items-center gap-1">
                       <span>Categoría</span>
@@ -367,6 +371,7 @@ export function ProductsPage() {
                   <th 
                     className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('brand')}
+                    style={{ width: '120px', minWidth: '120px' }}
                   >
                     <div className="flex items-center gap-1">
                       <span>Marca</span>
@@ -377,12 +382,13 @@ export function ProductsPage() {
                       )}
                     </div>
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '150px', minWidth: '150px' }}>
                     Proveedor
                   </th>
                   <th 
                     className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('price')}
+                    style={{ width: '180px', minWidth: '180px' }}
                   >
                     <div className="flex items-center gap-1">
                       <span>Precios</span>
@@ -396,6 +402,7 @@ export function ProductsPage() {
                   <th 
                     className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('stock')}
+                    style={{ width: '120px', minWidth: '120px' }}
                   >
                     <div className="flex items-center gap-1">
                       <span>Stock</span>
@@ -409,6 +416,7 @@ export function ProductsPage() {
                   <th 
                     className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('status')}
+                    style={{ width: '100px', minWidth: '100px' }}
                   >
                     <div className="flex items-center gap-1">
                       <span>Estado</span>
@@ -419,7 +427,7 @@ export function ProductsPage() {
                       )}
                     </div>
                   </th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '200px', minWidth: '200px' }}>
                     Acciones
                   </th>
                 </tr>

@@ -13,11 +13,12 @@ export function Layout() {
   }, [location.pathname]);
 
   return (
-    <div className="h-screen bg-gray-50 lg:flex">
+    <div className="h-screen bg-gray-50">
+      {/* Sidebar component */}
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       
-      {/* Main content area */}
-      <div className="flex flex-col flex-1 min-h-0 lg:ml-72">
+      {/* Main content area - full width on mobile, with left margin on desktop */}
+      <div className="flex flex-col h-full lg:ml-72">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         
         <main className="flex-1 overflow-y-auto bg-gray-50">

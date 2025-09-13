@@ -82,9 +82,10 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile sidebar */}
+      {/* Mobile sidebar overlay - only shows when open is true and on mobile */}
       <Transition.Root show={open} as={Fragment}>
         <Dialog as="div" className="fixed inset-0 z-50 lg:hidden" onClose={setOpen}>
+          {/* Background overlay */}
           <Transition.Child
             as={Fragment}
             enter="transition-opacity ease-linear duration-300"
@@ -97,6 +98,7 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
             <div className="fixed inset-0 bg-gray-900/80" />
           </Transition.Child>
 
+          {/* Sliding sidebar panel */}
           <div className="fixed inset-0 flex">
             <Transition.Child
               as={Fragment}
@@ -111,6 +113,8 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
                 <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white shadow-xl">
                   <SidebarContent />
                 </div>
+                
+                {/* Close button outside the sidebar */}
                 <div className="absolute top-0 right-0 -mr-12 pt-2">
                   <button
                     type="button"
@@ -127,8 +131,8 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
         </Dialog>
       </Transition.Root>
 
-      {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
+      {/* Desktop sidebar - ONLY visible on large screens and above (lg+) */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-72 lg:flex-col">
         <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-gray-200 shadow-sm">
           <SidebarContent />
         </div>

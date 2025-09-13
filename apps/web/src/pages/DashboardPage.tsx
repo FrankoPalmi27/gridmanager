@@ -337,25 +337,26 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
                 className={`bg-white p-6 rounded-2xl border-2 ${stat.borderColor} shadow-sm hover:shadow-md transition-all ${cursorStyle}`}
                 onClick={clickHandler}
               >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                  <span className="text-2xl">{stat.icon}</span>
-                </div>
-                {stat.change && (
-                  <div className="text-right">
-                    <div className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
-                      ↗ {stat.change}
-                    </div>
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`p-3 rounded-xl ${stat.bgColor}`}>
+                    <span className="text-2xl">{stat.icon}</span>
                   </div>
-                )}
+                  {stat.change && (
+                    <div className="text-right">
+                      <div className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
+                        ↗ {stat.change}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-1">{stat.name}</p>
+                  <p className={`text-3xl font-bold ${stat.color} mb-1`}>{stat.value}</p>
+                  <p className="text-xs text-gray-500">{stat.description}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">{stat.name}</p>
-                <p className={`text-3xl font-bold ${stat.color} mb-1`}>{stat.value}</p>
-                <p className="text-xs text-gray-500">{stat.description}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
 

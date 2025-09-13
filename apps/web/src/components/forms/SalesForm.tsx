@@ -62,8 +62,6 @@ const PAYMENT_METHODS = [
 
 
 export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess, editingSale }) => {
-  console.log('SalesForm rendered with isOpen:', isOpen, 'editingSale:', editingSale);
-  
   const { addSale, updateSale } = useSales();
   const { products } = useProductsStore();
   const { accounts, getActiveAccounts } = useAccountsStore();
@@ -101,6 +99,8 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
         product: matchingProduct?.name || '',
         quantity: editingSale.items,
         price: unitPrice,
+        discount: editingSale.discount || 0,
+        saleDate: editingSale.date || new Date().toISOString().split('T')[0],
         salesChannel: editingSale.salesChannel || 'store',
         paymentStatus: editingSale.paymentStatus || 'pending',
         paymentMethod: editingSale.paymentMethod || 'cash',
@@ -118,6 +118,8 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
       product: '',
       quantity: 1,
       price: 0,
+      discount: 0,
+      saleDate: new Date().toISOString().split('T')[0],
       salesChannel: 'store',
       paymentStatus: 'paid',
       paymentMethod: 'cash',
@@ -326,7 +328,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
         <Input
           type="number"
           label="Cantidad"
-          value={formData.quantity.toString()}
+          value={formData.quantity?.toString() || '1'}
           onChange={(e) => {
             const quantity = parseInt(e.target.value) || 1;
             setFormData(prev => ({ ...prev, quantity }));
@@ -344,7 +346,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
         <Input
           type="number"
           label="Precio Unitario"
-          value={formData.price.toString()}
+          value={formData.price?.toString() || '0'}
           onChange={(e) => {
             const price = parseFloat(e.target.value) || 0;
             setFormData(prev => ({ ...prev, price }));
@@ -363,7 +365,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
         <Input
           type="number"
           label="Descuento (%)"
-          value={formData.discount.toString()}
+          value={formData.discount?.toString() || '0'}
           onChange={(e) => {
             const discount = parseFloat(e.target.value) || 0;
             setFormData(prev => ({ ...prev, discount: Math.max(0, Math.min(100, discount)) }));

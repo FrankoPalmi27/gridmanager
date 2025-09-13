@@ -631,6 +631,7 @@ export function AccountsPage() {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | undefined>();
+  const tableScrollRef = React.useRef<HTMLDivElement>(null);
 
   // Save accounts to localStorage whenever they change
   useEffect(() => {
@@ -795,6 +796,18 @@ export function AccountsPage() {
     .reduce((total, t) => total + t.amount, 0);
 
   const activeAccounts = accounts.filter(acc => acc.active).length;
+
+  const scrollLeft = () => {
+    if (tableScrollRef.current) {
+      tableScrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (tableScrollRef.current) {
+      tableScrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50/30">
@@ -1009,30 +1022,65 @@ export function AccountsPage() {
           </div>
 
           {/* Transactions Table */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Movimientos</h3>
+              
+              {/* Horizontal Navigation Controls */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 mr-3">Navegación horizontal:</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={scrollLeft}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 hover:bg-gray-50"
+                >
+                  ← Izquierda
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={scrollRight}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 hover:bg-gray-50"
+                >
+                  Derecha →
+                </Button>
+              </div>
+            </div>
+            
+            <div className="relative">
+              <div 
+                ref={tableScrollRef}
+                className="overflow-x-auto overflow-y-visible scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
+                style={{ 
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#D1D5DB #F3F4F6',
+                  maxWidth: '100%',
+                  width: '100%'
+                }}
+              >
+                <table className="divide-y divide-gray-200" style={{ minWidth: '1400px', width: 'max-content' }}>
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ width: '150px', minWidth: '150px' }}>
                       Fecha
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ width: '200px', minWidth: '200px' }}>
                       Cuenta
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ width: '300px', minWidth: '300px' }}>
                       Descripción
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ width: '150px', minWidth: '150px' }}>
                       Categoría
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ width: '130px', minWidth: '130px' }}>
                       Tipo
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ width: '150px', minWidth: '150px' }}>
                       Monto
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ width: '150px', minWidth: '150px' }}>
                       Referencia
                     </th>
                   </tr>
@@ -1042,20 +1090,20 @@ export function AccountsPage() {
                     const account = accounts.find(acc => acc.id === transaction.accountId);
                     return (
                       <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900" style={{ width: '150px', minWidth: '150px' }}>
                           {formatDate(new Date(transaction.date))}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-4 whitespace-nowrap" style={{ width: '200px', minWidth: '200px' }}>
                           <div className="text-sm font-medium text-gray-900">{account?.name}</div>
                           <div className="text-sm text-gray-500">{account?.bankName}</div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                        <td className="px-4 py-4 text-sm text-gray-900 max-w-xs truncate" style={{ width: '300px', minWidth: '300px' }}>
                           {transaction.description}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900" style={{ width: '150px', minWidth: '150px' }}>
                           {transaction.category}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-4 whitespace-nowrap" style={{ width: '130px', minWidth: '130px' }}>
                           <StatusBadge 
                             variant={
                               transaction.type === 'income' ? 'success' :
@@ -1067,12 +1115,12 @@ export function AccountsPage() {
                              transaction.type === 'expense' ? 'Egreso' : 'Transferencia'}
                           </StatusBadge>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td className="px-4 py-4 whitespace-nowrap text-sm font-medium" style={{ width: '150px', minWidth: '150px' }}>
                           <span className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}>
                             {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500" style={{ width: '150px', minWidth: '150px' }}>
                           {transaction.reference || '-'}
                         </td>
                       </tr>
@@ -1080,6 +1128,7 @@ export function AccountsPage() {
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
 
             {filteredTransactions.length === 0 && (

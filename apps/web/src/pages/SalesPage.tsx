@@ -230,6 +230,7 @@ export function SalesPage() {
   const [editingSale, setEditingSale] = useState<any>(null);
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const tableScrollRef = React.useRef<HTMLDivElement>(null);
   
   // Get real sales data from context
   const { sales, deleteSale } = useSales();
@@ -297,6 +298,18 @@ export function SalesPage() {
   const handleCloseModal = () => {
     setIsNewSaleModalOpen(false);
     setEditingSale(null);
+  };
+
+  const scrollLeft = () => {
+    if (tableScrollRef.current) {
+      tableScrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (tableScrollRef.current) {
+      tableScrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+    }
   };
 
   const handleDeleteSale = (sale: any) => {
@@ -470,17 +483,50 @@ export function SalesPage() {
 
         {/* Sales Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Lista de Ventas</h3>
+            
+            {/* Horizontal Navigation Controls */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500 mr-3">Navegación horizontal:</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={scrollLeft}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 hover:bg-gray-50"
+              >
+                ← Izquierda
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={scrollRight}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 hover:bg-gray-50"
+              >
+                Derecha →
+              </Button>
+            </div>
           </div>
         
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+        {/* Scrollable table container with custom scrollbar and fixed width */}
+        <div className="relative">
+          <div 
+            ref={tableScrollRef}
+            className="overflow-x-auto overflow-y-visible scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
+            style={{ 
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#D1D5DB #F3F4F6',
+              maxWidth: '100%',
+              width: '100%'
+            }}
+          >
+          <table className="divide-y divide-gray-200" style={{ minWidth: '1500px', width: 'max-content' }}>
             <thead className="bg-gray-50">
               <tr>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort('number')}
+                  style={{ width: '180px', minWidth: '180px' }}
                 >
                   <div className="flex items-center gap-1">
                     <span>Venta</span>
@@ -492,8 +538,9 @@ export function SalesPage() {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort('client')}
+                  style={{ width: '200px', minWidth: '200px' }}
                 >
                   <div className="flex items-center gap-1">
                     <span>Cliente</span>
@@ -505,8 +552,9 @@ export function SalesPage() {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort('date')}
+                  style={{ width: '150px', minWidth: '150px' }}
                 >
                   <div className="flex items-center gap-1">
                     <span>Fecha</span>
@@ -517,12 +565,13 @@ export function SalesPage() {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '150px', minWidth: '150px' }}>
                   Items
                 </th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort('amount')}
+                  style={{ width: '150px', minWidth: '150px' }}
                 >
                   <div className="flex items-center gap-1">
                     <span>Total</span>
@@ -533,15 +582,16 @@ export function SalesPage() {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '120px', minWidth: '120px' }}>
                   Cobrado
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '120px', minWidth: '120px' }}>
                   A Cobrar
                 </th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort('status')}
+                  style={{ width: '130px', minWidth: '130px' }}
                 >
                   <div className="flex items-center gap-1">
                     <span>Estado</span>
@@ -552,7 +602,7 @@ export function SalesPage() {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '280px', minWidth: '280px' }}>
                   Acciones
                 </th>
               </tr>
@@ -560,7 +610,7 @@ export function SalesPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredAndSortedSales.map((sale) => (
                 <tr key={sale.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '180px', minWidth: '180px' }}>
                     <div className="flex items-center">
                       <Button
                         variant="ghost"
@@ -576,7 +626,7 @@ export function SalesPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '200px', minWidth: '200px' }}>
                     <div className="flex items-center">
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">{sale.client.name}</div>
@@ -584,7 +634,7 @@ export function SalesPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '150px', minWidth: '150px' }}>
                     <div className="text-sm text-gray-900">
                       {new Date(sale.date).toLocaleDateString('es-AR')}
                     </div>
@@ -594,7 +644,7 @@ export function SalesPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '150px', minWidth: '150px' }}>
                     <div className="text-sm text-gray-900">{sale.items} productos</div>
                     {sale.salesChannel && (
                       <div className="text-sm text-gray-500 capitalize">
@@ -605,7 +655,7 @@ export function SalesPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '150px', minWidth: '150px' }}>
                     <div className="text-sm font-medium text-gray-900">
                       {formatCurrency(sale.amount)}
                     </div>
@@ -618,20 +668,20 @@ export function SalesPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '120px', minWidth: '120px' }}>
                     <div className="text-sm font-medium text-green-600">
                       {formatCurrency(sale.cobrado || 0)}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '120px', minWidth: '120px' }}>
                     <div className="text-sm font-medium text-orange-600">
                       {formatCurrency(sale.aCobrar || 0)}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '130px', minWidth: '130px' }}>
                     <StatusDropdown sale={sale} />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium" style={{ width: '280px', minWidth: '280px' }}>
                     <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-900 mr-2"
                       onClick={() => handleEditSale(sale)}
                     >

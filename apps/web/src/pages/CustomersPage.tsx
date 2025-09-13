@@ -14,6 +14,7 @@ export function CustomersPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
+  const tableScrollRef = React.useRef<HTMLDivElement>(null);
   
   // Use the centralized customers store
   const { customers, addCustomer, updateCustomer, deleteCustomer, stats } = useCustomersStore();
@@ -163,6 +164,18 @@ export function CustomersPage() {
     setIsModalOpen(true);
   };
 
+  const scrollLeft = () => {
+    if (tableScrollRef.current) {
+      tableScrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (tableScrollRef.current) {
+      tableScrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="w-full">
       <div className="max-w-7xl mx-auto">
@@ -261,31 +274,62 @@ export function CustomersPage() {
 
         {/* Customer List */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Lista de Clientes</h3>
+            
+            {/* Horizontal Navigation Controls */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500 mr-3">Navegación horizontal:</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={scrollLeft}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 hover:bg-gray-50"
+              >
+                ← Izquierda
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={scrollRight}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 hover:bg-gray-50"
+              >
+                Derecha →
+              </Button>
+            </div>
           </div>
           
           {/* Desktop Table */}
-          <div className="hidden lg:block overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="hidden lg:block relative">
+            <div 
+              ref={tableScrollRef}
+              className="overflow-x-auto overflow-y-visible scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
+              style={{ 
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#D1D5DB #F3F4F6',
+                maxWidth: '100%',
+                width: '100%'
+              }}
+            >
+              <table className="divide-y divide-gray-200" style={{ minWidth: '1200px', width: 'max-content' }}>
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '200px', minWidth: '200px' }}>
                     Cliente
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '250px', minWidth: '250px' }}>
                     Mail
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '150px', minWidth: '150px' }}>
                     Celular
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '150px', minWidth: '150px' }}>
                     Balance
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '120px', minWidth: '120px' }}>
                     Estado
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '200px', minWidth: '200px' }}>
                     Acciones
                   </th>
                 </tr>
@@ -293,18 +337,18 @@ export function CustomersPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredCustomers.length > 0 ? filteredCustomers.map((customer) => (
                   <tr key={customer.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '200px', minWidth: '200px' }}>
                       <div className="text-sm font-medium text-gray-900">
                         {customer.name}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '250px', minWidth: '250px' }}>
                       <div className="text-sm text-gray-900">{customer.email}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '150px', minWidth: '150px' }}>
                       <div className="text-sm text-gray-900">{customer.celular || customer.phone}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '150px', minWidth: '150px' }}>
                       <div className={`text-sm font-medium ${
                         customer.balance > 0 
                           ? 'text-green-600' 
@@ -315,10 +359,10 @@ export function CustomersPage() {
                         {formatCurrency(customer.balance)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '120px', minWidth: '120px' }}>
                       <UserStatusBadge status={customer.status} />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium" style={{ width: '200px', minWidth: '200px' }}>
                       <Button 
                         variant="ghost" 
                         size="sm" 
@@ -359,6 +403,7 @@ export function CustomersPage() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Mobile Card Layout */}

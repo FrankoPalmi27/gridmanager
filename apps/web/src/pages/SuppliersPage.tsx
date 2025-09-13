@@ -11,6 +11,7 @@ export function SuppliersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const tableScrollRef = React.useRef<HTMLDivElement>(null);
 
   const filteredSuppliers = suppliers.filter(supplier => {
     const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -47,6 +48,18 @@ export function SuppliersPage() {
     // TODO: Implement supplier view functionality
     console.log('View supplier:', supplier);
     // This could show supplier details in a modal
+  };
+
+  const scrollLeft = () => {
+    if (tableScrollRef.current) {
+      tableScrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (tableScrollRef.current) {
+      tableScrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+    }
   };
 
   return (
@@ -153,30 +166,61 @@ export function SuppliersPage() {
 
         {/* Suppliers Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Lista de Proveedores</h3>
+            
+            {/* Horizontal Navigation Controls */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500 mr-3">Navegación horizontal:</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={scrollLeft}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 hover:bg-gray-50"
+              >
+                ← Izquierda
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={scrollRight}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 hover:bg-gray-50"
+              >
+                Derecha →
+              </Button>
+            </div>
           </div>
           
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="relative">
+            <div 
+              ref={tableScrollRef}
+              className="overflow-x-auto overflow-y-visible scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
+              style={{ 
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#D1D5DB #F3F4F6',
+                maxWidth: '100%',
+                width: '100%'
+              }}
+            >
+              <table className="divide-y divide-gray-200" style={{ minWidth: '1300px', width: 'max-content' }}>
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '250px', minWidth: '250px' }}>
                     Proveedor
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '200px', minWidth: '200px' }}>
                     Contacto
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '180px', minWidth: '180px' }}>
                     Balance
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '150px', minWidth: '150px' }}>
                     Compras Totales
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '120px', minWidth: '120px' }}>
                     Estado
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '250px', minWidth: '250px' }}>
                     Acciones
                   </th>
                 </tr>
@@ -184,7 +228,7 @@ export function SuppliersPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredSuppliers.map((supplier) => (
                   <tr key={supplier.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '250px', minWidth: '250px' }}>
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                           <span className="text-sm font-medium text-gray-600">
@@ -197,11 +241,11 @@ export function SuppliersPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '200px', minWidth: '200px' }}>
                       <div className="text-sm text-gray-900">{supplier.email || 'No email'}</div>
                       <div className="text-sm text-gray-500">{formatPhoneNumber(supplier.phone || '')}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '180px', minWidth: '180px' }}>
                       <div className={`text-sm font-medium ${
                         supplier.currentBalance === 0 
                           ? 'text-gray-900'
@@ -213,17 +257,17 @@ export function SuppliersPage() {
                       </div>
                       <div className="text-sm text-gray-500">{supplier.paymentTerms} días</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '150px', minWidth: '150px' }}>
                       <div className="text-sm font-medium text-gray-900">
                         {formatCurrency(supplier.totalPurchases)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '120px', minWidth: '120px' }}>
                       <StatusBadge variant={supplier.active ? 'active' : 'inactive'} dot>
                         {supplier.active ? 'Activo' : 'Inactivo'}
                       </StatusBadge>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium" style={{ width: '250px', minWidth: '250px' }}>
                       <Button 
                         variant="ghost" 
                         size="sm" 
@@ -253,6 +297,7 @@ export function SuppliersPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           {filteredSuppliers.length === 0 && (

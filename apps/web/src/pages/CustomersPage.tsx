@@ -183,7 +183,7 @@ export function CustomersPage() {
         </div>
 
         {/* Customer Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -291,7 +291,7 @@ export function CustomersPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredCustomers.map((customer) => (
+                {filteredCustomers.length > 0 ? filteredCustomers.map((customer) => (
                   <tr key={customer.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
@@ -336,26 +336,66 @@ export function CustomersPage() {
                       </Button>
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center">
+                      <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                      </svg>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No hay clientes</h3>
+                      <p className="text-gray-500 mb-4">
+                        {searchTerm ? 'No se encontraron clientes con ese filtro.' : 'Comienza agregando tu primer cliente.'}
+                      </p>
+                      {!searchTerm && (
+                        <Button
+                          onClick={handleNewCustomer}
+                          variant="primary"
+                        >
+                          + Nuevo Cliente
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
 
           {/* Mobile Card Layout */}
-          <div className="lg:hidden">
-            {filteredCustomers.map((customer) => (
-              <div key={customer.id} className="border-b border-gray-200 p-4 hover:bg-gray-50">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-base font-medium text-gray-900 truncate">
-                      {customer.name}
+          <div className="lg:hidden space-y-4 p-4">
+            {filteredCustomers.length > 0 ? (
+              filteredCustomers.map((customer) => (
+                <div key={customer.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                  {/* Header with name and status */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-semibold text-gray-900 truncate">
+                        {customer.name}
+                      </h3>
                     </div>
-                    <div className="text-sm text-gray-500 truncate">{customer.email}</div>
-                    <div className="text-sm text-gray-500">{customer.celular || customer.phone}</div>
-                  </div>
-                  <div className="flex flex-col items-end space-y-2 ml-4">
                     <UserStatusBadge status={customer.status} />
-                    <div className={`text-sm font-medium ${
+                  </div>
+
+                  {/* Contact Info */}
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center text-sm text-gray-600">
+                      <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                      </svg>
+                      <span className="truncate">{customer.email}</span>
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      <span>{customer.celular || customer.phone}</span>
+                    </div>
+                  </div>
+
+                  {/* Balance */}
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm font-medium text-gray-500">Balance:</span>
+                    <span className={`text-lg font-bold ${
                       customer.balance > 0 
                         ? 'text-green-600' 
                         : customer.balance < 0 
@@ -363,29 +403,56 @@ export function CustomersPage() {
                           : 'text-gray-900'
                     }`}>
                       {formatCurrency(customer.balance)}
-                    </div>
+                    </span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex space-x-2 pt-3 border-t border-gray-100">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleEditCustomer(customer)}
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Editar
+                    </Button>
+                    <Button 
+                      variant="primary" 
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleViewCustomer(customer)}
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      Ver
+                    </Button>
                   </div>
                 </div>
-                <div className="flex space-x-2 mt-3">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={() => handleEditCustomer(customer)}
+              ))
+            ) : (
+              <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-200">
+                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No hay clientes</h3>
+                <p className="text-gray-500 mb-4">
+                  {searchTerm ? 'No se encontraron clientes con ese filtro.' : 'Comienza agregando tu primer cliente.'}
+                </p>
+                {!searchTerm && (
+                  <Button
+                    onClick={handleNewCustomer}
+                    variant="primary"
                   >
-                    Editar
+                    + Nuevo Cliente
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleViewCustomer(customer)}
-                  >
-                    Ver
-                  </Button>
-                </div>
+                )}
               </div>
-            ))}
+            )}
           </div>
         </div>
 

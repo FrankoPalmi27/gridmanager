@@ -131,7 +131,7 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
         </Dialog>
       </Transition.Root>
 
-      {/* Desktop sidebar - ONLY visible on large screens and above (lg+) */}
+      {/* Desktop sidebar - hidden on mobile, visible on lg+ */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-72 lg:flex-col">
         <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-gray-200 shadow-sm">
           <SidebarContent />

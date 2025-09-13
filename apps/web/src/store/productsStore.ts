@@ -10,10 +10,27 @@ export interface Product {
   description?: string;
   cost: number;
   price: number;
+  margin?: number;  // Calculated field: ((price - cost) / cost) * 100
+  suggestedPrice?: number; // Price suggestion based on cost + target margin
+  supplier?: string; // Supplier name
   stock: number;
   minStock: number;
   status: 'active' | 'inactive';
   createdAt: string;
+}
+
+// Tipo para los movimientos de stock
+export interface StockMovement {
+  id: string;
+  productId: string;
+  type: 'in' | 'out' | 'adjustment';
+  quantity: number;
+  previousStock: number;
+  newStock: number;
+  reason: string;
+  reference?: string; // Sale ID, Purchase ID, etc.
+  createdAt: string;
+  createdBy?: string;
 }
 
 // Tipo para las categorías
@@ -27,6 +44,7 @@ export interface Category {
 // LocalStorage keys
 const PRODUCTS_STORAGE_KEY = 'gridmanager_products';
 const CATEGORIES_STORAGE_KEY = 'gridmanager_categories';
+const STOCK_MOVEMENTS_STORAGE_KEY = 'gridmanager_stock_movements';
 
 // LocalStorage utilities
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
@@ -794,6 +812,7 @@ const getAllCategories = (products: Product[], categories: Category[]) => {
 interface ProductsStore {
   products: Product[];
   categories: Category[];
+  stockMovements: StockMovement[];
   addProduct: (productData: {
     name: string;
     category: string;
@@ -801,6 +820,9 @@ interface ProductsStore {
     description?: string;
     cost: number;
     price: number;
+    margin?: number;
+    suggestedPrice?: number;
+    supplier?: string;
     stock: number;
     minStock: number;
     status?: 'active' | 'inactive';
@@ -829,13 +851,26 @@ interface ProductsStore {
     totalValue: number;
     categories: string[];
   };
+  // Stock movements functions
+  addStockMovement: (movement: Omit<StockMovement, 'id' | 'createdAt'>) => void;
+  getStockMovementsByProduct: (productId: string) => StockMovement[];
+  updateStockWithMovement: (productId: string, newStock: number, reason: string, reference?: string) => void;
 }
 
 export const useProductsStore = create<ProductsStore>((set, get) => ({
   products: loadFromStorage(PRODUCTS_STORAGE_KEY, initialProducts),
   categories: loadFromStorage(CATEGORIES_STORAGE_KEY, []),
+  stockMovements: loadFromStorage(STOCK_MOVEMENTS_STORAGE_KEY, []),
 
   addProduct: (productData) => {
+    // Calculate margin if not provided
+    const calculatedMargin = productData.margin || 
+      (productData.cost > 0 ? ((productData.price - productData.cost) / productData.cost) * 100 : 0);
+    
+    // Calculate suggested price if not provided (using 50% margin as default)
+    const calculatedSuggestedPrice = productData.suggestedPrice || 
+      (productData.cost * 1.5);
+
     const newProduct: Product = {
       id: Date.now().toString(),
       sku: generateSKU(productData.category, productData.name),
@@ -845,6 +880,9 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
       description: productData.description || '',
       cost: productData.cost,
       price: productData.price,
+      margin: calculatedMargin,
+      suggestedPrice: calculatedSuggestedPrice,
+      supplier: productData.supplier || '',
       stock: productData.stock,
       minStock: productData.minStock,
       status: productData.status || 'active',
@@ -934,6 +972,68 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
   resetToInitialProducts: () => {
     set({ products: initialProducts });
     saveToStorage(PRODUCTS_STORAGE_KEY, initialProducts);
+  },
+
+  // Stock movements functions
+  addStockMovement: (movement) => {
+    const newMovement: StockMovement = {
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+      ...movement
+    };
+
+    set((state) => {
+      const newMovements = [newMovement, ...state.stockMovements];
+      saveToStorage(STOCK_MOVEMENTS_STORAGE_KEY, newMovements);
+      return { stockMovements: newMovements };
+    });
+  },
+
+  getStockMovementsByProduct: (productId) => {
+    const state = get();
+    return state.stockMovements.filter(movement => movement.productId === productId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  updateStockWithMovement: (productId, newStock, reason, reference) => {
+    set((state) => {
+      const product = state.products.find(p => p.id === productId);
+      if (!product) return state;
+
+      const previousStock = product.stock;
+      const quantity = newStock - previousStock;
+      const type: 'in' | 'out' | 'adjustment' = 
+        quantity > 0 ? 'in' : quantity < 0 ? 'out' : 'adjustment';
+
+      // Update product stock
+      const updatedProducts = state.products.map(p =>
+        p.id === productId ? { ...p, stock: newStock } : p
+      );
+
+      // Create stock movement
+      const newMovement: StockMovement = {
+        id: Date.now().toString(),
+        productId,
+        type,
+        quantity: Math.abs(quantity),
+        previousStock,
+        newStock,
+        reason,
+        reference,
+        createdAt: new Date().toISOString()
+      };
+
+      const newMovements = [newMovement, ...state.stockMovements];
+
+      // Save to storage
+      saveToStorage(PRODUCTS_STORAGE_KEY, updatedProducts);
+      saveToStorage(STOCK_MOVEMENTS_STORAGE_KEY, newMovements);
+
+      return {
+        products: updatedProducts,
+        stockMovements: newMovements
+      };
+    });
   },
 
   get stats() {

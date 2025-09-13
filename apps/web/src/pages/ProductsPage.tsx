@@ -3,6 +3,7 @@ import { Button } from '../components/ui/Button';
 import { StatusBadge, StockStatusBadge } from '../components/ui/StatusBadge';
 import { Input } from '../components/ui/Input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
+import { Modal } from '../components/ui/Modal';
 import { ProductForm } from '../components/forms/ProductForm';
 import { CategoryModal } from '../components/forms/CategoryModal';
 import { CategoriesTable } from '../components/tables/CategoriesTable';
@@ -14,7 +15,7 @@ type SortField = 'name' | 'category' | 'brand' | 'price' | 'cost' | 'stock' | 's
 type SortOrder = 'asc' | 'desc';
 
 export function ProductsPage() {
-  const { products, addProduct, stats, updateProduct, deleteProduct, categories, setCategories, resetToInitialProducts } = useProductsStore();
+  const { products, addProduct, stats, updateProduct, deleteProduct, categories, setCategories, resetToInitialProducts, stockMovements, getStockMovementsByProduct, addStockMovement } = useProductsStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
@@ -24,6 +25,7 @@ export function ProductsPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [activeTab, setActiveTab] = useState('productos');
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [stockMovementsModal, setStockMovementsModal] = useState<{ isOpen: boolean; product: Product | null }>({ isOpen: false, product: null });
 
   const allCategories = ['all', ...stats.categories];
 
@@ -83,6 +85,36 @@ export function ProductsPage() {
   const handleCloseForm = () => {
     setIsProductFormOpen(false);
     setEditingProduct(null);
+  };
+
+  const handleViewStockMovements = (product: Product) => {
+    setStockMovementsModal({ isOpen: true, product });
+  };
+
+  const handleCloseStockMovements = () => {
+    setStockMovementsModal({ isOpen: false, product: null });
+  };
+
+  const handleStockAdjustment = (product: Product) => {
+    const newStock = prompt('Nuevo stock:', product.stock.toString());
+    if (newStock !== null && !isNaN(Number(newStock))) {
+      const newStockValue = parseInt(newStock);
+      const previousStock = product.stock;
+      
+      // Update the product stock
+      updateProduct(product.id, { stock: newStockValue });
+      
+      // Add stock movement record
+      addStockMovement({
+        productId: product.id,
+        type: newStockValue > previousStock ? 'in' : newStockValue < previousStock ? 'out' : 'adjustment',
+        quantity: Math.abs(newStockValue - previousStock),
+        previousStock,
+        newStock: newStockValue,
+        reason: `Ajuste manual de stock`,
+        createdBy: 'Usuario'
+      });
+    }
   };
 
   return (
@@ -323,6 +355,9 @@ export function ProductsPage() {
                       )}
                     </div>
                   </th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Proveedor
+                  </th>
                   <th 
                     className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('price')}
@@ -397,8 +432,29 @@ export function ProductsPage() {
                       <div className="text-sm text-gray-900">{product.brand}</div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{formatCurrency(product.price)}</div>
-                      <div className="text-xs text-gray-500">Costo: {formatCurrency(product.cost)}</div>
+                      <div className="text-sm text-gray-900">
+                        {product.supplier || <span className="text-gray-400 italic">Sin proveedor</span>}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          Precio: {formatCurrency(product.price)}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Costo: {formatCurrency(product.cost)}
+                        </div>
+                        {product.margin !== undefined && (
+                          <div className="text-xs text-blue-600">
+                            Margen: {product.margin.toFixed(1)}%
+                          </div>
+                        )}
+                        {product.suggestedPrice && product.suggestedPrice !== product.price && (
+                          <div className="text-xs text-green-600">
+                            Sugerido: {formatCurrency(product.suggestedPrice)}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className={`text-sm font-medium ${
@@ -417,27 +473,32 @@ export function ProductsPage() {
                       </StatusBadge>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-blue-600 hover:text-blue-900 mr-1 px-2 py-1"
-                        onClick={() => handleEditProduct(product)}
-                      >
-                        Editar
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-gray-600 hover:text-gray-900 px-2 py-1"
-                        onClick={() => {
-                          const newStock = prompt('Nuevo stock:', product.stock.toString());
-                          if (newStock !== null && !isNaN(Number(newStock))) {
-                            updateProduct(product.id, { stock: parseInt(newStock) });
-                          }
-                        }}
-                      >
-                        Stock
-                      </Button>
+                      <div className="flex gap-1 justify-end">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-blue-600 hover:text-blue-900 px-2 py-1"
+                          onClick={() => handleEditProduct(product)}
+                        >
+                          Editar
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-green-600 hover:text-green-900 px-2 py-1"
+                          onClick={() => handleStockAdjustment(product)}
+                        >
+                          Stock
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-purple-600 hover:text-purple-900 px-2 py-1"
+                          onClick={() => handleViewStockMovements(product)}
+                        >
+                          Movimientos
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -488,6 +549,174 @@ export function ProductsPage() {
         categories={categories}
         onCategoriesUpdate={setCategories}
       />
+
+      {/* Stock Movements Modal */}
+      {stockMovementsModal.product && (
+        <Modal
+          isOpen={stockMovementsModal.isOpen}
+          onClose={handleCloseStockMovements}
+          title={`Movimientos de Stock - ${stockMovementsModal.product.name}`}
+          size="xl"
+        >
+          <div className="space-y-6">
+            {/* Product Info */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">SKU:</span>
+                  <div className="text-gray-900">{stockMovementsModal.product.sku}</div>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Stock Actual:</span>
+                  <div className="text-gray-900 font-semibold">{stockMovementsModal.product.stock}</div>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Stock Mínimo:</span>
+                  <div className="text-gray-900">{stockMovementsModal.product.minStock}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Stock Movements Table */}
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Fecha
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tipo
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Cantidad
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Stock Anterior
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Stock Nuevo
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Motivo
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Usuario
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {getStockMovementsByProduct(stockMovementsModal.product.id)
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .map((movement) => (
+                    <tr key={movement.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(movement.createdAt).toLocaleString('es-AR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          movement.type === 'in' 
+                            ? 'bg-green-100 text-green-800' 
+                            : movement.type === 'out' 
+                            ? 'bg-red-100 text-red-800' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {movement.type === 'in' ? 'Entrada' : movement.type === 'out' ? 'Salida' : 'Ajuste'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        <span className={movement.type === 'in' ? 'text-green-600' : movement.type === 'out' ? 'text-red-600' : 'text-blue-600'}>
+                          {movement.type === 'in' ? '+' : movement.type === 'out' ? '-' : '±'}{movement.quantity}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {movement.previousStock}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {movement.newStock}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
+                        {movement.reason}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                        {movement.createdBy || 'Sistema'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              {getStockMovementsByProduct(stockMovementsModal.product.id).length === 0 && (
+                <div className="text-center py-12">
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">Sin movimientos</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Este producto aún no tiene movimientos de stock registrados.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Stock Actions */}
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center">
+                <h4 className="text-sm font-semibold text-gray-900">Acciones Rápidas</h4>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const adjustment = prompt('Cantidad a agregar (positivo) o quitar (negativo):', '10');
+                      if (adjustment && !isNaN(Number(adjustment))) {
+                        const adjustmentValue = parseInt(adjustment);
+                        const newStock = stockMovementsModal.product!.stock + adjustmentValue;
+                        
+                        if (newStock >= 0) {
+                          updateProduct(stockMovementsModal.product!.id, { stock: newStock });
+                          addStockMovement({
+                            productId: stockMovementsModal.product!.id,
+                            type: adjustmentValue > 0 ? 'in' : 'out',
+                            quantity: Math.abs(adjustmentValue),
+                            previousStock: stockMovementsModal.product!.stock,
+                            newStock: newStock,
+                            reason: `Ajuste rápido: ${adjustmentValue > 0 ? 'Entrada' : 'Salida'} de ${Math.abs(adjustmentValue)} unidades`,
+                            createdBy: 'Usuario'
+                          });
+                          // Update the modal state to reflect changes
+                          setStockMovementsModal(prev => ({
+                            ...prev,
+                            product: prev.product ? { ...prev.product, stock: newStock } : null
+                          }));
+                        } else {
+                          alert('El stock no puede ser negativo');
+                        }
+                      }
+                    }}
+                    className="text-green-600 border-green-600 hover:bg-green-50"
+                  >
+                    Ajuste Rápido
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCloseStockMovements()}
+                  >
+                    Cerrar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

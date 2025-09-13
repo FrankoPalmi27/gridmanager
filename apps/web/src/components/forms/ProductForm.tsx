@@ -22,7 +22,8 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
     price: '',
     stock: '',
     minStock: '',
-    status: 'active' as 'active' | 'inactive'
+    status: 'active' as 'active' | 'inactive',
+    supplier: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -54,7 +55,8 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
         price: editingProduct.price.toString(),
         stock: editingProduct.stock.toString(),
         minStock: editingProduct.minStock.toString(),
-        status: editingProduct.status
+        status: editingProduct.status,
+        supplier: editingProduct.supplier || ''
       });
     } else if (isOpen && !editingProduct) {
       setFormData({
@@ -66,7 +68,8 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
         price: '',
         stock: '',
         minStock: '',
-        status: 'active'
+        status: 'active',
+        supplier: ''
       });
     }
     setErrors({});
@@ -145,7 +148,8 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
         minStock: parseInt(formData.minStock),
-        status: formData.status
+        status: formData.status,
+        supplier: formData.supplier.trim()
       };
 
       if (editingProduct) {
@@ -162,12 +166,22 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
     }
   };
 
-  const profit = () => {
+  const calculations = () => {
     const cost = parseFloat(formData.cost) || 0;
     const price = parseFloat(formData.price) || 0;
     const profitAmount = price - cost;
-    const profitPercentage = cost > 0 ? (profitAmount / cost) * 100 : 0;
-    return { amount: profitAmount, percentage: profitPercentage };
+    const margin = cost > 0 ? (profitAmount / cost) * 100 : 0;
+    
+    // Calculate suggested price with a standard 30% margin
+    const targetMargin = 30;
+    const suggestedPrice = cost > 0 ? cost * (1 + targetMargin / 100) : 0;
+    
+    return { 
+      profitAmount, 
+      margin,
+      suggestedPrice,
+      isGoodMargin: margin >= 20
+    };
   };
 
   return (
@@ -258,6 +272,16 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
             </div>
 
             <div>
+              <Input
+                label="Proveedor"
+                name="supplier"
+                value={formData.supplier}
+                onChange={handleInputChange}
+                placeholder="Ej: Distribuidora XYZ"
+              />
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Descripción
               </label>
@@ -312,14 +336,33 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
 
             {/* Profit calculation */}
             {formData.cost && formData.price && (
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="text-sm text-gray-600">
-                  <div className="flex justify-between">
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <div className="text-sm text-gray-700">
+                  <div className="flex justify-between items-center">
                     <span>Ganancia:</span>
-                    <span className={`font-medium ${profit().amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      ${profit().amount.toFixed(2)} ({profit().percentage.toFixed(1)}%)
+                    <span className={`font-medium ${calculations().profitAmount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      ${calculations().profitAmount.toFixed(2)}
                     </span>
                   </div>
+                  <div className="flex justify-between items-center">
+                    <span>Margen:</span>
+                    <span className={`font-medium ${calculations().isGoodMargin ? 'text-green-600' : 'text-yellow-600'}`}>
+                      {calculations().margin.toFixed(1)}%
+                    </span>
+                  </div>
+                  {calculations().suggestedPrice > 0 && calculations().suggestedPrice !== parseFloat(formData.price) && (
+                    <div className="flex justify-between items-center">
+                      <span>Precio sugerido (30%):</span>
+                      <span className="font-medium text-blue-600">
+                        ${calculations().suggestedPrice.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {calculations().margin < 20 && (
+                    <div className="text-xs text-yellow-600 mt-1">
+                      ⚠️ Margen bajo. Se recomienda al menos 20%
+                    </div>
+                  )}
                 </div>
               </div>
             )}

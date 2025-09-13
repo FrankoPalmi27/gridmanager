@@ -31,6 +31,24 @@ export function SuppliersPage() {
     setIsModalOpen(true);
   };
 
+  const handleEditSupplier = (supplier: any) => {
+    // TODO: Implement supplier editing functionality
+    console.log('Edit supplier:', supplier);
+    // This could open a modal similar to customers or navigate to edit form
+  };
+
+  const handlePaySupplier = (supplier: any) => {
+    // TODO: Implement supplier payment functionality  
+    console.log('Pay supplier:', supplier);
+    // This could open a payment modal
+  };
+
+  const handleViewSupplier = (supplier: any) => {
+    // TODO: Implement supplier view functionality
+    console.log('View supplier:', supplier);
+    // This could show supplier details in a modal
+  };
+
   return (
     <div className="flex-1 overflow-auto">
       <div className="max-w-7xl mx-auto px-6 py-8">
@@ -206,13 +224,28 @@ export function SuppliersPage() {
                       </StatusBadge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-900 mr-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-blue-600 hover:text-blue-900 mr-2"
+                        onClick={() => handleEditSupplier(supplier)}
+                      >
                         Editar
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-900 mr-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-green-600 hover:text-green-900 mr-2"
+                        onClick={() => handlePaySupplier(supplier)}
+                      >
                         Pagar
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-gray-600 hover:text-gray-900"
+                        onClick={() => handleViewSupplier(supplier)}
+                      >
                         Ver
                       </Button>
                     </td>

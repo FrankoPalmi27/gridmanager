@@ -62,6 +62,8 @@ const PAYMENT_METHODS = [
 
 
 export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess, editingSale }) => {
+  console.log('SalesForm rendered with isOpen:', isOpen, 'editingSale:', editingSale);
+  
   const { addSale, updateSale } = useSales();
   const { products } = useProductsStore();
   const { accounts, getActiveAccounts } = useAccountsStore();

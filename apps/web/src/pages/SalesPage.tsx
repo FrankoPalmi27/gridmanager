@@ -290,8 +290,11 @@ export function SalesPage() {
     });
 
   const handleEditSale = (sale: any) => {
+    console.log('handleEditSale called with sale:', sale);
+    console.log('Current isNewSaleModalOpen:', isNewSaleModalOpen);
     setEditingSale(sale);
     setIsNewSaleModalOpen(true);
+    console.log('Set editingSale and isNewSaleModalOpen to true');
   };
 
   const handleCloseModal = () => {
@@ -334,8 +337,11 @@ export function SalesPage() {
           </div>
           <Button 
             onClick={() => {
+              console.log('Nueva Venta button clicked - Header');
+              console.log('Current isNewSaleModalOpen:', isNewSaleModalOpen);
               setEditingSale(null);
               setIsNewSaleModalOpen(true);
+              console.log('Set isNewSaleModalOpen to true');
             }}
             variant="primary"
           >
@@ -667,8 +673,11 @@ export function SalesPage() {
             <div className="mt-6">
               <Button 
                 onClick={() => {
+                  console.log('Nueva Venta button clicked - Empty state');
+                  console.log('Current isNewSaleModalOpen:', isNewSaleModalOpen);
                   setEditingSale(null);
                   setIsNewSaleModalOpen(true);
+                  console.log('Set isNewSaleModalOpen to true');
                 }}
                 variant="primary"
                 className="inline-flex items-center gap-2"

@@ -26,6 +26,7 @@ export function ProductsPage() {
   const [activeTab, setActiveTab] = useState('productos');
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [stockMovementsModal, setStockMovementsModal] = useState<{ isOpen: boolean; product: Product | null }>({ isOpen: false, product: null });
+  const tableScrollRef = React.useRef<HTMLDivElement>(null);
 
   const allCategories = ['all', ...stats.categories];
 
@@ -114,6 +115,18 @@ export function ProductsPage() {
         reason: `Ajuste manual de stock`,
         createdBy: 'Usuario'
       });
+    }
+  };
+
+  const scrollLeft = () => {
+    if (tableScrollRef.current) {
+      tableScrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (tableScrollRef.current) {
+      tableScrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
     }
   };
 
@@ -306,7 +319,16 @@ export function ProductsPage() {
             <h3 className="text-lg font-semibold text-gray-900">Lista de Productos</h3>
           </div>
           
-          <div className="overflow-x-auto">
+          {/* Scrollable table container with custom scrollbar */}
+          <div className="relative">
+            <div 
+              ref={tableScrollRef}
+              className="overflow-x-auto overflow-y-visible scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400" 
+              style={{ 
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#D1D5DB #F3F4F6'
+              }}
+            >
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -504,19 +526,64 @@ export function ProductsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
 
-          {sortedAndFilteredProducts.length === 0 && (
-            <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No hay productos</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {searchTerm || categoryFilter !== 'all' ? 'No se encontraron productos con esos filtros.' : 'Comienza agregando tu primer producto.'}
-              </p>
+              {sortedAndFilteredProducts.length === 0 && (
+                <div className="text-center py-12">
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No hay productos</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {searchTerm || categoryFilter !== 'all' ? 'No se encontraron productos con esos filtros.' : 'Comienza agregando tu primer producto.'}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Horizontal scroll navigation */}
+            {sortedAndFilteredProducts.length > 0 && (
+              <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between text-sm">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+                    </svg>
+                    <span>Navega por la tabla</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={scrollLeft}
+                      className="text-gray-600 hover:text-gray-900 px-2 py-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      <span className="ml-1">Izquierda</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={scrollRight}
+                      className="text-gray-600 hover:text-gray-900 px-2 py-1"
+                    >
+                      <span className="mr-1">Derecha</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Button>
+                  </div>
+                </div>
+                <span className="text-gray-400">
+                  {sortedAndFilteredProducts.length} producto{sortedAndFilteredProducts.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         </TabsContent>

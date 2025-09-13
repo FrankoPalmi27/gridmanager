@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { SearchableSelect } from '../ui/SearchableSelect';
 import { useSales } from '../../store/SalesContext';
 import { useProductsStore } from '../../store/productsStore';
 import { useAccountsStore } from '../../store/accountsStore';
@@ -20,6 +21,8 @@ interface SalesFormData {
   product: string;
   quantity: number;
   price: number;
+  discount: number;
+  saleDate: string;
   salesChannel: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
   paymentStatus: 'paid' | 'pending' | 'partial';
   paymentMethod: 'cash' | 'transfer' | 'card' | 'check' | 'other';
@@ -76,6 +79,8 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
     product: '',
     quantity: 1,
     price: 0,
+    discount: 0,
+    saleDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
     salesChannel: 'store',
     paymentStatus: 'paid',
     paymentMethod: 'cash',
@@ -218,7 +223,9 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
     }
   };
 
-  const total = formData.quantity * formData.price;
+  const subtotal = formData.quantity * formData.price;
+  const discountAmount = subtotal * (formData.discount / 100);
+  const total = subtotal - discountAmount;
 
   const footer = (
     <>
@@ -252,29 +259,25 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
             Cliente
             <span className="text-red-500 ml-1">*</span>
           </label>
-          <select
+          <SearchableSelect
+            options={activeCustomers.map(customer => ({
+              id: customer.id,
+              name: customer.name,
+              subtitle: customer.email + (customer.balance !== 0 ? ` (Balance: ${customer.balance.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })})` : ''),
+              value: customer.name
+            }))}
             value={formData.client}
-            onChange={(e) => {
-              setFormData(prev => ({ ...prev, client: e.target.value }));
+            onChange={(value) => {
+              setFormData(prev => ({ ...prev, client: value }));
               if (errors.client) {
                 setErrors(prev => ({ ...prev, client: undefined }));
               }
             }}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.client ? 'border-red-500' : 'border-gray-300'
-            }`}
+            placeholder="Seleccionar cliente..."
+            searchPlaceholder="Buscar cliente por nombre o email..."
             disabled={loading}
-          >
-            <option value="">Seleccionar cliente...</option>
-            {activeCustomers.map((customer) => (
-              <option key={customer.id} value={customer.name}>
-                {customer.name} - {customer.email}
-                {customer.balance !== 0 && (
-                  <span> (Balance: {customer.balance.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })})</span>
-                )}
-              </option>
-            ))}
-          </select>
+            error={!!errors.client}
+          />
           {activeCustomers.length === 0 && (
             <p className="text-sm text-gray-500 mt-1">
               No hay clientes activos disponibles. 
@@ -292,24 +295,20 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
             Producto
             <span className="text-red-500 ml-1">*</span>
           </label>
-          <select
+          <SearchableSelect
+            options={activeProducts.map(product => ({
+              id: product.id,
+              name: product.name,
+              subtitle: `${product.price.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}${product.stock <= product.minStock ? ` (Stock bajo: ${product.stock})` : ` (Stock: ${product.stock})`}`,
+              value: product.name
+            }))}
             value={formData.product}
-            onChange={(e) => handleProductChange(e.target.value)}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.product ? 'border-red-500' : 'border-gray-300'
-            }`}
+            onChange={(value) => handleProductChange(value)}
+            placeholder="Seleccionar producto..."
+            searchPlaceholder="Buscar producto por nombre..."
             disabled={loading}
-          >
-            <option value="">Seleccionar producto...</option>
-            {activeProducts.map((product) => (
-              <option key={product.id} value={product.name}>
-                {product.name} - {product.price.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
-                {product.stock <= product.minStock && (
-                  <span> (Stock bajo: {product.stock})</span>
-                )}
-              </option>
-            ))}
-          </select>
+            error={!!errors.product}
+          />
           {activeProducts.length === 0 && (
             <p className="text-sm text-gray-500 mt-1">
               No hay productos activos disponibles. 
@@ -357,6 +356,56 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
           disabled={loading}
           error={errors.price}
         />
+
+        {/* Descuento */}
+        <Input
+          type="number"
+          label="Descuento (%)"
+          value={formData.discount.toString()}
+          onChange={(e) => {
+            const discount = parseFloat(e.target.value) || 0;
+            setFormData(prev => ({ ...prev, discount: Math.max(0, Math.min(100, discount)) }));
+          }}
+          step="0.01"
+          min="0"
+          max="100"
+          disabled={loading}
+          placeholder="0"
+        />
+
+        {/* Fecha de Venta */}
+        <Input
+          type="date"
+          label="Fecha de Venta"
+          value={formData.saleDate}
+          onChange={(e) => {
+            setFormData(prev => ({ ...prev, saleDate: e.target.value }));
+          }}
+          disabled={loading}
+          required
+        />
+
+        {/* Resumen de Totales */}
+        {(formData.quantity > 0 && formData.price > 0) && (
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Subtotal ({formData.quantity} × {formatAmount(formData.price)}):</span>
+                <span className="font-medium">{formatAmount(subtotal)}</span>
+              </div>
+              {formData.discount > 0 && (
+                <div className="flex justify-between text-orange-600">
+                  <span>Descuento ({formData.discount}%):</span>
+                  <span className="font-medium">-{formatAmount(discountAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-lg font-semibold border-t pt-2">
+                <span>Total:</span>
+                <span>{formatAmount(total)}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Canal de Venta */}
         <div>

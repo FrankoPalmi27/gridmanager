@@ -232,7 +232,7 @@ export function SalesPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   
   // Get real sales data from context
-  const { sales } = useSales();
+  const { sales, deleteSale } = useSales();
   const { products } = useProductsStore();
   
   // Migrate existing sales to include new payment fields if missing
@@ -299,6 +299,30 @@ export function SalesPage() {
     setEditingSale(null);
   };
 
+  const handleDeleteSale = (sale: any) => {
+    if (confirm(`¿Estás seguro de que deseas eliminar la venta ${sale.number}?`)) {
+      deleteSale(sale.id);
+    }
+  };
+
+  const handlePreviewPDF = (sale: any) => {
+    try {
+      const pdfBlob = generateInvoicePDF(sale);
+      // Create a blob URL and open in new window for preview
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      const newWindow = window.open(pdfUrl, '_blank');
+      if (newWindow) {
+        newWindow.document.title = `Factura ${sale.number}`;
+      }
+      // Clean up the URL after some time
+      setTimeout(() => URL.revokeObjectURL(pdfUrl), 10000);
+    } catch (error) {
+      console.error('Error generating PDF preview:', error);
+      // Fallback to download if preview fails
+      generateInvoicePDF(sale);
+    }
+  };
+
   return (
     <div className="flex-1 overflow-auto">
       <div className="max-w-7xl mx-auto px-6 py-8">
@@ -317,6 +341,84 @@ export function SalesPage() {
           >
             + Nueva Venta
           </Button>
+        </div>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Total Ventas Hoy */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-500">Ventas Hoy</h3>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(migratedSales.filter(sale => {
+                    const today = new Date().toISOString().split('T')[0];
+                    return sale.date.startsWith(today);
+                  }).reduce((sum, sale) => sum + sale.amount, 0))}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Total Ventas Mes */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-500">Ventas Mes</h3>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(migratedSales.filter(sale => {
+                    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+                    return sale.date.startsWith(currentMonth);
+                  }).reduce((sum, sale) => sum + sale.amount, 0))}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Ventas Pendientes */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-500">Pendientes</h3>
+                <p className="text-2xl font-bold text-gray-900">{pendingSalesCount}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Ticket Promedio */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-500">Ticket Promedio</h3>
+                <p className="text-2xl font-bold text-gray-900">
+                  {migratedSales.length > 0 
+                    ? formatCurrency(migratedSales.reduce((sum, sale) => sum + sale.amount, 0) / migratedSales.length)
+                    : formatCurrency(0)
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Filters and Search */}
@@ -463,9 +565,9 @@ export function SalesPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => generateInvoicePDF(sale)}
+                        onClick={() => handlePreviewPDF(sale)}
                         className="w-10 h-10 bg-blue-100 hover:bg-blue-200 rounded-lg flex items-center justify-center mr-4"
-                        title="Descargar proforma PDF"
+                        title="Previsualizar PDF"
                       >
                         <DocumentTextIcon className="w-5 h-5 text-blue-600" />
                       </Button>
@@ -534,6 +636,11 @@ export function SalesPage() {
                       onClick={() => handleEditSale(sale)}
                     >
                       Editar
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-900 mr-2"
+                      onClick={() => handleDeleteSale(sale)}
+                    >
+                      Eliminar
                     </Button>
                     <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-900 mr-2">
                       Facturar

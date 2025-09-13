@@ -5,6 +5,7 @@ import { useCustomersStore } from '../store/customersStore';
 import { useSuppliersStore } from '../stores/suppliersStore';
 import { SalesForm } from '../components/forms/SalesForm';
 import { ProductForm } from '../components/forms/ProductForm';
+import { CustomerModal } from '../components/forms/CustomerModal';
 import { Button } from '../components/ui/Button';
 import { formatCurrency } from '../lib/formatters';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -23,6 +24,7 @@ interface ExchangeRate {
 export function DashboardPage({ onNavigate }: DashboardPageProps) {
   const [showNewSaleModal, setShowNewSaleModal] = useState(false);
   const [showNewProductModal, setShowNewProductModal] = useState(false);
+  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
   const [exchangeRate, setExchangeRate] = useState<ExchangeRate | null>(null);
   const [realStats, setRealStats] = useState({
     totalAvailable: 0,
@@ -306,12 +308,35 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
 
         {/* Enhanced Stats Cards - Bigger */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-          {enhancedStats.map((stat, index) => (
-            <div 
-              key={stat.name} 
-              className={`bg-white p-6 rounded-2xl border-2 ${stat.borderColor} shadow-sm hover:shadow-md transition-all ${stat.name === 'Deudas Proveedores' ? 'cursor-pointer hover:scale-105' : ''}`}
-              onClick={stat.name === 'Deudas Proveedores' ? () => handleModuleClick('suppliers') : undefined}
-            >
+          {enhancedStats.map((stat, index) => {
+            // Determine click handler and styling based on card name
+            let clickHandler, cursorStyle;
+            
+            switch(stat.name) {
+              case 'Total Disponible':
+              case 'Cuentas':
+                clickHandler = () => handleModuleClick('accounts');
+                cursorStyle = 'cursor-pointer hover:scale-105';
+                break;
+              case 'Deudas Clientes':
+                clickHandler = () => handleModuleClick('customers');
+                cursorStyle = 'cursor-pointer hover:scale-105';
+                break;
+              case 'Deudas Proveedores':
+                clickHandler = () => handleModuleClick('suppliers');
+                cursorStyle = 'cursor-pointer hover:scale-105';
+                break;
+              default:
+                clickHandler = undefined;
+                cursorStyle = '';
+            }
+            
+            return (
+              <div 
+                key={stat.name} 
+                className={`bg-white p-6 rounded-2xl border-2 ${stat.borderColor} shadow-sm hover:shadow-md transition-all ${cursorStyle}`}
+                onClick={clickHandler}
+              >
               <div className="flex items-start justify-between mb-4">
                 <div className={`p-3 rounded-xl ${stat.bgColor}`}>
                   <span className="text-2xl">{stat.icon}</span>
@@ -410,7 +435,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
               <span className="text-sm font-medium">Nueva Venta</span>
             </Button>
             <Button 
-              onClick={() => handleModuleClick('customers')}
+              onClick={() => setShowNewCustomerModal(true)}
               variant="outline"
               className="flex flex-col items-center p-4 h-auto bg-blue-50 hover:bg-blue-100 border-blue-200 text-gray-700"
             >
@@ -588,6 +613,11 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
         isOpen={showNewProductModal}
         onClose={() => setShowNewProductModal(false)}
         editingProduct={null}
+      />
+      
+      <CustomerModal 
+        isOpen={showNewCustomerModal}
+        onClose={() => setShowNewCustomerModal(false)}
       />
       
     </div>

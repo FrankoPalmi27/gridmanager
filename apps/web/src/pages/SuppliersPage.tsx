@@ -4,90 +4,27 @@ import { Modal } from '../components/ui/Modal';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { Input } from '../components/ui/Input';
 import { formatCurrency, formatTaxId, formatPhoneNumber } from '../lib/formatters';
-
-interface Supplier {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  taxId: string;
-  balance: number;
-  totalPurchases: number;
-  status: 'active' | 'inactive';
-  paymentTerms: string;
-}
-
-const mockSuppliers: Supplier[] = [
-  {
-    id: '1',
-    name: 'Distribuidora Central S.A.',
-    email: 'ventas@distribuidoracentral.com',
-    phone: '+54 11 4567-8901',
-    address: 'Av. Corrientes 1234, CABA',
-    taxId: '30-12345678-9',
-    balance: -25000,
-    totalPurchases: 450000,
-    status: 'active',
-    paymentTerms: '30 días'
-  },
-  {
-    id: '2',
-    name: 'Mayorista del Norte',
-    email: 'contacto@mayoristanorte.com.ar',
-    phone: '+54 11 5555-0123',
-    address: 'Ruta 9 Km 45, Tigre',
-    taxId: '33-87654321-9',
-    balance: -15000,
-    totalPurchases: 280000,
-    status: 'active',
-    paymentTerms: '15 días'
-  },
-  {
-    id: '3',
-    name: 'Proveedor Express',
-    email: 'info@proveedorexpress.com',
-    phone: '+54 11 6789-0123',
-    address: 'San Martín 567, San Isidro',
-    taxId: '20-11223344-5',
-    balance: 0,
-    totalPurchases: 120000,
-    status: 'active',
-    paymentTerms: 'Contado'
-  },
-  {
-    id: '4',
-    name: 'Antigua Distribuidora (Suspendido)',
-    email: 'admin@antiguadist.com',
-    phone: '+54 11 4444-5555',
-    address: 'Brasil 890, CABA',
-    taxId: '30-99887766-1',
-    balance: -5000,
-    totalPurchases: 50000,
-    status: 'inactive',
-    paymentTerms: '60 días'
-  }
-];
+import { useSuppliersStore } from '../stores/suppliersStore';
 
 export function SuppliersPage() {
-  const [suppliers] = useState<Supplier[]>(mockSuppliers);
+  const { suppliers } = useSuppliersStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const filteredSuppliers = suppliers.filter(supplier => {
     const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         supplier.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (supplier.email?.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          supplier.taxId.includes(searchTerm);
-    const matchesStatus = statusFilter === 'all' || supplier.status === statusFilter;
+    const matchesStatus = statusFilter === 'all' || 
+                         (statusFilter === 'active' ? supplier.active : !supplier.active);
     return matchesSearch && matchesStatus;
   });
 
-  const activeSuppliers = suppliers.filter(s => s.status === 'active');
-  const totalDebt = Math.abs(suppliers.filter(s => s.balance < 0).reduce((sum, s) => sum + s.balance, 0));
+  const activeSuppliers = suppliers.filter(s => s.active);
+  const totalDebt = Math.abs(suppliers.filter(s => s.active && s.currentBalance < 0).reduce((sum, s) => sum + s.currentBalance, 0));
   const avgPaymentTerms = Math.round(suppliers.reduce((sum, s) => {
-    const days = s.paymentTerms.includes('día') ? parseInt(s.paymentTerms) : 0;
-    return sum + days;
+    return sum + s.paymentTerms;
   }, 0) / suppliers.length);
 
   const handleNewSupplier = () => {
@@ -243,20 +180,20 @@ export function SuppliersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{supplier.email}</div>
-                      <div className="text-sm text-gray-500">{formatPhoneNumber(supplier.phone)}</div>
+                      <div className="text-sm text-gray-900">{supplier.email || 'No email'}</div>
+                      <div className="text-sm text-gray-500">{formatPhoneNumber(supplier.phone || '')}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className={`text-sm font-medium ${
-                        supplier.balance === 0 
+                        supplier.currentBalance === 0 
                           ? 'text-gray-900'
-                          : supplier.balance < 0 
+                          : supplier.currentBalance < 0 
                             ? 'text-red-600' 
                             : 'text-green-600'
                       }`}>
-                        {supplier.balance === 0 ? 'Sin deuda' : formatCurrency(Math.abs(supplier.balance))}
+                        {supplier.currentBalance === 0 ? 'Sin deuda' : formatCurrency(Math.abs(supplier.currentBalance))}
                       </div>
-                      <div className="text-sm text-gray-500">{supplier.paymentTerms}</div>
+                      <div className="text-sm text-gray-500">{supplier.paymentTerms} días</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
@@ -264,8 +201,8 @@ export function SuppliersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge variant={supplier.status === 'active' ? 'active' : 'inactive'} dot>
-                        {supplier.status === 'active' ? 'Activo' : 'Inactivo'}
+                      <StatusBadge variant={supplier.active ? 'active' : 'inactive'} dot>
+                        {supplier.active ? 'Activo' : 'Inactivo'}
                       </StatusBadge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

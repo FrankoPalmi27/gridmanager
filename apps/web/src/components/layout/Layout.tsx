@@ -18,7 +18,7 @@ export function Layout() {
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       
       {/* Main content area - full width on mobile, with left margin on desktop */}
-      <div className="flex flex-col h-full lg:ml-72">
+      <div className="flex flex-col h-full ml-0 lg:ml-72">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         
         <main className="flex-1 overflow-y-auto bg-gray-50">

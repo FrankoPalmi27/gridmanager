@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -33,6 +33,18 @@ const navigation = [
 
 export function Sidebar({ open, setOpen }: SidebarProps) {
   const { user } = useAuthStore();
+  const [isLargeScreen, setIsLargeScreen] = useState(false);
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsLargeScreen(window.innerWidth >= 1024);
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   const filteredNavigation = navigation.filter(item => 
     user?.role && item.roles.includes(user.role)
@@ -131,12 +143,14 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
         </Dialog>
       </Transition.Root>
 
-      {/* Desktop sidebar - hidden on mobile, visible on lg+ */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-72 lg:flex-col">
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-gray-200 shadow-sm">
-          <SidebarContent />
+      {/* Desktop sidebar - only show on large screens */}
+      {isLargeScreen && (
+        <div className="fixed inset-y-0 z-30 flex w-72 flex-col">
+          <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-gray-200 shadow-sm">
+            <SidebarContent />
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

@@ -197,14 +197,14 @@ export function Header({ onMenuClick }: HeaderProps) {
           <div className="flex items-center space-x-6">
             <button
               type="button"
-              className="text-gray-500 hover:text-gray-600 lg:hidden transition-colors duration-200"
+              className="text-gray-500 hover:text-gray-600 lg:hidden transition-colors duration-200 z-50 relative"
               onClick={onMenuClick}
             >
               <Bars3Icon className="h-6 w-6" />
             </button>
             
-            <div className="hidden lg:block">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+            <div className="lg:block">
+              <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
                 Grid Manager
               </h1>
             </div>

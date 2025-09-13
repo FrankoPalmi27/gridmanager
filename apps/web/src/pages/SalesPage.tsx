@@ -508,19 +508,18 @@ export function SalesPage() {
             </div>
           </div>
         
-        {/* Scrollable table container with custom scrollbar and fixed width */}
-        <div className="relative">
-          <div 
-            ref={tableScrollRef}
-            className="overflow-x-auto overflow-y-visible scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
-            style={{ 
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#D1D5DB #F3F4F6',
-              maxWidth: '100%',
-              width: '100%'
-            }}
-          >
-          <table className="divide-y divide-gray-200" style={{ minWidth: '1500px', width: 'max-content' }}>
+          <div className="relative">
+            <div 
+              ref={tableScrollRef}
+              className="overflow-x-auto overflow-y-visible scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
+              style={{ 
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#D1D5DB #F3F4F6',
+                maxWidth: '100%',
+                width: '100%'
+              }}
+            >
+              <table className="divide-y divide-gray-200" style={{ minWidth: '1500px', width: 'max-content' }}>
             <thead className="bg-gray-50">
               <tr>
                 <th 
@@ -644,7 +643,7 @@ export function SalesPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '150px', minWidth: '150px' }}>
+                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '160px', minWidth: '160px' }}>
                     <div className="text-sm text-gray-900">{sale.items} productos</div>
                     {sale.salesChannel && (
                       <div className="text-sm text-gray-500 capitalize">
@@ -655,7 +654,7 @@ export function SalesPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '150px', minWidth: '150px' }}>
+                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '140px', minWidth: '140px' }}>
                     <div className="text-sm font-medium text-gray-900">
                       {formatCurrency(sale.amount)}
                     </div>
@@ -681,7 +680,7 @@ export function SalesPage() {
                   <td className="px-4 py-4 whitespace-nowrap" style={{ width: '130px', minWidth: '130px' }}>
                     <StatusDropdown sale={sale} />
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium" style={{ width: '280px', minWidth: '280px' }}>
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium" style={{ width: '270px', minWidth: '270px' }}>
                     <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-900 mr-2"
                       onClick={() => handleEditSale(sale)}
                     >
@@ -703,7 +702,8 @@ export function SalesPage() {
               ))}
             </tbody>
           </table>
-        </div>
+            </div>
+          </div>
 
         {filteredAndSortedSales.length === 0 && (
           <div className="text-center py-12">

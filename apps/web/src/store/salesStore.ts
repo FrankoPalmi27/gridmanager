@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
+import { useAccountsStore } from './accountsStore';
 
 // Tipo para las ventas
 export interface Sale {
@@ -38,47 +39,6 @@ export const initialDashboardStats = {
 };
 
 
-// Función utilitaria para actualizar el balance de las cuentas
-const updateAccountBalance = (accountId: string, amount: number, description: string) => {
-  try {
-    // Cargar cuentas actuales
-    const currentAccounts = loadFromStorage(STORAGE_KEYS.ACCOUNTS, []);
-    
-    // Actualizar balance de la cuenta especificada
-    const updatedAccounts = currentAccounts.map((account: any) => {
-      if (account.id === accountId) {
-        return {
-          ...account,
-          balance: account.balance + amount
-        };
-      }
-      return account;
-    });
-    
-    // Guardar cuentas actualizadas
-    saveToStorage(STORAGE_KEYS.ACCOUNTS, updatedAccounts);
-    
-    // Crear transacción en el registro
-    const currentTransactions = loadFromStorage(STORAGE_KEYS.TRANSACTIONS, []);
-    const newTransaction = {
-      id: Date.now().toString(),
-      accountId: accountId,
-      type: 'income',
-      amount: amount,
-      description: description,
-      date: new Date().toISOString().split('T')[0],
-      category: 'Ventas',
-      reference: description.split(' ')[0] // Extraer numero de venta
-    };
-    
-    // Guardar transacciones actualizadas
-    saveToStorage(STORAGE_KEYS.TRANSACTIONS, [newTransaction, ...currentTransactions]);
-    
-  } catch (error) {
-    console.error('Error updating account balance:', error);
-  }
-};
-
 // Hook personalizado para manejar las ventas
 export const useSalesStore = () => {
   const [dashboardStats, setDashboardStats] = useState(() => 
@@ -87,6 +47,9 @@ export const useSalesStore = () => {
   const [sales, setSales] = useState<Sale[]>(() => 
     loadFromStorage(STORAGE_KEYS.SALES, [])
   );
+  
+  // Hook para manejar transacciones enlazadas
+  const { addLinkedTransaction, removeLinkedTransactions } = useAccountsStore();
 
   // Save to localStorage whenever sales or stats change
   useEffect(() => {
@@ -151,12 +114,17 @@ export const useSalesStore = () => {
       monthlyGrowth: prev.monthlyGrowth + 0.1 // Pequeño incremento
     }));
 
-    // Si el pago está marcado como pagado y se especificó una cuenta, actualizar el balance
+    // Si el pago está marcado como pagado y se especificó una cuenta, crear transacción enlazada
     if (saleData.paymentStatus === 'paid' && saleData.accountId) {
-      updateAccountBalance(
+      addLinkedTransaction(
         saleData.accountId, 
         newSale.amount, 
-        `Venta ${newSale.number} - ${saleData.client}`
+        `Venta ${newSale.number} - ${saleData.client}`,
+        {
+          type: 'sale',
+          id: newSale.id.toString(),
+          number: newSale.number
+        }
       );
     }
 
@@ -189,13 +157,9 @@ export const useSalesStore = () => {
           monthlyGrowth: prev.monthlyGrowth
         }));
 
-        // Si la venta tenía pagos registrados, revertir cambios en cuenta
+        // Si la venta tenía pagos registrados, eliminar transacciones enlazadas
         if (saleToDelete.paymentStatus === 'paid' && saleToDelete.accountId) {
-          updateAccountBalance(
-            saleToDelete.accountId, 
-            -saleToDelete.amount, 
-            `Eliminación venta ${saleToDelete.number} - ${saleToDelete.client.name}`
-          );
+          removeLinkedTransactions('sale', saleToDelete.id.toString());
         }
       }
       
@@ -235,20 +199,21 @@ export const useSalesStore = () => {
 
           // Handle account balance updates if payment status changes
           if (sale.paymentStatus === 'paid' && sale.accountId) {
-            // Remove previous amount from account
-            updateAccountBalance(
-              sale.accountId, 
-              -originalAmount, 
-              `Corrección venta ${sale.number} - ${sale.client.name}`
-            );
+            // Remove previous linked transactions
+            removeLinkedTransactions('sale', sale.id.toString());
           }
 
-          // Add new amount to account if marked as paid
+          // Add new linked transaction if marked as paid
           if (updatedData.paymentStatus === 'paid' && updatedData.accountId) {
-            updateAccountBalance(
+            addLinkedTransaction(
               updatedData.accountId, 
               newAmount, 
-              `Venta ${sale.number} - ${updatedData.client}`
+              `Venta ${sale.number} - ${updatedData.client}`,
+              {
+                type: 'sale',
+                id: sale.id.toString(),
+                number: sale.number
+              }
             );
           }
 

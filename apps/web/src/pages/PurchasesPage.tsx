@@ -4,108 +4,187 @@ import { Modal } from '../components/ui/Modal';
 import { PurchaseStatusBadge } from '../components/ui/StatusBadge';
 import { Input } from '../components/ui/Input';
 import { formatCurrency, formatDate as formatDateUtil } from '../lib/formatters';
+import { usePurchasesStore, Purchase } from '../store/purchasesStore';
+import { useSuppliersStore } from '../store/suppliersStore';
+import { useProductsStore } from '../store/productsStore';
+import { useAccountsStore } from '../store/accountsStore';
 
-interface Purchase {
-  id: string;
-  number: string;
-  supplier: string;
-  date: string;
-  dueDate: string;
-  status: 'pending' | 'received' | 'paid' | 'cancelled';
-  subtotal: number;
-  taxes: number;
-  total: number;
-  items: number;
+interface PurchaseFormData {
+  supplierId: string;
+  items: Array<{
+    productId: string;
+    quantity: number;
+    unitCost: number;
+  }>;
+  paymentStatus: 'paid' | 'pending' | 'partial';
+  paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other';
+  accountId?: string;
+  reference?: string;
+  notes?: string;
 }
-
-const mockPurchases: Purchase[] = [
-  {
-    id: '1',
-    number: 'COMP-001',
-    supplier: 'Distribuidora Central S.A.',
-    date: '2025-01-15',
-    dueDate: '2025-02-15',
-    status: 'received',
-    subtotal: 25000,
-    taxes: 5250,
-    total: 30250,
-    items: 15
-  },
-  {
-    id: '2',
-    number: 'COMP-002',
-    supplier: 'Mayorista del Norte',
-    date: '2025-01-10',
-    dueDate: '2025-01-25',
-    status: 'pending',
-    subtotal: 18500,
-    taxes: 3885,
-    total: 22385,
-    items: 8
-  },
-  {
-    id: '3',
-    number: 'COMP-003',
-    supplier: 'Proveedor Express',
-    date: '2025-01-08',
-    dueDate: '2025-01-08',
-    status: 'paid',
-    subtotal: 12000,
-    taxes: 2520,
-    total: 14520,
-    items: 5
-  },
-  {
-    id: '4',
-    number: 'COMP-004',
-    supplier: 'Distribuidora Central S.A.',
-    date: '2025-01-05',
-    dueDate: '2025-02-05',
-    status: 'cancelled',
-    subtotal: 8000,
-    taxes: 1680,
-    total: 9680,
-    items: 3
-  }
-];
 
 const statusConfig = {
   pending: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800' },
   received: { label: 'Recibido', color: 'bg-blue-100 text-blue-800' },
-  paid: { label: 'Pagado', color: 'bg-green-100 text-green-800' },
   cancelled: { label: 'Cancelado', color: 'bg-red-100 text-red-800' }
 };
 
+const paymentStatusConfig = {
+  paid: { label: 'Pagado', color: 'bg-green-100 text-green-800' },
+  pending: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800' },
+  partial: { label: 'Parcial', color: 'bg-orange-100 text-orange-800' }
+};
+
 export function PurchasesPage() {
-  const [purchases] = useState<Purchase[]>(mockPurchases);
+  const { 
+    purchases, 
+    dashboardStats, 
+    addPurchase, 
+    markAsReceived, 
+    updatePaymentStatus, 
+    deletePurchase 
+  } = usePurchasesStore();
+  
+  const { suppliers } = useSuppliersStore();
+  const { products } = useProductsStore();
+  const { accounts } = useAccountsStore();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | null>(null);
+  
+  // Form state
+  const [formData, setFormData] = useState<PurchaseFormData>({
+    supplierId: '',
+    items: [{ productId: '', quantity: 1, unitCost: 0 }],
+    paymentStatus: 'pending',
+    paymentMethod: undefined,
+    accountId: undefined,
+    reference: '',
+    notes: ''
+  });
 
   const filteredPurchases = purchases.filter(purchase => {
     const matchesSearch = purchase.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         purchase.supplier.toLowerCase().includes(searchTerm.toLowerCase());
+                         purchase.supplierName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || purchase.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
-
-  const totalPurchases = purchases.reduce((sum, p) => sum + p.total, 0);
-  const pendingPurchases = purchases.filter(p => p.status === 'pending');
-  const receivedPurchases = purchases.filter(p => p.status === 'received');
-  const overduePurchases = purchases.filter(p => 
-    new Date(p.dueDate) < new Date() && (p.status === 'pending' || p.status === 'received')
-  );
 
   const handleNewPurchase = () => {
     setIsModalOpen(true);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-AR');
+  const handleAddItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      items: [...prev.items, { productId: '', quantity: 1, unitCost: 0 }]
+    }));
   };
 
-  const isOverdue = (dueDate: string, status: string) => {
-    return new Date(dueDate) < new Date() && (status === 'pending' || status === 'received');
+  const handleRemoveItem = (index: number) => {
+    if (formData.items.length > 1) {
+      setFormData(prev => ({
+        ...prev,
+        items: prev.items.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const handleItemChange = (index: number, field: keyof PurchaseFormData['items'][0], value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.map((item, i) => 
+        i === index ? { ...item, [field]: value } : item
+      )
+    }));
+  };
+
+  const handleSubmitPurchase = async () => {
+    try {
+      // Validate form
+      if (!formData.supplierId) {
+        alert('Selecciona un proveedor');
+        return;
+      }
+
+      if (formData.items.some(item => !item.productId || item.quantity <= 0 || item.unitCost <= 0)) {
+        alert('Completa todos los datos de los productos');
+        return;
+      }
+
+      if (formData.paymentStatus === 'paid' && !formData.accountId) {
+        alert('Selecciona una cuenta para el pago');
+        return;
+      }
+
+      // Create purchase
+      await addPurchase(formData);
+
+      // Reset form and close modal
+      setFormData({
+        supplierId: '',
+        items: [{ productId: '', quantity: 1, unitCost: 0 }],
+        paymentStatus: 'pending',
+        paymentMethod: undefined,
+        accountId: undefined,
+        reference: '',
+        notes: ''
+      });
+      
+      setIsModalOpen(false);
+      alert('¡Compra creada exitosamente!');
+    } catch (error) {
+      console.error('Error creating purchase:', error);
+      alert('Error al crear la compra: ' + (error as Error).message);
+    }
+  };
+
+  const handleReceivePurchase = (purchaseId: string) => {
+    try {
+      markAsReceived(purchaseId);
+      alert('¡Compra marcada como recibida! El inventario se actualizó automáticamente.');
+    } catch (error) {
+      console.error('Error receiving purchase:', error);
+      alert('Error al marcar compra como recibida: ' + (error as Error).message);
+    }
+  };
+
+  const handleOpenPaymentModal = (purchaseId: string) => {
+    setSelectedPurchaseId(purchaseId);
+    setIsPaymentModalOpen(true);
+  };
+
+  const handleProcessPayment = (accountId: string) => {
+    if (!selectedPurchaseId) return;
+    
+    try {
+      updatePaymentStatus(selectedPurchaseId, 'paid', accountId);
+      setIsPaymentModalOpen(false);
+      setSelectedPurchaseId(null);
+      alert('¡Pago registrado exitosamente!');
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      alert('Error al procesar pago: ' + (error as Error).message);
+    }
+  };
+
+  const handleDeletePurchase = (purchaseId: string) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar esta compra? Esta acción no se puede deshacer.')) {
+      try {
+        deletePurchase(purchaseId);
+        alert('Compra eliminada exitosamente');
+      } catch (error) {
+        console.error('Error deleting purchase:', error);
+        alert('Error al eliminar compra: ' + (error as Error).message);
+      }
+    }
+  };
+
+  const calculateFormTotal = () => {
+    return formData.items.reduce((total, item) => total + (item.quantity * item.unitCost), 0);
   };
 
   return (
@@ -135,8 +214,8 @@ export function PurchasesPage() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm text-gray-500">Total Compras</p>
-                <p className="text-lg font-semibold text-gray-900">{formatCurrency(totalPurchases)}</p>
+                <p className="text-sm text-gray-500">Total Gastado</p>
+                <p className="text-lg font-semibold text-gray-900">{formatCurrency(dashboardStats.totalSpent)}</p>
               </div>
             </div>
           </div>
@@ -149,36 +228,36 @@ export function PurchasesPage() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm text-gray-500">Pendientes</p>
-                <p className="text-lg font-semibold text-yellow-600">{pendingPurchases.length}</p>
+                <p className="text-sm text-gray-500">Órdenes Pendientes</p>
+                <p className="text-lg font-semibold text-yellow-600">{dashboardStats.pendingOrders}</p>
               </div>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-gray-200">
             <div className="flex items-center">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-3 bg-green-100 rounded-lg">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm text-gray-500">Recibidos</p>
-                <p className="text-lg font-semibold text-blue-600">{receivedPurchases.length}</p>
+                <p className="text-sm text-gray-500">Total Compras</p>
+                <p className="text-lg font-semibold text-green-600">{dashboardStats.totalPurchases}</p>
               </div>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-gray-200">
             <div className="flex items-center">
-              <div className="p-3 bg-red-100 rounded-lg">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              <div className="p-3 bg-purple-100 rounded-lg">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm text-gray-500">Vencidos</p>
-                <p className="text-lg font-semibold text-red-600">{overduePurchases.length}</p>
+                <p className="text-sm text-gray-500">Este Mes</p>
+                <p className="text-lg font-semibold text-purple-600">{formatCurrency(dashboardStats.monthlySpending)}</p>
               </div>
             </div>
           </div>
@@ -207,7 +286,6 @@ export function PurchasesPage() {
             <option value="all">Todos los estados</option>
             <option value="pending">Pendiente</option>
             <option value="received">Recibido</option>
-            <option value="paid">Pagado</option>
             <option value="cancelled">Cancelado</option>
           </select>
         </div>
@@ -229,7 +307,7 @@ export function PurchasesPage() {
                     Proveedor
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fechas
+                    Fecha
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Items
@@ -239,6 +317,9 @@ export function PurchasesPage() {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Pago
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
@@ -257,27 +338,23 @@ export function PurchasesPage() {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{purchase.number}</div>
+                          {purchase.reference && (
+                            <div className="text-sm text-gray-500">Ref: {purchase.reference}</div>
+                          )}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{purchase.supplier}</div>
+                      <div className="text-sm text-gray-900">{purchase.supplierName}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">Compra: {formatDateUtil(new Date(purchase.date))}</div>
-                      <div className={`text-sm ${
-                        isOverdue(purchase.dueDate, purchase.status) 
-                          ? 'text-red-600 font-medium' 
-                          : 'text-gray-500'
-                      }`}>
-                        Vence: {formatDateUtil(new Date(purchase.dueDate))}
-                        {isOverdue(purchase.dueDate, purchase.status) && (
-                          <span className="ml-1 text-red-600">⚠️</span>
-                        )}
-                      </div>
+                      <div className="text-sm text-gray-900">{formatDateUtil(new Date(purchase.date))}</div>
+                      {purchase.receivedDate && (
+                        <div className="text-sm text-gray-500">Recibido: {formatDateUtil(new Date(purchase.receivedDate))}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{purchase.items} productos</div>
+                      <div className="text-sm text-gray-900">{purchase.items.length} productos</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
@@ -288,24 +365,47 @@ export function PurchasesPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <PurchaseStatusBadge status={purchase.status === 'paid' ? 'received' : purchase.status as 'received' | 'pending' | 'cancelled' | 'draft' | 'ordered'} />
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        statusConfig[purchase.status]?.color || 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {statusConfig[purchase.status]?.label || purchase.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        paymentStatusConfig[purchase.paymentStatus]?.color || 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {paymentStatusConfig[purchase.paymentStatus]?.label || purchase.paymentStatus}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-900 mr-2">
-                        Ver
-                      </Button>
                       {purchase.status === 'pending' && (
-                        <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-900 mr-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-green-600 hover:text-green-900 mr-2"
+                          onClick={() => handleReceivePurchase(purchase.id)}
+                        >
                           Recibir
                         </Button>
                       )}
-                      {purchase.status === 'received' && (
-                        <Button variant="ghost" size="sm" className="text-yellow-600 hover:text-yellow-900 mr-2">
+                      {purchase.status === 'received' && purchase.paymentStatus !== 'paid' && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-yellow-600 hover:text-yellow-900 mr-2"
+                          onClick={() => handleOpenPaymentModal(purchase.id)}
+                        >
                           Pagar
                         </Button>
                       )}
-                      <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
-                        ⋯
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-600 hover:text-red-900"
+                        onClick={() => handleDeletePurchase(purchase.id)}
+                      >
+                        Eliminar
                       </Button>
                     </td>
                   </tr>
@@ -326,66 +426,6 @@ export function PurchasesPage() {
             </div>
           )}
         </div>
-
-        {/* Quick Actions */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-3 bg-yellow-100 rounded-lg">
-                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-4 flex-1">
-                <h4 className="text-lg font-medium text-gray-900">Próximos Vencimientos</h4>
-                <p className="text-sm text-gray-500">{overduePurchases.length} compras vencidas</p>
-              </div>
-              <Button variant="ghost" size="icon" className="text-yellow-600 hover:text-yellow-700">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Button>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <div className="ml-4 flex-1">
-                <h4 className="text-lg font-medium text-gray-900">Reporte Mensual</h4>
-                <p className="text-sm text-gray-500">Compras de este mes</p>
-              </div>
-              <Button variant="ghost" size="icon" className="text-blue-600 hover:text-blue-700">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Button>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
-              <div className="ml-4 flex-1">
-                <h4 className="text-lg font-medium text-gray-900">Gestionar Proveedores</h4>
-                <p className="text-sm text-gray-500">Ver y editar proveedores</p>
-              </div>
-              <Button variant="ghost" size="icon" className="text-green-600 hover:text-green-700">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Button>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* New Purchase Modal */}
@@ -393,17 +433,257 @@ export function PurchasesPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Nueva Compra"
-        size="md"
-        footer={
-          <Button
-            onClick={() => setIsModalOpen(false)}
-            variant="secondary"
-          >
-            Cerrar
-          </Button>
-        }
+        size="lg"
       >
-        <p className="text-gray-600">Funcionalidad en desarrollo...</p>
+        <div className="space-y-6">
+          {/* Supplier Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Proveedor <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.supplierId}
+              onChange={(e) => setFormData(prev => ({ ...prev, supplierId: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+            >
+              <option value="">Seleccionar proveedor...</option>
+              {suppliers.filter(s => s.active).map(supplier => (
+                <option key={supplier.id} value={supplier.id}>
+                  {supplier.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Items */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Productos <span className="text-red-500">*</span>
+              </label>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleAddItem}
+              >
+                + Agregar Producto
+              </Button>
+            </div>
+            
+            <div className="space-y-3">
+              {formData.items.map((item, index) => (
+                <div key={index} className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <select
+                      value={item.productId}
+                      onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    >
+                      <option value="">Seleccionar producto...</option>
+                      {products.filter(p => p.status === 'active').map(product => (
+                        <option key={product.id} value={product.id}>
+                          {product.name} ({product.sku})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="w-24">
+                    <label className="block text-xs text-gray-500 mb-1">Cantidad</label>
+                    <input
+                      type="number"
+                      value={item.quantity}
+                      onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      min="1"
+                      required
+                    />
+                  </div>
+                  <div className="w-32">
+                    <label className="block text-xs text-gray-500 mb-1">Costo Unit.</label>
+                    <input
+                      type="number"
+                      value={item.unitCost}
+                      onChange={(e) => handleItemChange(index, 'unitCost', parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      min="0"
+                      step="0.01"
+                      required
+                    />
+                  </div>
+                  {formData.items.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveItem(index)}
+                      className="text-red-600 hover:text-red-700 mb-0"
+                    >
+                      Eliminar
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            {/* Total */}
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex justify-between text-lg font-semibold">
+                <span>Total:</span>
+                <span>{formatCurrency(calculateFormTotal())}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Estado de Pago
+              </label>
+              <select
+                value={formData.paymentStatus}
+                onChange={(e) => setFormData(prev => ({ ...prev, paymentStatus: e.target.value as 'paid' | 'pending' | 'partial' }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="pending">Pendiente</option>
+                <option value="paid">Pagado</option>
+                <option value="partial">Parcial</option>
+              </select>
+            </div>
+
+            {formData.paymentStatus !== 'pending' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cuenta de Pago <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.accountId || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, accountId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required={formData.paymentStatus === 'paid'}
+                >
+                  <option value="">Seleccionar cuenta...</option>
+                  {accounts.filter(acc => acc.active).map(account => (
+                    <option key={account.id} value={account.id}>
+                      {account.name} - {formatCurrency(account.balance)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Additional Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Referencia Externa
+              </label>
+              <input
+                type="text"
+                value={formData.reference}
+                onChange={(e) => setFormData(prev => ({ ...prev, reference: e.target.value }))}
+                placeholder="Ej: Factura #123"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            {formData.paymentStatus !== 'pending' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Método de Pago
+                </label>
+                <select
+                  value={formData.paymentMethod || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Seleccionar método...</option>
+                  <option value="cash">Efectivo</option>
+                  <option value="transfer">Transferencia</option>
+                  <option value="card">Tarjeta</option>
+                  <option value="check">Cheque</option>
+                  <option value="other">Otro</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Notas
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+              rows={3}
+              placeholder="Notas adicionales..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          {/* Form Actions */}
+          <div className="flex justify-end space-x-3 pt-4 border-t">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleSubmitPurchase}
+            >
+              Crear Compra
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Payment Modal */}
+      <Modal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        title="Registrar Pago"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">Selecciona la cuenta desde la cual realizar el pago:</p>
+          
+          <div className="space-y-2">
+            {accounts.filter(acc => acc.active).map(account => (
+              <Button
+                key={account.id}
+                variant="ghost"
+                className="w-full justify-between text-left p-4 border rounded-lg hover:bg-blue-50"
+                onClick={() => handleProcessPayment(account.id)}
+              >
+                <div>
+                  <div className="font-medium">{account.name}</div>
+                  <div className="text-sm text-gray-500">{account.bankName}</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">{formatCurrency(account.balance)}</div>
+                  <div className="text-sm text-gray-500">{account.currency}</div>
+                </div>
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex justify-end pt-4 border-t">
+            <Button
+              variant="secondary"
+              onClick={() => setIsPaymentModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

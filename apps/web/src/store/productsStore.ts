@@ -42,6 +42,23 @@ export interface Category {
   createdAt: string;
 }
 
+// Tipos para alertas de stock
+export type StockAlertLevel = 'critical' | 'high' | 'medium' | 'normal';
+
+export interface StockAlert {
+  id: string;
+  productId: string;
+  productName: string;
+  productSku: string;
+  currentStock: number;
+  minStock: number;
+  level: StockAlertLevel;
+  message: string;
+  color: 'red' | 'orange' | 'yellow' | 'green';
+  canSell: boolean;
+  createdAt: string;
+}
+
 
 // Productos cargados desde vision_tenis.csv
 const initialProducts: Product[] = [
@@ -833,6 +850,11 @@ interface ProductsStore {
   addStockMovement: (movement: Omit<StockMovement, 'id' | 'createdAt'>) => void;
   getStockMovementsByProduct: (productId: string) => StockMovement[];
   updateStockWithMovement: (productId: string, newStock: number, reason: string, reference?: string) => void;
+  // Stock alert functions
+  getStockAlerts: () => StockAlert[];
+  getProductById: (id: string) => Product | undefined;
+  checkStockLevel: (product: Product) => StockAlertLevel;
+  generateStockAlert: (product: Product) => StockAlert | null;
 }
 
 export const useProductsStore = create<ProductsStore>((set, get) => ({
@@ -1011,6 +1033,81 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
         products: updatedProducts,
         stockMovements: newMovements
       };
+    });
+  },
+
+  // Stock alert functions implementation
+  getProductById: (id) => {
+    const state = get();
+    return state.products.find(p => p.id === id);
+  },
+
+  checkStockLevel: (product) => {
+    if (product.stock === 0) return 'critical';
+    if (product.stock < product.minStock) return 'high';
+    if (product.stock <= product.minStock * 1.2) return 'medium';
+    return 'normal';
+  },
+
+  generateStockAlert: (product) => {
+    const level = get().checkStockLevel(product);
+    
+    if (level === 'normal') return null;
+
+    let message = '';
+    let color: 'red' | 'orange' | 'yellow' | 'green' = 'green';
+    let canSell = true;
+
+    switch (level) {
+      case 'critical':
+        message = `¡CRÍTICO! Stock agotado - Bloquear ventas`;
+        color = 'red';
+        canSell = false;
+        break;
+      case 'high':
+        message = `¡ALTA! Stock por debajo del mínimo - Sugerir reorden`;
+        color = 'orange';
+        canSell = true;
+        break;
+      case 'medium':
+        message = `MEDIA: Stock cerca del mínimo - Monitorear`;
+        color = 'yellow';
+        canSell = true;
+        break;
+    }
+
+    return {
+      id: `alert-${product.id}-${Date.now()}`,
+      productId: product.id,
+      productName: product.name,
+      productSku: product.sku,
+      currentStock: product.stock,
+      minStock: product.minStock,
+      level,
+      message,
+      color,
+      canSell,
+      createdAt: new Date().toISOString()
+    };
+  },
+
+  getStockAlerts: () => {
+    const state = get();
+    const alerts: StockAlert[] = [];
+    
+    state.products
+      .filter(p => p.status === 'active')
+      .forEach(product => {
+        const alert = get().generateStockAlert(product);
+        if (alert) {
+          alerts.push(alert);
+        }
+      });
+
+    // Sort by priority: critical first, then by stock level
+    return alerts.sort((a, b) => {
+      const priority = { critical: 0, high: 1, medium: 2, normal: 3 };
+      return priority[a.level] - priority[b.level];
     });
   },
 

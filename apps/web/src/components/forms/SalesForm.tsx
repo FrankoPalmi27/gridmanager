@@ -19,6 +19,7 @@ interface SalesFormProps {
 interface SalesFormData {
   client: string;
   product: string;
+  productId: string; // Nuevo campo requerido para inventario
   quantity: number;
   price: number;
   discount: number;
@@ -62,7 +63,7 @@ const PAYMENT_METHODS = [
 
 
 export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess, editingSale }) => {
-  const { addSale, updateSale } = useSales();
+  const { addSale, updateSale, validateStock } = useSales();
   const { products } = useProductsStore();
   const { accounts, getActiveAccounts } = useAccountsStore();
   const { customers, getActiveCustomers } = useCustomersStore();
@@ -77,6 +78,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
   const [formData, setFormData] = useState<SalesFormData>({
     client: '',
     product: '',
+    productId: '', // Inicializar productId vacío
     quantity: 1,
     price: 0,
     discount: 0,
@@ -116,6 +118,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
     setFormData({
       client: '',
       product: '',
+      productId: '', // Reset productId también
       quantity: 1,
       price: 0,
       discount: 0,
@@ -136,10 +139,12 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
   const handleProductChange = (productName: string) => {
     const product = activeProducts.find(p => p.name === productName);
     const price = product ? product.price : 0;
+    const productId = product ? product.id : '';
     
     setFormData(prev => ({ 
       ...prev, 
       product: productName, 
+      productId: productId, // 🔥 CRÍTICO: Guardar productId para integración con inventario
       price 
     }));
     
@@ -203,6 +208,18 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
           alert(`¡Venta actualizada exitosamente! Nº ${editingSale.number}`);
         }
       } else {
+        // 🚨 VALIDACIÓN CRÍTICA DE STOCK PRE-VENTA
+        const stockValidation = validateStock(formData.productId, formData.quantity);
+        if (!stockValidation.valid) {
+          const confirm = window.confirm(
+            `⚠️ ALERTA DE STOCK:\n\n${stockValidation.message}\n\n¿Desea proceder de todos modos?\n\nEsto podría generar stock negativo.`
+          );
+          if (!confirm) {
+            setLoading(false);
+            return;
+          }
+        }
+
         // Create new sale
         const newSale = addSale(formData);
         // Sale created successfully

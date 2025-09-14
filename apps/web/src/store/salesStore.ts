@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
 import { useAccountsStore } from './accountsStore';
+import { useProductsStore } from './productsStore';
 
 // Tipo para las ventas
 export interface Sale {
@@ -28,6 +29,9 @@ export interface Sale {
   // Nuevos campos de tracking de pagos
   cobrado: number; // Monto cobrado
   aCobrar: number; // Monto pendiente de cobro
+  // Integración con inventario
+  productId?: string; // ID del producto vendido
+  productName?: string; // Nombre del producto para referencia
 }
 
 // Estado inicial del dashboard
@@ -50,6 +54,9 @@ export const useSalesStore = () => {
   
   // Hook para manejar transacciones enlazadas
   const { addLinkedTransaction, removeLinkedTransactions } = useAccountsStore();
+  
+  // Hook para manejar inventario  
+  const { products, updateStockWithMovement, getProductById } = useProductsStore();
 
   // Save to localStorage whenever sales or stats change
   useEffect(() => {
@@ -60,9 +67,28 @@ export const useSalesStore = () => {
     saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, dashboardStats);
   }, [dashboardStats]);
 
+  // Nueva función para validar stock disponible
+  const validateStock = (productId: string, quantity: number): { valid: boolean; message?: string; currentStock?: number } => {
+    const product = getProductById(productId);
+    if (!product) {
+      return { valid: false, message: 'Producto no encontrado' };
+    }
+    
+    if (product.stock < quantity) {
+      return { 
+        valid: false, 
+        message: `Stock insuficiente. Disponible: ${product.stock}, Solicitado: ${quantity}`,
+        currentStock: product.stock
+      };
+    }
+    
+    return { valid: true, currentStock: product.stock };
+  };
+
   const addSale = (saleData: {
     client: string;
     product: string;
+    productId: string; // Nuevo campo requerido
     quantity: number;
     price: number;
     salesChannel?: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
@@ -70,6 +96,12 @@ export const useSalesStore = () => {
     paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other';
     accountId?: string;
   }) => {
+    // 🚨 VALIDACIÓN CRÍTICA: Verificar stock disponible
+    const stockValidation = validateStock(saleData.productId, saleData.quantity);
+    if (!stockValidation.valid) {
+      throw new Error(stockValidation.message);
+    }
+
     // Generate client avatar (initials)
     const generateAvatar = (name: string) => {
       return name.split(' ').map(n => n.charAt(0)).join('').toUpperCase();
@@ -100,11 +132,28 @@ export const useSalesStore = () => {
       accountId: saleData.accountId,
       // Inicializar campos de tracking de pagos
       cobrado: saleData.paymentStatus === 'paid' ? totalAmount : 0,
-      aCobrar: saleData.paymentStatus === 'paid' ? 0 : totalAmount
+      aCobrar: saleData.paymentStatus === 'paid' ? 0 : totalAmount,
+      // Integración con inventario
+      productId: saleData.productId,
+      productName: saleData.product
     };
 
     // Agregar la nueva venta
     setSales(prev => [newSale, ...prev]);
+
+    // 🔥 ACTUALIZACIÓN AUTOMÁTICA DE INVENTARIO
+    try {
+      updateStockWithMovement(
+        saleData.productId,
+        stockValidation.currentStock! - saleData.quantity,
+        `Venta ${newSale.number} - Cliente: ${saleData.client}`,
+        newSale.number
+      );
+    } catch (error) {
+      // Si falla la actualización de stock, revertir la venta
+      setSales(prev => prev.filter(sale => sale.id !== newSale.id));
+      throw new Error(`Error actualizando inventario: ${error}`);
+    }
 
     // Actualizar estadísticas del dashboard
     setDashboardStats(prev => ({
@@ -156,6 +205,24 @@ export const useSalesStore = () => {
           averagePerDay: Math.round((prev.totalSales - saleToDelete.amount) / 30),
           monthlyGrowth: prev.monthlyGrowth
         }));
+
+        // 🔥 REVERSIÓN AUTOMÁTICA DE INVENTARIO  
+        if (saleToDelete.productId) {
+          try {
+            const currentProduct = getProductById(saleToDelete.productId);
+            if (currentProduct) {
+              updateStockWithMovement(
+                saleToDelete.productId,
+                currentProduct.stock + saleToDelete.items, // Restaurar stock
+                `Eliminación venta ${saleToDelete.number} - Cliente: ${saleToDelete.client.name}`,
+                `CANCEL-${saleToDelete.number}`
+              );
+            }
+          } catch (error) {
+            console.error('Error revirtiendo stock al eliminar venta:', error);
+            // Continuar con eliminación aunque falle la reversión de stock
+          }
+        }
 
         // Si la venta tenía pagos registrados, eliminar transacciones enlazadas
         if (saleToDelete.paymentStatus === 'paid' && saleToDelete.accountId) {
@@ -249,6 +316,7 @@ export const useSalesStore = () => {
     updateSaleStatus,
     deleteSale,
     updateDashboardStats,
-    setSales
+    setSales,
+    validateStock // Exponer función de validación
   };
 };

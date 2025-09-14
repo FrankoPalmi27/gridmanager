@@ -47,6 +47,8 @@ export const STORAGE_KEYS = {
   ACCOUNTS: 'gridmanager_accounts',
   TRANSACTIONS: 'gridmanager_transactions',
   SUPPLIERS: 'gridmanager_suppliers',
+  PURCHASES: 'gridmanager_purchases',
+  PURCHASE_STATS: 'gridmanager_purchase_stats',
   AUTH: 'gridmanager_auth',
   DASHBOARD_STATS: 'gridmanager_dashboard_stats',
 } as const;

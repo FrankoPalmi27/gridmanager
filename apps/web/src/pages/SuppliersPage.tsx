@@ -7,12 +7,44 @@ import { formatCurrency, formatTaxId, formatPhoneNumber } from '../lib/formatter
 import { useSuppliersStore } from '../store/suppliersStore';
 import { useTableScroll } from '../hooks/useTableScroll';
 
+interface SupplierFormData {
+  name: string;
+  businessName: string;
+  taxId: string;
+  email: string;
+  phone: string;
+  address: string;
+  contactPerson: string;
+  paymentTerms: number;
+  creditLimit: number;
+  category: string;
+  active: boolean;
+}
+
 export function SuppliersPage() {
-  const { suppliers } = useSuppliersStore();
+  const { suppliers, addSupplier, updateSupplier } = useSuppliersStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
+
+  // Form state
+  const [formData, setFormData] = useState<SupplierFormData>({
+    name: '',
+    businessName: '',
+    taxId: '',
+    email: '',
+    phone: '',
+    address: '',
+    contactPerson: '',
+    paymentTerms: 30,
+    creditLimit: 0,
+    category: '',
+    active: true
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const filteredSuppliers = suppliers.filter(supplier => {
     const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -29,23 +61,136 @@ export function SuppliersPage() {
     return sum + s.paymentTerms;
   }, 0) / suppliers.length);
 
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      businessName: '',
+      taxId: '',
+      email: '',
+      phone: '',
+      address: '',
+      contactPerson: '',
+      paymentTerms: 30,
+      creditLimit: 0,
+      category: '',
+      active: true
+    });
+    setErrors({});
+    setEditingSupplier(null);
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'El nombre es requerido';
+    }
+
+    if (!formData.businessName.trim()) {
+      newErrors.businessName = 'La razón social es requerida';
+    }
+
+    if (!formData.taxId.trim()) {
+      newErrors.taxId = 'El CUIT es requerido';
+    } else if (formData.taxId.length < 11) {
+      newErrors.taxId = 'El CUIT debe tener al menos 11 caracteres';
+    }
+
+    if (formData.email && !formData.email.includes('@')) {
+      newErrors.email = 'Email inválido';
+    }
+
+    if (!formData.contactPerson.trim()) {
+      newErrors.contactPerson = 'La persona de contacto es requerida';
+    }
+
+    if (formData.paymentTerms < 0) {
+      newErrors.paymentTerms = 'Los términos de pago deben ser positivos';
+    }
+
+    if (formData.creditLimit < 0) {
+      newErrors.creditLimit = 'El límite de crédito debe ser positivo';
+    }
+
+    if (!formData.category.trim()) {
+      newErrors.category = 'La categoría es requerida';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      const supplierData = {
+        ...formData,
+        currentBalance: 0, // New suppliers start with 0 balance
+        totalPurchases: 0, // New suppliers start with 0 total purchases
+        lastPurchaseDate: undefined // No purchases yet
+      };
+
+      if (editingSupplier) {
+        updateSupplier(editingSupplier.id, supplierData);
+        alert('¡Proveedor actualizado exitosamente!');
+      } else {
+        addSupplier(supplierData);
+        alert('¡Proveedor creado exitosamente!');
+      }
+
+      resetForm();
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Error saving supplier:', error);
+      alert('Error al guardar el proveedor: ' + (error as Error).message);
+    }
+  };
+
   const handleNewSupplier = () => {
+    resetForm();
     setIsModalOpen(true);
   };
 
   const handleEditSupplier = (supplier: any) => {
-    // TODO: Implement supplier editing functionality
-    // This could open a modal similar to customers or navigate to edit form
+    setFormData({
+      name: supplier.name,
+      businessName: supplier.businessName,
+      taxId: supplier.taxId,
+      email: supplier.email || '',
+      phone: supplier.phone || '',
+      address: supplier.address || '',
+      contactPerson: supplier.contactPerson || '',
+      paymentTerms: supplier.paymentTerms,
+      creditLimit: supplier.creditLimit || 0,
+      category: supplier.category,
+      active: supplier.active
+    });
+    setEditingSupplier(supplier);
+    setIsModalOpen(true);
   };
 
   const handlePaySupplier = (supplier: any) => {
     // TODO: Implement supplier payment functionality  
     // This could open a payment modal
+    alert('Funcionalidad de pago en desarrollo');
   };
 
   const handleViewSupplier = (supplier: any) => {
     // TODO: Implement supplier view functionality
     // This could show supplier details in a modal
+    alert('Vista detallada en desarrollo');
+  };
+
+  const handleInputChange = (field: keyof SupplierFormData, value: string | number | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
 
   // Scroll functions now provided by useTableScroll hook
@@ -302,22 +447,264 @@ export function SuppliersPage() {
         </div>
       </div>
 
-      {/* New Supplier Modal */}
+      {/* New/Edit Supplier Modal */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Nuevo Proveedor"
-        size="md"
-        footer={
-          <Button
-            onClick={() => setIsModalOpen(false)}
-            variant="secondary"
-          >
-            Cerrar
-          </Button>
-        }
+        onClose={() => {
+          resetForm();
+          setIsModalOpen(false);
+        }}
+        title={editingSupplier ? 'Editar Proveedor' : 'Nuevo Proveedor'}
+        size="lg"
       >
-        <p className="text-gray-600">Funcionalidad en desarrollo...</p>
+        <div className="space-y-6">
+          {/* Basic Information */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Información Básica</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre Comercial <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.name ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: TechDistributor SA"
+                  required
+                />
+                {errors.name && (
+                  <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Razón Social <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.businessName}
+                  onChange={(e) => handleInputChange('businessName', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.businessName ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: Tech Distributor Sociedad Anónima"
+                  required
+                />
+                {errors.businessName && (
+                  <p className="mt-1 text-sm text-red-600">{errors.businessName}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  CUIT <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.taxId}
+                  onChange={(e) => handleInputChange('taxId', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.taxId ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: 20-12345678-9"
+                  required
+                />
+                {errors.taxId && (
+                  <p className="mt-1 text-sm text-red-600">{errors.taxId}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Categoría <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => handleInputChange('category', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.category ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  required
+                >
+                  <option value="">Seleccionar categoría...</option>
+                  <option value="Tecnología">Tecnología</option>
+                  <option value="Logística">Logística</option>
+                  <option value="Oficina">Oficina</option>
+                  <option value="Servicios">Servicios</option>
+                  <option value="Materiales">Materiales</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Alimentación">Alimentación</option>
+                  <option value="Construcción">Construcción</option>
+                  <option value="Textil">Textil</option>
+                  <option value="Otro">Otro</option>
+                </select>
+                {errors.category && (
+                  <p className="mt-1 text-sm text-red-600">{errors.category}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Contact Information */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Información de Contacto</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Persona de Contacto <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.contactPerson}
+                  onChange={(e) => handleInputChange('contactPerson', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.contactPerson ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: Juan Carlos Pérez"
+                  required
+                />
+                {errors.contactPerson && (
+                  <p className="mt-1 text-sm text-red-600">{errors.contactPerson}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.email ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Ej: ventas@proveedor.com"
+                />
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Teléfono
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Ej: +54 11 4567-8900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Dirección
+                </label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Ej: Av. Córdoba 1234, CABA"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Commercial Terms */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Condiciones Comerciales</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Términos de Pago (días) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={formData.paymentTerms}
+                  onChange={(e) => handleInputChange('paymentTerms', parseInt(e.target.value) || 0)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.paymentTerms ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  min="0"
+                  placeholder="30"
+                  required
+                />
+                {errors.paymentTerms && (
+                  <p className="mt-1 text-sm text-red-600">{errors.paymentTerms}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Límite de Crédito ($)
+                </label>
+                <input
+                  type="number"
+                  value={formData.creditLimit}
+                  onChange={(e) => handleInputChange('creditLimit', parseFloat(e.target.value) || 0)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.creditLimit ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  min="0"
+                  step="1000"
+                  placeholder="100000"
+                />
+                {errors.creditLimit && (
+                  <p className="mt-1 text-sm text-red-600">{errors.creditLimit}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Status */}
+          <div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="active"
+                checked={formData.active}
+                onChange={(e) => handleInputChange('active', e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="active" className="ml-2 text-sm text-gray-700">
+                Proveedor activo
+              </label>
+            </div>
+            <p className="mt-1 text-sm text-gray-500">
+              Los proveedores inactivos no aparecerán en las listas de selección
+            </p>
+          </div>
+
+          {/* Form Actions */}
+          <div className="flex justify-end space-x-3 pt-4 border-t">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                resetForm();
+                setIsModalOpen(false);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleSubmit}
+            >
+              {editingSupplier ? 'Actualizar Proveedor' : 'Crear Proveedor'}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

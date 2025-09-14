@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
 
 // Account interface
 export interface Account {
@@ -26,28 +27,6 @@ export interface Transaction {
   reference?: string;
 }
 
-// LocalStorage keys
-const ACCOUNTS_STORAGE_KEY = 'gridmanager_accounts';
-const TRANSACTIONS_STORAGE_KEY = 'gridmanager_transactions';
-
-// LocalStorage utilities
-const loadFromStorage = <T>(key: string, defaultValue: T): T => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.error(`Error loading ${key} from localStorage:`, error);
-    return defaultValue;
-  }
-};
-
-const saveToStorage = <T>(key: string, value: T): void => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Error saving ${key} to localStorage:`, error);
-  }
-};
 
 // Mock data for accounts
 const initialAccounts: Account[] = [
@@ -169,8 +148,8 @@ interface AccountsStore {
 }
 
 export const useAccountsStore = create<AccountsStore>((set, get) => ({
-  accounts: loadFromStorage(ACCOUNTS_STORAGE_KEY, initialAccounts),
-  transactions: loadFromStorage(TRANSACTIONS_STORAGE_KEY, initialTransactions),
+  accounts: loadFromStorage(STORAGE_KEYS.ACCOUNTS, initialAccounts),
+  transactions: loadFromStorage(STORAGE_KEYS.TRANSACTIONS, initialTransactions),
 
   addAccount: (accountData) => {
     const newAccount: Account = {
@@ -181,7 +160,7 @@ export const useAccountsStore = create<AccountsStore>((set, get) => ({
 
     set((state) => {
       const newAccounts = [...state.accounts, newAccount];
-      saveToStorage(ACCOUNTS_STORAGE_KEY, newAccounts);
+      saveToStorage(STORAGE_KEYS.ACCOUNTS, newAccounts);
       return { accounts: newAccounts };
     });
     
@@ -193,7 +172,7 @@ export const useAccountsStore = create<AccountsStore>((set, get) => ({
       const newAccounts = state.accounts.map(account =>
         account.id === id ? { ...account, ...updatedData } : account
       );
-      saveToStorage(ACCOUNTS_STORAGE_KEY, newAccounts);
+      saveToStorage(STORAGE_KEYS.ACCOUNTS, newAccounts);
       return { accounts: newAccounts };
     });
   },
@@ -201,14 +180,14 @@ export const useAccountsStore = create<AccountsStore>((set, get) => ({
   deleteAccount: (id) => {
     set((state) => {
       const newAccounts = state.accounts.filter(account => account.id !== id);
-      saveToStorage(ACCOUNTS_STORAGE_KEY, newAccounts);
+      saveToStorage(STORAGE_KEYS.ACCOUNTS, newAccounts);
       return { accounts: newAccounts };
     });
   },
 
   setAccounts: (accounts) => {
     set({ accounts });
-    saveToStorage(ACCOUNTS_STORAGE_KEY, accounts);
+    saveToStorage(STORAGE_KEYS.ACCOUNTS, accounts);
   },
 
   getActiveAccounts: () => {
@@ -224,7 +203,7 @@ export const useAccountsStore = create<AccountsStore>((set, get) => ({
 
     set((state) => {
       const newTransactions = [newTransaction, ...state.transactions];
-      saveToStorage(TRANSACTIONS_STORAGE_KEY, newTransactions);
+      saveToStorage(STORAGE_KEYS.TRANSACTIONS, newTransactions);
       return { transactions: newTransactions };
     });
     

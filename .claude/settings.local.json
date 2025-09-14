@@ -51,7 +51,9 @@
       "Bash(npm audit --audit-level=moderate)",
       "Bash(git clean:*)",
       "Bash(del \"C:\\Users\\franc\\Desktop\\JOINT FORCE\\OBSIDIAN\\APPS\\Grid Manager\\vision_tenis.csv\")",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(tree:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

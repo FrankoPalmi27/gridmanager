@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
 
 // Tipo para las ventas
 export interface Sale {
@@ -36,37 +37,12 @@ export const initialDashboardStats = {
   monthlyGrowth: 18.5
 };
 
-// LocalStorage keys
-const SALES_STORAGE_KEY = 'gridmanager_sales';
-const STATS_STORAGE_KEY = 'gridmanager_dashboard_stats';
-
-// LocalStorage utilities
-const loadFromStorage = <T>(key: string, defaultValue: T): T => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.error(`Error loading ${key} from localStorage:`, error);
-    return defaultValue;
-  }
-};
-
-const saveToStorage = <T>(key: string, value: T): void => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Error saving ${key} to localStorage:`, error);
-  }
-};
 
 // Función utilitaria para actualizar el balance de las cuentas
 const updateAccountBalance = (accountId: string, amount: number, description: string) => {
   try {
-    const accountsKey = 'gridmanager_accounts';
-    const transactionsKey = 'gridmanager_transactions';
-    
     // Cargar cuentas actuales
-    const currentAccounts = loadFromStorage(accountsKey, []);
+    const currentAccounts = loadFromStorage(STORAGE_KEYS.ACCOUNTS, []);
     
     // Actualizar balance de la cuenta especificada
     const updatedAccounts = currentAccounts.map((account: any) => {
@@ -80,10 +56,10 @@ const updateAccountBalance = (accountId: string, amount: number, description: st
     });
     
     // Guardar cuentas actualizadas
-    saveToStorage(accountsKey, updatedAccounts);
+    saveToStorage(STORAGE_KEYS.ACCOUNTS, updatedAccounts);
     
     // Crear transacción en el registro
-    const currentTransactions = loadFromStorage(transactionsKey, []);
+    const currentTransactions = loadFromStorage(STORAGE_KEYS.TRANSACTIONS, []);
     const newTransaction = {
       id: Date.now().toString(),
       accountId: accountId,
@@ -96,7 +72,7 @@ const updateAccountBalance = (accountId: string, amount: number, description: st
     };
     
     // Guardar transacciones actualizadas
-    saveToStorage(transactionsKey, [newTransaction, ...currentTransactions]);
+    saveToStorage(STORAGE_KEYS.TRANSACTIONS, [newTransaction, ...currentTransactions]);
     
   } catch (error) {
     console.error('Error updating account balance:', error);
@@ -106,19 +82,19 @@ const updateAccountBalance = (accountId: string, amount: number, description: st
 // Hook personalizado para manejar las ventas
 export const useSalesStore = () => {
   const [dashboardStats, setDashboardStats] = useState(() => 
-    loadFromStorage(STATS_STORAGE_KEY, initialDashboardStats)
+    loadFromStorage(STORAGE_KEYS.DASHBOARD_STATS, initialDashboardStats)
   );
   const [sales, setSales] = useState<Sale[]>(() => 
-    loadFromStorage(SALES_STORAGE_KEY, [])
+    loadFromStorage(STORAGE_KEYS.SALES, [])
   );
 
   // Save to localStorage whenever sales or stats change
   useEffect(() => {
-    saveToStorage(SALES_STORAGE_KEY, sales);
+    saveToStorage(STORAGE_KEYS.SALES, sales);
   }, [sales]);
 
   useEffect(() => {
-    saveToStorage(STATS_STORAGE_KEY, dashboardStats);
+    saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, dashboardStats);
   }, [dashboardStats]);
 
   const addSale = (saleData: {

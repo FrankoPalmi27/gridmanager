@@ -7,6 +7,15 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@components': path.resolve(__dirname, './src/components'),
+      '@pages': path.resolve(__dirname, './src/pages'),
+      '@store': path.resolve(__dirname, './src/store'),
+      '@hooks': path.resolve(__dirname, './src/hooks'),
+      '@lib': path.resolve(__dirname, './src/lib'),
+      '@utils': path.resolve(__dirname, './src/utils'),
+      '@ui': path.resolve(__dirname, './src/components/ui'),
+      '@forms': path.resolve(__dirname, './src/components/forms'),
+      '@layout': path.resolve(__dirname, './src/components/layout'),
     },
   },
   server: {

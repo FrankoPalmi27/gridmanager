@@ -17,13 +17,14 @@ import {
   TrashIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
-import { Button } from '../components/ui/Button';
-import { SaleStatusBadge } from '../components/ui/StatusBadge';
-import { SalesForm } from '../components/forms/SalesForm';
-import { formatCurrency } from '../lib/formatters';
-import { useSales } from '../store/SalesContext';
-import { useProductsStore } from '../store/productsStore';
-import { generateInvoicePDF } from '../utils/pdfGenerator';
+import { Button } from '@ui/Button';
+import { SaleStatusBadge } from '@ui/StatusBadge';
+import { SalesForm } from '@forms/SalesForm';
+import { formatCurrency } from '@lib/formatters';
+import { useSales } from '@store/SalesContext';
+import { useProductsStore } from '@store/productsStore';
+import { generateInvoicePDF } from '@utils/pdfGenerator';
+import { useTableScroll } from '@hooks/useTableScroll';
 
 // Mock data
 const salesData = [
@@ -124,8 +125,8 @@ function QuickActions({ sale, onEdit }: { sale: any; onEdit: (sale: any) => void
   const getStatusActions = () => {
     const baseActions = [
       { icon: PencilIcon, label: 'Editar', action: () => onEdit(sale) },
-      { icon: DocumentDuplicateIcon, label: 'Duplicar', action: () => console.log('Duplicar', sale.id) },
-      { icon: ShareIcon, label: 'Compartir', action: () => console.log('Compartir', sale.id) },
+      { icon: DocumentDuplicateIcon, label: 'Duplicar', action: () => {} /* TODO: Implement duplicate functionality */ },
+      { icon: ShareIcon, label: 'Compartir', action: () => {} /* TODO: Implement share functionality */ },
       { icon: TrashIcon, label: 'Eliminar', action: handleDeleteSale, className: 'text-red-600 hover:text-red-700' },
     ];
 
@@ -230,7 +231,7 @@ export function SalesPage() {
   const [editingSale, setEditingSale] = useState<any>(null);
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
-  const tableScrollRef = React.useRef<HTMLDivElement>(null);
+  const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
   
   // Get real sales data from context
   const { sales, deleteSale } = useSales();
@@ -300,17 +301,7 @@ export function SalesPage() {
     setEditingSale(null);
   };
 
-  const scrollLeft = () => {
-    if (tableScrollRef.current) {
-      tableScrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
-    }
-  };
-
-  const scrollRight = () => {
-    if (tableScrollRef.current) {
-      tableScrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
-    }
-  };
+  // Scroll functions now provided by useTableScroll hook
 
   const handleDeleteSale = (sale: any) => {
     if (confirm(`¿Estás seguro de que deseas eliminar la venta ${sale.number}?`)) {

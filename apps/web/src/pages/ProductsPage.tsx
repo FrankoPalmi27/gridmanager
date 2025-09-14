@@ -1,15 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { Button } from '../components/ui/Button';
-import { StatusBadge, StockStatusBadge } from '../components/ui/StatusBadge';
-import { Input } from '../components/ui/Input';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
-import { Modal } from '../components/ui/Modal';
-import { ProductForm } from '../components/forms/ProductForm';
-import { CategoryModal } from '../components/forms/CategoryModal';
-import { CategoriesTable } from '../components/tables/CategoriesTable';
-import BulkProductImport from '../components/BulkProductImport';
-import { useProductsStore, Product } from '../store/productsStore';
-import { formatCurrency } from '../lib/formatters';
+import { Button } from '@ui/Button';
+import { StatusBadge, StockStatusBadge } from '@ui/StatusBadge';
+import { Input } from '@ui/Input';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@ui/Tabs';
+import { Modal } from '@ui/Modal';
+import { ProductForm } from '@forms/ProductForm';
+import { CategoryModal } from '@forms/CategoryModal';
+import { CategoriesTable } from '@components/tables/CategoriesTable';
+import BulkProductImport from '@components/BulkProductImport';
+import { useProductsStore, Product } from '@store/productsStore';
+import { formatCurrency } from '@lib/formatters';
+import { useTableScroll } from '@hooks/useTableScroll';
 
 type SortField = 'name' | 'category' | 'brand' | 'price' | 'cost' | 'stock' | 'status';
 type SortOrder = 'asc' | 'desc';
@@ -26,7 +27,7 @@ export function ProductsPage() {
   const [activeTab, setActiveTab] = useState('productos');
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [stockMovementsModal, setStockMovementsModal] = useState<{ isOpen: boolean; product: Product | null }>({ isOpen: false, product: null });
-  const tableScrollRef = React.useRef<HTMLDivElement>(null);
+  const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
 
   const allCategories = ['all', ...stats.categories];
 
@@ -118,17 +119,7 @@ export function ProductsPage() {
     }
   };
 
-  const scrollLeft = () => {
-    if (tableScrollRef.current) {
-      tableScrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
-    }
-  };
-
-  const scrollRight = () => {
-    if (tableScrollRef.current) {
-      tableScrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
-    }
-  };
+  // Scroll functions now provided by useTableScroll hook
 
   return (
     <div className="flex-1 overflow-auto">
@@ -213,7 +204,7 @@ export function ProductsPage() {
               <div className="p-6">
                 <BulkProductImport 
                   onImportComplete={(result) => {
-                    console.log('Import completed:', result);
+                    // Import completed successfully
                     if (result.success.length > 0) {
                       setTimeout(() => {
                         setShowBulkImport(false);

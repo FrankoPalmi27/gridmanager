@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
 
 // Customer interface
 export interface Customer {
@@ -14,27 +15,7 @@ export interface Customer {
   notes?: string;
 }
 
-// LocalStorage keys
-const CUSTOMERS_STORAGE_KEY = 'gridmanager_customers';
-
-// LocalStorage utilities
-const loadFromStorage = <T>(key: string, defaultValue: T): T => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.error(`Error loading ${key} from localStorage:`, error);
-    return defaultValue;
-  }
-};
-
-const saveToStorage = <T>(key: string, value: T): void => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Error saving ${key} to localStorage:`, error);
-  }
-};
+// LocalStorage utilities are now centralized in lib/localStorage.ts
 
 // Initial customers data
 const initialCustomers: Customer[] = [
@@ -105,7 +86,7 @@ interface CustomersStore {
 }
 
 export const useCustomersStore = create<CustomersStore>((set, get) => ({
-  customers: loadFromStorage(CUSTOMERS_STORAGE_KEY, initialCustomers),
+  customers: loadFromStorage(STORAGE_KEYS.CUSTOMERS, initialCustomers),
 
   addCustomer: (customerData) => {
     const newCustomer: Customer = {
@@ -116,7 +97,7 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
 
     set((state) => {
       const newCustomers = [...state.customers, newCustomer];
-      saveToStorage(CUSTOMERS_STORAGE_KEY, newCustomers);
+      saveToStorage(STORAGE_KEYS.CUSTOMERS, newCustomers);
       return { customers: newCustomers };
     });
     
@@ -128,7 +109,7 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
       const newCustomers = state.customers.map(customer =>
         customer.id === id ? { ...customer, ...updatedData } : customer
       );
-      saveToStorage(CUSTOMERS_STORAGE_KEY, newCustomers);
+      saveToStorage(STORAGE_KEYS.CUSTOMERS, newCustomers);
       return { customers: newCustomers };
     });
   },
@@ -136,14 +117,14 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
   deleteCustomer: (id) => {
     set((state) => {
       const newCustomers = state.customers.filter(customer => customer.id !== id);
-      saveToStorage(CUSTOMERS_STORAGE_KEY, newCustomers);
+      saveToStorage(STORAGE_KEYS.CUSTOMERS, newCustomers);
       return { customers: newCustomers };
     });
   },
 
   setCustomers: (customers) => {
     set({ customers });
-    saveToStorage(CUSTOMERS_STORAGE_KEY, customers);
+    saveToStorage(STORAGE_KEYS.CUSTOMERS, customers);
   },
 
   getActiveCustomers: () => {
@@ -158,7 +139,7 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
           ? { ...customer, balance: customer.balance + balanceChange }
           : customer
       );
-      saveToStorage(CUSTOMERS_STORAGE_KEY, newCustomers);
+      saveToStorage(STORAGE_KEYS.CUSTOMERS, newCustomers);
       return { customers: newCustomers };
     });
   },

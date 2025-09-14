@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
 
 export interface Supplier {
   id: string;
@@ -135,31 +136,37 @@ interface SuppliersState {
 }
 
 export const useSuppliersStore = create<SuppliersState>((set, get) => ({
-  suppliers: mockSuppliers,
+  suppliers: loadFromStorage(STORAGE_KEYS.SUPPLIERS, mockSuppliers),
   
   getSuppliers: () => get().suppliers,
   
-  addSupplier: (supplierData) => set((state) => ({
-    suppliers: [
+  addSupplier: (supplierData) => set((state) => {
+    const newSuppliers = [
       ...state.suppliers,
       {
         ...supplierData,
         id: Date.now().toString(),
       }
-    ]
-  })),
+    ];
+    saveToStorage(STORAGE_KEYS.SUPPLIERS, newSuppliers);
+    return { suppliers: newSuppliers };
+  }),
   
-  updateSupplier: (id, supplierData) => set((state) => ({
-    suppliers: state.suppliers.map(supplier => 
+  updateSupplier: (id, supplierData) => set((state) => {
+    const newSuppliers = state.suppliers.map(supplier => 
       supplier.id === id 
         ? { ...supplier, ...supplierData }
         : supplier
-    )
-  })),
+    );
+    saveToStorage(STORAGE_KEYS.SUPPLIERS, newSuppliers);
+    return { suppliers: newSuppliers };
+  }),
   
-  deleteSupplier: (id) => set((state) => ({
-    suppliers: state.suppliers.filter(supplier => supplier.id !== id)
-  })),
+  deleteSupplier: (id) => set((state) => {
+    const newSuppliers = state.suppliers.filter(supplier => supplier.id !== id);
+    saveToStorage(STORAGE_KEYS.SUPPLIERS, newSuppliers);
+    return { suppliers: newSuppliers };
+  }),
   
   getActiveSuppliers: () => get().suppliers.filter(supplier => supplier.active),
   

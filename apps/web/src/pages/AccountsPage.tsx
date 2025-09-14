@@ -7,6 +7,7 @@ import { StatusBadge } from '../components/ui/StatusBadge';
 import { Input } from '../components/ui/Input';
 import { TransferModal } from '../components/forms/TransferModal';
 import { formatCurrency, formatDate } from '../lib/formatters';
+import { useTableScroll } from '../hooks/useTableScroll';
 
 // Account interface
 interface Account {
@@ -631,7 +632,7 @@ export function AccountsPage() {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | undefined>();
-  const tableScrollRef = React.useRef<HTMLDivElement>(null);
+  const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
 
   // Save accounts to localStorage whenever they change
   useEffect(() => {
@@ -797,17 +798,7 @@ export function AccountsPage() {
 
   const activeAccounts = accounts.filter(acc => acc.active).length;
 
-  const scrollLeft = () => {
-    if (tableScrollRef.current) {
-      tableScrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
-    }
-  };
-
-  const scrollRight = () => {
-    if (tableScrollRef.current) {
-      tableScrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
-    }
-  };
+  // Scroll functions now provided by useTableScroll hook
 
   return (
     <div className="min-h-screen bg-gray-50/30">

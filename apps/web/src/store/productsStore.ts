@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
 
 // Tipo para los productos
 export interface Product {
@@ -41,29 +42,6 @@ export interface Category {
   createdAt: string;
 }
 
-// LocalStorage keys
-const PRODUCTS_STORAGE_KEY = 'gridmanager_products';
-const CATEGORIES_STORAGE_KEY = 'gridmanager_categories';
-const STOCK_MOVEMENTS_STORAGE_KEY = 'gridmanager_stock_movements';
-
-// LocalStorage utilities
-const loadFromStorage = <T>(key: string, defaultValue: T): T => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.error(`Error loading ${key} from localStorage:`, error);
-    return defaultValue;
-  }
-};
-
-const saveToStorage = <T>(key: string, value: T): void => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Error saving ${key} to localStorage:`, error);
-  }
-};
 
 // Productos cargados desde vision_tenis.csv
 const initialProducts: Product[] = [
@@ -858,9 +836,9 @@ interface ProductsStore {
 }
 
 export const useProductsStore = create<ProductsStore>((set, get) => ({
-  products: loadFromStorage(PRODUCTS_STORAGE_KEY, initialProducts),
-  categories: loadFromStorage(CATEGORIES_STORAGE_KEY, []),
-  stockMovements: loadFromStorage(STOCK_MOVEMENTS_STORAGE_KEY, []),
+  products: loadFromStorage(STORAGE_KEYS.PRODUCTS, initialProducts),
+  categories: loadFromStorage(STORAGE_KEYS.CATEGORIES, []),
+  stockMovements: loadFromStorage(STORAGE_KEYS.STOCK_MOVEMENTS, []),
 
   addProduct: (productData) => {
     // Calculate margin if not provided
@@ -891,7 +869,7 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
 
     set((state) => {
       const newProducts = [newProduct, ...state.products];
-      saveToStorage(PRODUCTS_STORAGE_KEY, newProducts);
+      saveToStorage(STORAGE_KEYS.PRODUCTS, newProducts);
       return { products: newProducts };
     });
     
@@ -924,7 +902,7 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
 
     set((state) => {
       const updatedProducts = [...newProducts, ...state.products];
-      saveToStorage(PRODUCTS_STORAGE_KEY, updatedProducts);
+      saveToStorage(STORAGE_KEYS.PRODUCTS, updatedProducts);
       return { products: updatedProducts };
     });
     
@@ -936,7 +914,7 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
       const newProducts = state.products.map(product =>
         product.id === id ? { ...product, ...updatedData } : product
       );
-      saveToStorage(PRODUCTS_STORAGE_KEY, newProducts);
+      saveToStorage(STORAGE_KEYS.PRODUCTS, newProducts);
       return { products: newProducts };
     });
   },
@@ -944,7 +922,7 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
   deleteProduct: (id) => {
     set((state) => {
       const newProducts = state.products.filter(product => product.id !== id);
-      saveToStorage(PRODUCTS_STORAGE_KEY, newProducts);
+      saveToStorage(STORAGE_KEYS.PRODUCTS, newProducts);
       return { products: newProducts };
     });
   },
@@ -954,24 +932,24 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
       const newProducts = state.products.map(product =>
         product.id === id ? { ...product, stock: newStock } : product
       );
-      saveToStorage(PRODUCTS_STORAGE_KEY, newProducts);
+      saveToStorage(STORAGE_KEYS.PRODUCTS, newProducts);
       return { products: newProducts };
     });
   },
 
   setProducts: (products) => {
     set({ products });
-    saveToStorage(PRODUCTS_STORAGE_KEY, products);
+    saveToStorage(STORAGE_KEYS.PRODUCTS, products);
   },
 
   setCategories: (categories) => {
     set({ categories });
-    saveToStorage(CATEGORIES_STORAGE_KEY, categories);
+    saveToStorage(STORAGE_KEYS.CATEGORIES, categories);
   },
 
   resetToInitialProducts: () => {
     set({ products: initialProducts });
-    saveToStorage(PRODUCTS_STORAGE_KEY, initialProducts);
+    saveToStorage(STORAGE_KEYS.PRODUCTS, initialProducts);
   },
 
   // Stock movements functions
@@ -984,7 +962,7 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
 
     set((state) => {
       const newMovements = [newMovement, ...state.stockMovements];
-      saveToStorage(STOCK_MOVEMENTS_STORAGE_KEY, newMovements);
+      saveToStorage(STORAGE_KEYS.STOCK_MOVEMENTS, newMovements);
       return { stockMovements: newMovements };
     });
   },
@@ -1026,8 +1004,8 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
       const newMovements = [newMovement, ...state.stockMovements];
 
       // Save to storage
-      saveToStorage(PRODUCTS_STORAGE_KEY, updatedProducts);
-      saveToStorage(STOCK_MOVEMENTS_STORAGE_KEY, newMovements);
+      saveToStorage(STORAGE_KEYS.PRODUCTS, updatedProducts);
+      saveToStorage(STORAGE_KEYS.STOCK_MOVEMENTS, newMovements);
 
       return {
         products: updatedProducts,

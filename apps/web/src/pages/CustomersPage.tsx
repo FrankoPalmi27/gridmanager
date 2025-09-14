@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Button } from '../components/ui/Button';
-import { UserStatusBadge } from '../components/ui/StatusBadge';
-import { Modal } from '../components/ui/Modal';
-import { Input } from '../components/ui/Input';
-import { formatCurrency } from '../lib/formatters';
-import { useSales } from '../store/SalesContext';
-import { useCustomersStore, Customer } from '../store/customersStore';
+import { Button } from '@ui/Button';
+import { UserStatusBadge } from '@ui/StatusBadge';
+import { Modal } from '@ui/Modal';
+import { Input } from '@ui/Input';
+import { formatCurrency } from '@lib/formatters';
+import { useSales } from '@store/SalesContext';
+import { useCustomersStore, Customer } from '@store/customersStore';
+import { useTableScroll } from '@hooks/useTableScroll';
 
 
 export function CustomersPage() {
@@ -14,7 +15,7 @@ export function CustomersPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
-  const tableScrollRef = React.useRef<HTMLDivElement>(null);
+  const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
   
   // Use the centralized customers store
   const { customers, addCustomer, updateCustomer, deleteCustomer, stats } = useCustomersStore();
@@ -164,17 +165,7 @@ export function CustomersPage() {
     setIsModalOpen(true);
   };
 
-  const scrollLeft = () => {
-    if (tableScrollRef.current) {
-      tableScrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
-    }
-  };
-
-  const scrollRight = () => {
-    if (tableScrollRef.current) {
-      tableScrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
-    }
-  };
+  // Scroll functions now provided by useTableScroll hook
 
   return (
     <div className="w-full">

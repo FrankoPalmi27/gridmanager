@@ -195,9 +195,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
       
       if (editingSale) {
         // Update existing sale
-        console.log('Updating sale with data:', formData);
         updateSale(editingSale.id, formData);
-        console.log('Sale updated successfully');
         
         if (onSuccess) {
           onSuccess(editingSale);
@@ -206,9 +204,8 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
         }
       } else {
         // Create new sale
-        console.log('Creating sale with data:', formData);
         const newSale = addSale(formData);
-        console.log('Sale created successfully:', newSale);
+        // Sale created successfully
         
         if (onSuccess) {
           onSuccess(newSale);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSales } from '../store/SalesContext';
 import { useProductsStore } from '../store/productsStore';
 import { useCustomersStore } from '../store/customersStore';
-import { useSuppliersStore } from '../stores/suppliersStore';
+import { useSuppliersStore } from '../store/suppliersStore';
 import { SalesForm } from '../components/forms/SalesForm';
 import { ProductForm } from '../components/forms/ProductForm';
 import { CustomerModal } from '../components/forms/CustomerModal';

@@ -1,0 +1,52 @@
+{
+  "timestamp": "2025-01-13T19:30:00Z",
+  "backupBranch": "cleanup/deep-cleaning-backup",
+  "mainBranch": "main",
+  "backupCommit": "7d3526d",
+  "phase": "pre-cleanup-snapshot",
+  "project": "Grid Manager - Deep Cleaning",
+  "totalFilesAnalyzed": 144,
+  "targetedForDeletion": {
+    "distFolders": [
+      "apps/api/dist/",
+      "apps/web/dist/",
+      "packages/types/dist/"
+    ],
+    "testFiles": [
+      "test-connection.js",
+      "test-dotenv.js",
+      "apps/api/test-data.js",
+      "apps/api/test-db.js",
+      "apps/api/test-password.js"
+    ],
+    "debugCode": [
+      "console.log statements in 8+ files",
+      "TODO comments for evaluation"
+    ]
+  },
+  "targetedForConsolidation": {
+    "localStorage": "6 files with duplicated localStorage utilities",
+    "tableScroll": "5 files with duplicated scroll logic",
+    "statsCards": "5+ files with similar stats components",
+    "storeDirectory": "Consolidate store/ and stores/ directories"
+  },
+  "estimatedSavings": {
+    "files": "70+ files",
+    "sizeInMB": "20-50 MB",
+    "codeLines": "400+ lines of duplicate code"
+  },
+  "safetyLevel": {
+    "distFolders": "100% safe - regenerated on build",
+    "testFiles": "100% safe - development utilities", 
+    "debugCode": "95% safe - production cleanup",
+    "consolidation": "90% safe - requires testing"
+  },
+  "rollbackInstructions": [
+    "git checkout cleanup/deep-cleaning-backup",
+    "git checkout main", 
+    "git merge cleanup/deep-cleaning-backup --no-ff"
+  ],
+  "originalStructure": {
+    "note": "See STRUCTURE_BEFORE.md for complete tree"
+  }
+}

@@ -4,14 +4,15 @@ import { Modal } from '../components/ui/Modal';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { Input } from '../components/ui/Input';
 import { formatCurrency, formatTaxId, formatPhoneNumber } from '../lib/formatters';
-import { useSuppliersStore } from '../stores/suppliersStore';
+import { useSuppliersStore } from '../store/suppliersStore';
+import { useTableScroll } from '../hooks/useTableScroll';
 
 export function SuppliersPage() {
   const { suppliers } = useSuppliersStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const tableScrollRef = React.useRef<HTMLDivElement>(null);
+  const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
 
   const filteredSuppliers = suppliers.filter(supplier => {
     const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -34,33 +35,20 @@ export function SuppliersPage() {
 
   const handleEditSupplier = (supplier: any) => {
     // TODO: Implement supplier editing functionality
-    console.log('Edit supplier:', supplier);
     // This could open a modal similar to customers or navigate to edit form
   };
 
   const handlePaySupplier = (supplier: any) => {
     // TODO: Implement supplier payment functionality  
-    console.log('Pay supplier:', supplier);
     // This could open a payment modal
   };
 
   const handleViewSupplier = (supplier: any) => {
     // TODO: Implement supplier view functionality
-    console.log('View supplier:', supplier);
     // This could show supplier details in a modal
   };
 
-  const scrollLeft = () => {
-    if (tableScrollRef.current) {
-      tableScrollRef.current.scrollBy({ left: -300, behavior: 'smooth' });
-    }
-  };
-
-  const scrollRight = () => {
-    if (tableScrollRef.current) {
-      tableScrollRef.current.scrollBy({ left: 300, behavior: 'smooth' });
-    }
-  };
+  // Scroll functions now provided by useTableScroll hook
 
   return (
     <div className="flex-1 overflow-auto">

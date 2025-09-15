@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DashboardPage } from './pages/DashboardPage';
 import { SalesProvider } from './store/SalesContext';
 import { SalesPage } from './pages/SalesPage';
@@ -10,6 +10,9 @@ import { AccountsPage } from './pages/AccountsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { UsersPage } from './pages/UsersPage';
 import { CalculatorPage } from './pages/CalculatorPage';
+import { HomePage } from './pages/HomePage';
+import { TenantRegisterPage } from './pages/TenantRegisterPage';
+import { TenantLoginPage } from './pages/TenantLoginPage';
 
 const navigation = [
   { 
@@ -106,9 +109,40 @@ const navigation = [
 ];
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentPage, setCurrentPage] = useState('home');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [tenantData, setTenantData] = useState(null);
+
+  useEffect(() => {
+    // Check for existing authentication
+    const tokens = localStorage.getItem('gridmanager_tokens');
+    const tenant = localStorage.getItem('gridmanager_tenant');
+
+    if (tokens && tenant) {
+      setIsAuthenticated(true);
+      setTenantData(JSON.parse(tenant));
+      setCurrentPage('dashboard');
+    } else {
+      setCurrentPage('home');
+    }
+  }, []);
 
   const renderCurrentPage = () => {
+    // Public pages (no authentication required)
+    if (!isAuthenticated) {
+      switch (currentPage) {
+        case 'home':
+          return <HomePage onNavigate={setCurrentPage} />;
+        case 'tenant-register':
+          return <TenantRegisterPage onNavigate={setCurrentPage} />;
+        case 'tenant-login':
+          return <TenantLoginPage onNavigate={setCurrentPage} />;
+        default:
+          return <HomePage onNavigate={setCurrentPage} />;
+      }
+    }
+
+    // Protected pages (authentication required)
     switch (currentPage) {
       case 'dashboard':
         return <DashboardPage onNavigate={setCurrentPage} />;
@@ -131,10 +165,22 @@ function App() {
       case 'users':
         return <UsersPage />;
       default:
-        return <DashboardPage />;
+        return <DashboardPage onNavigate={setCurrentPage} />;
     }
   };
 
+  // For public pages, render without sidebar
+  if (!isAuthenticated) {
+    return (
+      <SalesProvider>
+        <div className="App">
+          {renderCurrentPage()}
+        </div>
+      </SalesProvider>
+    );
+  }
+
+  // For authenticated pages, render with sidebar
   return (
     <SalesProvider>
       <div className="App">
@@ -143,15 +189,18 @@ function App() {
         <div className="w-64 bg-white border-r border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h1 className="text-lg font-semibold text-gray-900">Grid Manager</h1>
+            {tenantData && (
+              <p className="text-xs text-gray-500 mt-1">{tenantData.name}</p>
+            )}
           </div>
-          
+
           <nav className="pt-6">
             <div className="px-6 mb-4">
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Navegación
               </p>
             </div>
-            
+
             <div className="space-y-1">
               {navigation.map((item) => (
                 <button
@@ -174,12 +223,34 @@ function App() {
           <div className="absolute bottom-0 w-64 p-6 border-t border-gray-200">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-gray-600">U</span>
+                <span className="text-sm font-medium text-gray-600">
+                  {tenantData?.name?.charAt(0) || 'U'}
+                </span>
               </div>
               <div className="ml-3 flex-1">
-                <p className="text-sm font-medium text-gray-900">Usuario Demo</p>
-                <p className="text-xs text-gray-500">demo@gridmanager.com</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {tenantData?.name || 'Usuario'}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {tenantData?.slug || 'empresa'}
+                </p>
               </div>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('gridmanager_tokens');
+                  localStorage.removeItem('gridmanager_user');
+                  localStorage.removeItem('gridmanager_tenant');
+                  setIsAuthenticated(false);
+                  setTenantData(null);
+                  setCurrentPage('home');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+                title="Cerrar sesión"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>

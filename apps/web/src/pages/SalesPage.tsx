@@ -23,7 +23,6 @@ import { SalesForm } from '@forms/SalesForm';
 import { formatCurrency } from '@lib/formatters';
 import { useSales } from '@store/SalesContext';
 import { useProductsStore } from '@store/productsStore';
-import { generateInvoicePDF } from '@utils/pdfGenerator';
 import { useTableScroll } from '@hooks/useTableScroll';
 
 // Mock data
@@ -40,6 +39,8 @@ const salesData = [
     sparkline: [120, 150, 180, 200, 250],
     cobrado: 25000,
     aCobrar: 0,
+    salesChannel: 'store' as const,
+    paymentMethod: 'card' as const,
   },
   {
     id: 2,
@@ -53,6 +54,8 @@ const salesData = [
     sparkline: [80, 100, 120, 140, 450],
     cobrado: 20000,
     aCobrar: 25000,
+    salesChannel: 'online' as const,
+    paymentMethod: 'transfer' as const,
   },
   {
     id: 3,
@@ -66,6 +69,8 @@ const salesData = [
     sparkline: [150, 140, 130, 120, 185],
     cobrado: 0,
     aCobrar: 18500,
+    salesChannel: 'whatsapp' as const,
+    paymentMethod: 'cash' as const,
   },
 ];
 
@@ -243,7 +248,9 @@ export function SalesPage() {
     cobrado: sale.cobrado !== undefined ? sale.cobrado : 
              (sale.paymentStatus === 'paid' ? sale.amount : 0),
     aCobrar: sale.aCobrar !== undefined ? sale.aCobrar : 
-             (sale.paymentStatus === 'paid' ? 0 : sale.amount)
+             (sale.paymentStatus === 'paid' ? 0 : sale.amount),
+    salesChannel: sale.salesChannel || 'store',
+    paymentMethod: sale.paymentMethod || 'cash'
   }));
 
   // Combine mock data with real sales for display
@@ -310,21 +317,315 @@ export function SalesPage() {
   };
 
   const handlePreviewPDF = (sale: any) => {
-    try {
-      const pdfBlob = generateInvoicePDF(sale);
-      // Create a blob URL and open in new window for preview
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      const newWindow = window.open(pdfUrl, '_blank');
-      if (newWindow) {
-        newWindow.document.title = `Factura ${sale.number}`;
+    // Create a comprehensive HTML invoice for PDF printing (similar to ReportsPage)
+    const invoiceWindow = window.open('', '_blank');
+    const invoiceData = {
+      sale,
+      generatedDate: new Date().toLocaleDateString('es-AR'),
+      generatedTime: new Date().toLocaleTimeString('es-AR')
+    };
+
+    // Helper functions for display
+    const getSalesChannelName = (channel?: string) => {
+      switch (channel) {
+        case 'store': return 'Tienda física';
+        case 'online': return 'Online';
+        case 'phone': return 'Teléfono';
+        case 'whatsapp': return 'WhatsApp';
+        case 'other': return 'Otro';
+        default: return 'No especificado';
       }
-      // Clean up the URL after some time
-      setTimeout(() => URL.revokeObjectURL(pdfUrl), 10000);
-    } catch (error) {
-      console.error('Error generating PDF preview:', error);
-      // Fallback to download if preview fails
-      generateInvoicePDF(sale);
-    }
+    };
+
+    const getPaymentMethodName = (method?: string) => {
+      switch (method) {
+        case 'cash': return 'Efectivo';
+        case 'transfer': return 'Transferencia';
+        case 'card': return 'Tarjeta';
+        case 'check': return 'Cheque';
+        case 'other': return 'Otro';
+        default: return 'No especificado';
+      }
+    };
+
+    const getPaymentStatusName = (status?: string) => {
+      switch (status) {
+        case 'paid': return 'Pagado';
+        case 'pending': return 'Pendiente';
+        case 'partial': return 'Parcial';
+        default: return 'No especificado';
+      }
+    };
+
+    const getStatusName = (status: string) => {
+      switch (status) {
+        case 'completed': return 'Completada';
+        case 'pending': return 'Pendiente';
+        case 'cancelled': return 'Cancelada';
+        default: return status;
+      }
+    };
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Proforma ${sale.number} - Grid Manager</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 20px;
+              background-color: #f8f9fa;
+            }
+            .invoice-container {
+              max-width: 800px;
+              margin: 0 auto;
+              background: white;
+              padding: 40px;
+              border-radius: 10px;
+              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 40px;
+              border-bottom: 3px solid #3B82F6;
+              padding-bottom: 20px;
+            }
+            .company-name {
+              font-size: 28px;
+              font-weight: bold;
+              color: #1F2937;
+              margin-bottom: 5px;
+            }
+            .company-subtitle {
+              font-size: 14px;
+              color: #6B7280;
+              margin-bottom: 20px;
+            }
+            .invoice-title {
+              font-size: 24px;
+              font-weight: bold;
+              color: #3B82F6;
+              margin-bottom: 10px;
+            }
+            .invoice-meta {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 30px;
+            }
+            .invoice-number {
+              font-size: 16px;
+              font-weight: bold;
+              color: #374151;
+            }
+            .section {
+              margin-bottom: 30px;
+            }
+            .section-title {
+              font-size: 18px;
+              font-weight: bold;
+              color: #1F2937;
+              margin-bottom: 15px;
+              padding-bottom: 8px;
+              border-bottom: 2px solid #E5E7EB;
+            }
+            .detail-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 15px;
+              margin-bottom: 20px;
+            }
+            .detail-item {
+              display: flex;
+              justify-content: space-between;
+              padding: 8px 0;
+            }
+            .detail-label {
+              font-weight: 600;
+              color: #374151;
+            }
+            .detail-value {
+              color: #6B7280;
+            }
+            .total-section {
+              background-color: #F3F4F6;
+              padding: 20px;
+              border-radius: 8px;
+              margin: 30px 0;
+              text-align: center;
+            }
+            .total-amount {
+              font-size: 32px;
+              font-weight: bold;
+              color: #059669;
+              margin-bottom: 10px;
+            }
+            .status-badge {
+              display: inline-block;
+              padding: 6px 12px;
+              border-radius: 20px;
+              font-size: 14px;
+              font-weight: 600;
+              text-transform: uppercase;
+            }
+            .status-completed {
+              background-color: #D1FAE5;
+              color: #065F46;
+            }
+            .status-pending {
+              background-color: #FEF3C7;
+              color: #92400E;
+            }
+            .status-cancelled {
+              background-color: #FEE2E2;
+              color: #991B1B;
+            }
+            .footer {
+              margin-top: 40px;
+              text-align: center;
+              font-size: 12px;
+              color: #6B7280;
+              border-top: 1px solid #E5E7EB;
+              padding-top: 20px;
+            }
+            .actions {
+              text-align: center;
+              margin-bottom: 30px;
+            }
+            .btn {
+              background-color: #3B82F6;
+              color: white;
+              border: none;
+              padding: 12px 24px;
+              border-radius: 6px;
+              font-size: 16px;
+              font-weight: 600;
+              cursor: pointer;
+              margin: 0 10px;
+              transition: background-color 0.2s;
+            }
+            .btn:hover {
+              background-color: #2563EB;
+            }
+            .btn-secondary {
+              background-color: #6B7280;
+            }
+            .btn-secondary:hover {
+              background-color: #4B5563;
+            }
+            @media print {
+              body { background-color: white; }
+              .actions { display: none; }
+              .invoice-container {
+                box-shadow: none;
+                margin: 0;
+                padding: 20px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="invoice-container">
+            <div class="actions">
+              <button class="btn" onclick="window.print()">
+                🖨️ Imprimir / Guardar como PDF
+              </button>
+              <button class="btn btn-secondary" onclick="window.close()">
+                ✕ Cerrar
+              </button>
+            </div>
+
+            <div class="header">
+              <div class="company-name">GRID MANAGER</div>
+              <div class="company-subtitle">Sistema de Gestión Empresarial</div>
+              <div class="invoice-title">PROFORMA DE VENTA</div>
+            </div>
+
+            <div class="invoice-meta">
+              <div>
+                <div class="invoice-number">Número: ${sale.number}</div>
+                <div>Fecha: ${new Date(sale.date).toLocaleDateString('es-AR')}</div>
+              </div>
+              <div>
+                <div class="status-badge status-${sale.status}">
+                  ${getStatusName(sale.status)}
+                </div>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">📋 Información del Cliente</div>
+              <div class="detail-item">
+                <span class="detail-label">Cliente:</span>
+                <span class="detail-value">${sale.client.name}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Email:</span>
+                <span class="detail-value">${sale.client.email}</span>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">🛍️ Detalles de la Venta</div>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <span class="detail-label">Cantidad de items:</span>
+                  <span class="detail-value">${sale.items}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Canal de venta:</span>
+                  <span class="detail-value">${getSalesChannelName(sale.salesChannel)}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Método de pago:</span>
+                  <span class="detail-value">${getPaymentMethodName(sale.paymentMethod)}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Estado del pago:</span>
+                  <span class="detail-value">${getPaymentStatusName(sale.paymentStatus)}</span>
+                </div>
+                ${sale.seller ? `
+                <div class="detail-item">
+                  <span class="detail-label">Vendedor:</span>
+                  <span class="detail-value">${sale.seller.name}</span>
+                </div>
+                ` : ''}
+              </div>
+            </div>
+
+            ${(sale.cobrado !== undefined && sale.aCobrar !== undefined) ? `
+            <div class="section">
+              <div class="section-title">💰 Seguimiento de Pagos</div>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <span class="detail-label">Monto cobrado:</span>
+                  <span class="detail-value" style="color: #059669; font-weight: 600;">${formatCurrency(sale.cobrado)}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Monto a cobrar:</span>
+                  <span class="detail-value" style="color: #DC2626; font-weight: 600;">${formatCurrency(sale.aCobrar)}</span>
+                </div>
+              </div>
+            </div>
+            ` : ''}
+
+            <div class="total-section">
+              <div class="total-amount">${formatCurrency(sale.amount)}</div>
+              <div style="color: #6B7280; font-weight: 600;">TOTAL DE LA VENTA</div>
+            </div>
+
+            <div class="footer">
+              <p>Este documento es una proforma generada automáticamente por Grid Manager</p>
+              <p>Generado el: ${invoiceData.generatedDate} a las ${invoiceData.generatedTime}</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    invoiceWindow?.document.write(htmlContent);
+    invoiceWindow?.document.close();
   };
 
   return (

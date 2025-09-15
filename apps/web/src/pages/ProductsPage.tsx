@@ -540,44 +540,9 @@ export function ProductsPage() {
               )}
             </div>
 
-            {/* Horizontal scroll navigation */}
+            {/* Product count */}
             {sortedAndFilteredProducts.length > 0 && (
-              <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between text-sm">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 text-gray-500">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
-                    </svg>
-                    <span>Navega por la tabla</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={scrollLeft}
-                      className="text-gray-600 hover:text-gray-900 px-2 py-1"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                      <span className="ml-1">Izquierda</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={scrollRight}
-                      className="text-gray-600 hover:text-gray-900 px-2 py-1"
-                    >
-                      <span className="mr-1">Derecha</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Button>
-                  </div>
-                </div>
+              <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-end text-sm">
                 <span className="text-gray-400">
                   {sortedAndFilteredProducts.length} producto{sortedAndFilteredProducts.length !== 1 ? 's' : ''}
                 </span>

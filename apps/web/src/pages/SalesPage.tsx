@@ -775,29 +775,8 @@ export function SalesPage() {
 
         {/* Sales Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">Lista de Ventas</h3>
-            
-            {/* Horizontal Navigation Controls */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 mr-3">Navegación horizontal:</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={scrollLeft}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 hover:bg-gray-50"
-              >
-                ← Izquierda
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={scrollRight}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 hover:bg-gray-50"
-              >
-                Derecha →
-              </Button>
-            </div>
           </div>
         
           <div className="relative">

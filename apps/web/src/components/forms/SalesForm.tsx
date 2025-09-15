@@ -99,6 +99,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
       setFormData({
         client: editingSale.client.name,
         product: matchingProduct?.name || '',
+        productId: editingSale.productId || matchingProduct?.id || '',
         quantity: editingSale.items,
         price: unitPrice,
         discount: editingSale.discount || 0,
@@ -342,9 +343,10 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
         <Input
           type="number"
           label="Cantidad"
-          value={formData.quantity?.toString() || '1'}
+          value={formData.quantity?.toString() || ''}
           onChange={(e) => {
-            const quantity = parseInt(e.target.value) || 1;
+            const value = e.target.value;
+            const quantity = value === '' ? 0 : parseInt(value) || 0;
             setFormData(prev => ({ ...prev, quantity }));
             if (errors.quantity) {
               setErrors(prev => ({ ...prev, quantity: undefined }));
@@ -354,15 +356,17 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
           required
           disabled={loading}
           error={errors.quantity}
+          placeholder="1"
         />
 
         {/* Precio Unitario */}
         <Input
           type="number"
           label="Precio Unitario"
-          value={formData.price?.toString() || '0'}
+          value={formData.price?.toString() || ''}
           onChange={(e) => {
-            const price = parseFloat(e.target.value) || 0;
+            const value = e.target.value;
+            const price = value === '' ? 0 : parseFloat(value) || 0;
             setFormData(prev => ({ ...prev, price }));
             if (errors.price) {
               setErrors(prev => ({ ...prev, price: undefined }));
@@ -373,15 +377,17 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
           required
           disabled={loading}
           error={errors.price}
+          placeholder="0.00"
         />
 
         {/* Descuento */}
         <Input
           type="number"
           label="Descuento (%)"
-          value={formData.discount?.toString() || '0'}
+          value={formData.discount?.toString() || ''}
           onChange={(e) => {
-            const discount = parseFloat(e.target.value) || 0;
+            const value = e.target.value;
+            const discount = value === '' ? 0 : parseFloat(value) || 0;
             setFormData(prev => ({ ...prev, discount: Math.max(0, Math.min(100, discount)) }));
           }}
           step="0.01"

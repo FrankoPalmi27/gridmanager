@@ -9,7 +9,9 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
 import { errorHandler } from './middleware/errorHandler';
+import { tenantMiddleware, optionalTenantMiddleware } from './middleware/tenant';
 import { authRoutes } from './routes/auth';
+import { tenantRoutes } from './routes/tenant';
 import { dashboardRoutes } from './routes/dashboard';
 import { customerRoutes } from './routes/customers';
 import { supplierRoutes } from './routes/suppliers';
@@ -46,17 +48,20 @@ export function createApp() {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-  // API Routes
+  // Public API Routes (no tenant required)
   app.use('/api/auth', authRoutes);
-  app.use('/api/dashboard', dashboardRoutes);
-  app.use('/api/customers', customerRoutes);
-  app.use('/api/suppliers', supplierRoutes);
-  app.use('/api/products', productRoutes);
-  app.use('/api/sales', saleRoutes);
-  app.use('/api/purchases', purchaseRoutes);
-  app.use('/api/users', userRoutes);
-  app.use('/api/accounts', accountRoutes);
-  app.use('/api/reports', reportRoutes);
+  app.use('/api/tenant', tenantRoutes);
+
+  // Tenant-aware API Routes (require tenant context)
+  app.use('/api/dashboard', tenantMiddleware, dashboardRoutes);
+  app.use('/api/customers', tenantMiddleware, customerRoutes);
+  app.use('/api/suppliers', tenantMiddleware, supplierRoutes);
+  app.use('/api/products', tenantMiddleware, productRoutes);
+  app.use('/api/sales', tenantMiddleware, saleRoutes);
+  app.use('/api/purchases', tenantMiddleware, purchaseRoutes);
+  app.use('/api/users', tenantMiddleware, userRoutes);
+  app.use('/api/accounts', tenantMiddleware, accountRoutes);
+  app.use('/api/reports', tenantMiddleware, reportRoutes);
 
   // Health check - simple and fast
   app.get('/health', (req, res) => {
@@ -69,11 +74,17 @@ export function createApp() {
 
   // Root endpoint
   app.get('/', (req, res) => {
-    res.json({ 
-      message: 'Grid Manager API', 
-      version: '1.0.0',
+    res.json({
+      message: 'Grid Manager Multi-Tenant API',
+      version: '2.0.0',
+      multiTenant: process.env.MULTITENANT_ENABLED === 'true',
       health: '/health',
-      docs: '/api-docs'
+      docs: '/api-docs',
+      endpoints: {
+        auth: '/api/auth',
+        tenantRegister: '/api/tenant/register',
+        tenantLogin: '/api/tenant/login'
+      }
     });
   });
 
@@ -150,17 +161,20 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Routes
+// Public API Routes (no tenant required)
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/dashboard', dashboardRoutes);
-app.use('/api/v1/customers', customerRoutes);
-app.use('/api/v1/suppliers', supplierRoutes);
-app.use('/api/v1/products', productRoutes);
-app.use('/api/v1/sales', saleRoutes);
-app.use('/api/v1/purchases', purchaseRoutes);
-app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/accounts', accountRoutes);
-app.use('/api/v1/reports', reportRoutes);
+app.use('/api/v1/tenant', tenantRoutes);
+
+// Tenant-aware API Routes (require tenant context)
+app.use('/api/v1/dashboard', tenantMiddleware, dashboardRoutes);
+app.use('/api/v1/customers', tenantMiddleware, customerRoutes);
+app.use('/api/v1/suppliers', tenantMiddleware, supplierRoutes);
+app.use('/api/v1/products', tenantMiddleware, productRoutes);
+app.use('/api/v1/sales', tenantMiddleware, saleRoutes);
+app.use('/api/v1/purchases', tenantMiddleware, purchaseRoutes);
+app.use('/api/v1/users', tenantMiddleware, userRoutes);
+app.use('/api/v1/accounts', tenantMiddleware, accountRoutes);
+app.use('/api/v1/reports', tenantMiddleware, reportRoutes);
 
 // Error handling
 app.use(errorHandler);

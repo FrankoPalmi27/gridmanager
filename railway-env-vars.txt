@@ -1,0 +1,48 @@
+# RAILWAY ENVIRONMENT VARIABLES FOR MULTI-TENANCY
+# Copy these variables to your Railway project settings:
+
+# Multi-tenant configuration
+MULTITENANT_ENABLED=true
+DEFAULT_DOMAIN=gridmanager.netlify.app
+ALLOW_PATH_ROUTING=true
+
+# CORS for multi-tenant (update with your Netlify domain)
+CORS_ORIGIN=https://your-netlify-domain.netlify.app,http://localhost:3000,http://localhost:5000
+
+# JWT Secret (IMPORTANT: Change this in production!)
+JWT_SECRET=your-super-secret-jwt-key-here-change-in-production-multitenant-2025
+
+# Database URL (should already be set)
+DATABASE_URL=postgresql://postgres.bcpanxxwahxbvxueeioj:GRIDMANAGER_2025@aws-1-us-east-1.pooler.supabase.com:6543/postgres
+
+# Email configuration (for future tenant onboarding emails)
+# SMTP_HOST=smtp.gmail.com
+# SMTP_USER=noreply@yourdomain.com
+# SMTP_PASS=your-app-password
+
+# Payment providers (for future billing integration)
+# STRIPE_SECRET_KEY=sk_live_...
+# STRIPE_WEBHOOK_SECRET=whsec_...
+# MERCADOPAGO_ACCESS_TOKEN=APP_USR-...
+
+# Node environment
+NODE_ENV=production
+
+# API Rate limiting (optional)
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# Tenant limits (can be overridden per tenant in database)
+DEFAULT_TRIAL_DAYS=14
+DEFAULT_MAX_USERS_TRIAL=3
+DEFAULT_MAX_PRODUCTS_TRIAL=100
+DEFAULT_MAX_SALES_TRIAL=500
+
+# Security
+BCRYPT_ROUNDS=12
+SESSION_TIMEOUT=86400000
+
+# Features flags
+ENABLE_ANALYTICS=true
+ENABLE_API_ACCESS=true
+ENABLE_AUDIT_LOGS=true

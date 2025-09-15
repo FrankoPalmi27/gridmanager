@@ -165,7 +165,7 @@ export const StockStatusBadge: React.FC<{ currentStock: number; minStock: number
     label = 'Stock Bajo';
   } else {
     status = 'inStock';
-    label = 'En Stock';
+    label = 'Disponible';
   }
 
   return (

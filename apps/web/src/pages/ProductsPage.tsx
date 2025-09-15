@@ -310,16 +310,17 @@ export function ProductsPage() {
             <h3 className="text-lg font-semibold text-gray-900">Lista de Productos</h3>
           </div>
           
-          {/* Scrollable table container with custom scrollbar and fixed width */}
+          {/* Scrollable table container with fixed height and vertical scroll */}
           <div className="relative">
-            <div 
+            <div
               ref={tableScrollRef}
-              className="overflow-x-auto overflow-y-visible scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
-              style={{ 
+              className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
+              style={{
                 scrollbarWidth: 'thin',
                 scrollbarColor: '#D1D5DB #F3F4F6',
                 maxWidth: '100%',
-                width: '100%'
+                width: '100%',
+                maxHeight: '600px'
               }}
             >
             <table className="divide-y divide-gray-200" style={{ minWidth: '1200px', width: 'max-content' }}>
@@ -644,7 +645,7 @@ export function ProductsPage() {
             </div>
 
             {/* Stock Movements Table */}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: '400px' }}>
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>

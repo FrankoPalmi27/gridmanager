@@ -1040,14 +1040,15 @@ export function AccountsPage() {
             </div>
             
             <div className="relative">
-              <div 
+              <div
                 ref={tableScrollRef}
-                className="overflow-x-auto overflow-y-visible scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
-                style={{ 
+                className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
+                style={{
                   scrollbarWidth: 'thin',
                   scrollbarColor: '#D1D5DB #F3F4F6',
                   maxWidth: '100%',
-                  width: '100%'
+                  width: '100%',
+                  maxHeight: '600px'
                 }}
               >
                 <table className="divide-y divide-gray-200" style={{ minWidth: '1400px', width: 'max-content' }}>

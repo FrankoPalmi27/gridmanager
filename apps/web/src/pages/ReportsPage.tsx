@@ -79,7 +79,6 @@ const PieChart = ({ data, title }: {
                 d={pathData.path}
                 fill={pathData.color}
                 className="hover:opacity-75 transition-opacity cursor-pointer"
-                title={`${pathData.item.label}: ${pathData.percentage}%`}
               />
             ))}
           </svg>
@@ -160,7 +159,6 @@ const AreaChart = ({ data, title, color = '#3B82F6' }: {
               r="1"
               fill={color}
               className="hover:r-2 transition-all cursor-pointer"
-              title={`${formatDate(data[index].date)}: ${formatCurrency(data[index].value)}`}
             />
           ))}
         </svg>
@@ -302,7 +300,7 @@ const ReportTable = ({ title, headers, data, sortable = true }: {
       <div className="p-6 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: '500px' }}>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>

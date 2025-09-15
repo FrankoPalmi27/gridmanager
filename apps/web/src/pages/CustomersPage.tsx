@@ -119,7 +119,15 @@ export function CustomersPage() {
         updateCustomer(editingCustomer.id, formData);
       } else {
         // Add new customer
-        addCustomer(formData);
+        addCustomer({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.celular,
+          balance: formData.balance,
+          status: formData.status,
+          address: formData.address,
+          notes: formData.notes
+        });
       }
       
       handleCloseModal();
@@ -292,14 +300,15 @@ export function CustomersPage() {
           
           {/* Desktop Table */}
           <div className="hidden lg:block relative">
-            <div 
+            <div
               ref={tableScrollRef}
-              className="overflow-x-auto overflow-y-visible scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
-              style={{ 
+              className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
+              style={{
                 scrollbarWidth: 'thin',
                 scrollbarColor: '#D1D5DB #F3F4F6',
                 maxWidth: '100%',
-                width: '100%'
+                width: '100%',
+                maxHeight: '600px'
               }}
             >
               <table className="divide-y divide-gray-200" style={{ minWidth: '1200px', width: 'max-content' }}>

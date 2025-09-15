@@ -296,7 +296,7 @@ export function PurchasesPage() {
             <h3 className="text-lg font-semibold text-gray-900">Lista de Compras</h3>
           </div>
           
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: '600px' }}>
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>

@@ -53,7 +53,8 @@
       "Bash(del \"C:\\Users\\franc\\Desktop\\JOINT FORCE\\OBSIDIAN\\APPS\\Grid Manager\\vision_tenis.csv\")",
       "Bash(git checkout:*)",
       "Bash(tree:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(set PORT=5002)"
     ],
     "deny": [],
     "ask": []

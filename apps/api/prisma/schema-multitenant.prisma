@@ -1,0 +1,110 @@
+// Multi-tenant Schema Extension for Grid Manager
+// This adds tenant isolation to the existing schema
+
+enum TenantPlan {
+  TRIAL
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+model Tenant {
+  id          String       @id @default(cuid())
+  name        String       // Nombre de la empresa
+  slug        String       @unique // Para subdominios: empresa.gridmanager.com
+  email       String       @unique // Email principal de contacto
+  phone       String?
+  address     String?
+  taxId       String?      // CUIT/RUT/Tax ID
+
+  // Plan y facturación
+  plan        TenantPlan   @default(TRIAL)
+  status      TenantStatus @default(TRIAL)
+  trialEnds   DateTime?    // Fin del período de prueba
+  billingCycle String?     // monthly, yearly
+
+  // Configuraciones personalizables
+  settings    Json?        // { logo, primaryColor, secondaryColor, favicon }
+  limits      Json?        // { maxUsers: 5, maxProducts: 1000, maxSales: 5000 }
+  features    Json?        // { analytics: true, multiCurrency: false, api: true }
+
+  // Timestamps
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relaciones - Todas las entidades ahora pertenecen a un tenant
+  users       User[]
+  branches    Branch[]
+  customers   Customer[]
+  suppliers   Supplier[]
+  products    Product[]
+  sales       Sale[]
+  purchases   Purchase[]
+  accounts    Account[]
+  incomes     Income[]
+  expenses    Expense[]
+  quotes      Quote[]
+
+  @@map("tenants")
+}
+
+// Subscription tracking
+model Subscription {
+  id              String       @id @default(cuid())
+  tenantId        String
+  plan            TenantPlan
+  status          String       // active, cancelled, past_due, etc.
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  amount          Decimal      @db.Decimal(12, 2)
+  currency        Currency     @default(ARS)
+
+  // External payment provider data
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  mercadoPagoId       String?
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  tenant          Tenant       @relation(fields: [tenantId], references: [id])
+
+  @@map("subscriptions")
+}
+
+// Usage tracking for billing
+model UsageMetric {
+  id       String   @id @default(cuid())
+  tenantId String
+  metric   String   // users_count, products_count, sales_count, storage_mb
+  value    Int
+  date     DateTime @default(now())
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, metric, date])
+  @@map("usage_metrics")
+}
+
+// Public tenant registration
+model TenantRegistration {
+  id            String   @id @default(cuid())
+  companyName   String
+  ownerName     String
+  email         String   @unique
+  phone         String?
+  industry      String?
+  employeeCount String?
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  token         String?  @unique // Email verification token
+  createdAt     DateTime @default(now())
+
+  @@map("tenant_registrations")
+}

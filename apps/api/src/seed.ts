@@ -6,9 +6,25 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seeding...');
 
+  // Create tenant first
+  const tenant = await prisma.tenant.create({
+    data: {
+      name: 'Grid Manager Demo',
+      slug: 'demo',
+      email: 'demo@gridmanager.com',
+      phone: '+54 11 4555-0000',
+      address: 'Buenos Aires, Argentina',
+      plan: 'PRO',
+      status: 'ACTIVE',
+    },
+  });
+
+  console.log('✅ Created tenant');
+
   // Create branches
   const branch1 = await prisma.branch.create({
     data: {
+      tenantId: tenant.id,
       name: 'Sucursal Centro',
       address: 'Av. Corrientes 1234, CABA',
       phone: '+54 11 4555-0001',
@@ -18,8 +34,9 @@ async function main() {
 
   const branch2 = await prisma.branch.create({
     data: {
+      tenantId: tenant.id,
       name: 'Sucursal Norte',
-      address: 'Av. Cabildo 5678, CABA', 
+      address: 'Av. Cabildo 5678, CABA',
       phone: '+54 11 4555-0002',
       email: 'norte@gridmanager.com',
     },
@@ -34,6 +51,7 @@ async function main() {
 
   const admin = await prisma.user.create({
     data: {
+      tenantId: tenant.id,
       email: 'admin@gridmanager.com',
       name: 'Admin Usuario',
       password: adminPassword,
@@ -43,6 +61,7 @@ async function main() {
 
   const manager = await prisma.user.create({
     data: {
+      tenantId: tenant.id,
       email: 'manager@gridmanager.com',
       name: 'Manager Usuario',
       password: managerPassword,
@@ -53,6 +72,7 @@ async function main() {
 
   const seller1 = await prisma.user.create({
     data: {
+      tenantId: tenant.id,
       email: 'vendedor1@gridmanager.com',
       name: 'Juan Pérez',
       password: sellerPassword,
@@ -63,6 +83,7 @@ async function main() {
 
   const seller2 = await prisma.user.create({
     data: {
+      tenantId: tenant.id,
       email: 'vendedor2@gridmanager.com',
       name: 'María García',
       password: sellerPassword,
@@ -73,6 +94,7 @@ async function main() {
 
   const analyst = await prisma.user.create({
     data: {
+      tenantId: tenant.id,
       email: 'analista@gridmanager.com',
       name: 'Carlos López',
       password: await hashPassword('analyst123'),

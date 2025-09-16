@@ -54,7 +54,10 @@
       "Bash(git checkout:*)",
       "Bash(tree:*)",
       "Bash(dir:*)",
-      "Bash(set PORT=5002)"
+      "Bash(set PORT=5002)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(psql:*)"
     ],
     "deny": [],
     "ask": []

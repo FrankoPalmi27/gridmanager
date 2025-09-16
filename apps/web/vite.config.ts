@@ -22,7 +22,7 @@ export default defineConfig({
     port: 5000,
     host: true,
     proxy: {
-      '/api': {
+      '/api/v1': {
         target: 'http://localhost:3001',
         changeOrigin: true,
       },

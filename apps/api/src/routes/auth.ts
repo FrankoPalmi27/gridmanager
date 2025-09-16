@@ -305,15 +305,154 @@ router.post('/logout', authenticate, async (req: AuthenticatedRequest, res, next
 
 /**
  * @swagger
- * /auth/google:
- *   get:
- *     summary: Initiate Google OAuth
+ * /auth/register-tenant:
+ *   post:
+ *     summary: Register new tenant (public registration)
  *     tags: [Auth]
- *     description: Redirects to Google for authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               name:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *               tenantName:
+ *                 type: string
+ *             required:
+ *               - email
+ *               - name
+ *               - password
+ *               - tenantName
  */
-router.get('/google', passport.authenticate('google', {
-  scope: ['profile', 'email']
-}));
+router.post('/register-tenant', async (req, res, next) => {
+  try {
+    const { email, name, password, tenantName } = req.body;
+
+    if (!email || !name || !password || !tenantName) {
+      throw createError('All fields are required', 400);
+    }
+
+    // Check if user with this email already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      throw createError('User with this email already exists', 409);
+    }
+
+    const hashedPassword = await hashPassword(password);
+
+    // Create tenant and admin user in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create slug from tenant name (remove spaces, special chars, make lowercase)
+      const slug = tenantName.toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .substring(0, 50);
+
+      // Ensure slug is unique by adding number if needed
+      let uniqueSlug = slug;
+      let counter = 1;
+      while (await tx.tenant.findUnique({ where: { slug: uniqueSlug } })) {
+        uniqueSlug = `${slug}-${counter}`;
+        counter++;
+      }
+
+      // Create tenant
+      const tenant = await tx.tenant.create({
+        data: {
+          name: tenantName,
+          slug: uniqueSlug,
+          email: email,
+          status: 'TRIAL',
+          plan: 'TRIAL',
+          trialEnds: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days from now
+        }
+      });
+
+      // Create default branch
+      const branch = await tx.branch.create({
+        data: {
+          tenantId: tenant.id,
+          name: 'Principal',
+          address: '',
+          phone: '',
+          status: 'ACTIVE'
+        }
+      });
+
+      // Create admin user
+      const user = await tx.user.create({
+        data: {
+          tenantId: tenant.id,
+          email,
+          name,
+          password: hashedPassword,
+          role: 'ADMIN',
+          status: 'ACTIVE',
+          branchId: branch.id
+        }
+      });
+
+      return { user, tenant, branch };
+    });
+
+    // Generate tokens
+    const tokens = generateTokens(result.user.id);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        tokens,
+        user: {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name,
+          role: result.user.role,
+          tenant: {
+            id: result.tenant.id,
+            name: result.tenant.name,
+            slug: result.tenant.slug,
+            plan: result.tenant.plan,
+            status: result.tenant.status,
+            trialEnds: result.tenant.trialEnds
+          },
+          branch: {
+            id: result.branch.id,
+            name: result.branch.name
+          }
+        }
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Google OAuth routes - Only register if Google is configured
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  /**
+   * @swagger
+   * /auth/google:
+   *   get:
+   *     summary: Initiate Google OAuth
+   *     tags: [Auth]
+   *     description: Redirects to Google for authentication
+   */
+  router.get('/google', passport.authenticate('google', {
+    scope: ['profile', 'email']
+  }));
 
 /**
  * @swagger
@@ -483,5 +622,29 @@ router.post('/google/complete', async (req, res, next) => {
     next(error);
   }
 });
+
+} else {
+  // Return error message if Google OAuth routes are accessed but not configured
+  router.get('/google', (req, res) => {
+    res.status(503).json({
+      success: false,
+      error: 'Google OAuth not configured on server'
+    });
+  });
+
+  router.get('/google/callback', (req, res) => {
+    res.status(503).json({
+      success: false,
+      error: 'Google OAuth not configured on server'
+    });
+  });
+
+  router.post('/google/complete', (req, res) => {
+    res.status(503).json({
+      success: false,
+      error: 'Google OAuth not configured on server'
+    });
+  });
+}
 
 export { router as authRoutes };

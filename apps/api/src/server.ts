@@ -66,25 +66,12 @@ export function createApp() {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Public API Routes (no tenant required)
-  app.use('/api/auth', authRoutes);
-  app.use('/api/tenant', tenantRoutes);
-
-  // Tenant-aware API Routes (require tenant context)
-  app.use('/api/dashboard', tenantMiddleware, dashboardRoutes);
-  app.use('/api/customers', tenantMiddleware, customerRoutes);
-  app.use('/api/suppliers', tenantMiddleware, supplierRoutes);
-  app.use('/api/products', tenantMiddleware, productRoutes);
-  app.use('/api/sales', tenantMiddleware, saleRoutes);
-  app.use('/api/purchases', tenantMiddleware, purchaseRoutes);
-  app.use('/api/users', tenantMiddleware, userRoutes);
-  app.use('/api/accounts', tenantMiddleware, accountRoutes);
-  app.use('/api/reports', tenantMiddleware, reportRoutes);
+  // All routes use v1 versioning for consistency
 
   // Health check - simple and fast
   app.get('/health', (req, res) => {
-    res.status(200).json({ 
-      status: 'ok', 
+    res.status(200).json({
+      status: 'ok',
       timestamp: new Date().toISOString(),
       port: process.env.PORT || '3001'
     });
@@ -99,9 +86,9 @@ export function createApp() {
       health: '/health',
       docs: '/api-docs',
       endpoints: {
-        auth: '/api/auth',
-        tenantRegister: '/api/tenant/register',
-        tenantLogin: '/api/tenant/login'
+        auth: '/api/v1/auth',
+        tenantRegister: '/api/v1/tenant/register',
+        tenantLogin: '/api/v1/tenant/login'
       }
     });
   });
@@ -170,14 +157,6 @@ const swaggerOptions = {
 const specs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0',
-  });
-});
 
 // Public API Routes (no tenant required)
 app.use('/api/v1/auth', authRoutes);

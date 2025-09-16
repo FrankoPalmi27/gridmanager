@@ -26,16 +26,8 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      user: {
-        id: '1',
-        name: 'Usuario Demo',
-        email: 'demo@gridmanager.com',
-        role: 'ADMIN'
-      },
-      tokens: {
-        accessToken: 'demo-token',
-        refreshToken: 'demo-refresh'
-      },
+      user: null,
+      tokens: null,
       isLoading: false,
       
       setAuth: (user, tokens) =>

@@ -8,6 +8,8 @@ interface RegistrationData {
   phone: string;
   industry: string;
   employeeCount: string;
+  password: string;
+  confirmPassword: string;
 }
 
 interface RegistrationResponse {
@@ -38,7 +40,9 @@ export function TenantRegisterPage() {
     email: '',
     phone: '',
     industry: '',
-    employeeCount: ''
+    employeeCount: '',
+    password: '',
+    confirmPassword: ''
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -99,6 +103,16 @@ export function TenantRegisterPage() {
       newErrors.email = 'Email debe tener un formato válido';
     }
 
+    if (!formData.password.trim()) {
+      newErrors.password = 'Contraseña es requerida';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Contraseña debe tener al menos 6 caracteres';
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Las contraseñas no coinciden';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -114,12 +128,17 @@ export function TenantRegisterPage() {
     setRegistrationResult(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tenant/register`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1'}/auth/register-tenant`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          email: formData.email,
+          name: formData.ownerName,
+          password: formData.password,
+          tenantName: formData.companyName
+        }),
       });
 
       const result: RegistrationResponse = await response.json();
@@ -320,6 +339,46 @@ export function TenantRegisterPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="+54 11 1234-5678"
                 />
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  Contraseña *
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.password ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Mínimo 6 caracteres"
+                />
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirmar contraseña *
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Confirma tu contraseña"
+                />
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+                )}
               </div>
 
               <div>

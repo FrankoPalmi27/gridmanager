@@ -63,7 +63,12 @@
       "Bash(railway login:*)",
       "Bash(railway status:*)",
       "Bash(railway whoami:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(PORT=3002)",
+      "Bash(set PORT=3002)",
+      "Bash(cat:*)",
+      "Bash(env)",
+      "Bash(PORT=3003 npm run dev)"
     ],
     "deny": [],
     "ask": []

@@ -2,6 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl1.1-compat
+
 # Copy package files
 COPY package*.json ./
 
@@ -16,8 +19,8 @@ RUN npx prisma generate
 COPY src ./src/
 COPY tsconfig.json ./
 
-# Expose port
-EXPOSE 3001
+# Expose port (Railway uses PORT env variable)
+EXPOSE $PORT
 
 # Start application
 CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]

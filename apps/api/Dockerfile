@@ -1,9 +1,12 @@
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
-# Install OpenSSL for Prisma
-RUN apk add --no-cache openssl1.1-compat
+# Install dependencies for Prisma on Debian
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package*.json ./
@@ -15,9 +18,10 @@ RUN npm ci
 COPY prisma ./prisma/
 RUN npx prisma generate
 
-# Copy source code
+# Copy source code and build
 COPY src ./src/
 COPY tsconfig.json ./
+RUN npm run build
 
 # Expose port (Railway uses PORT env variable)
 EXPOSE $PORT

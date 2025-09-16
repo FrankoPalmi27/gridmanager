@@ -3,10 +3,12 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import session from 'express-session';
 import { PrismaClient } from '@prisma/client';
 import { createClient } from 'redis';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import passport from './config/passport';
 
 import { errorHandler } from './middleware/errorHandler';
 import { tenantMiddleware, optionalTenantMiddleware } from './middleware/tenant';
@@ -47,6 +49,22 @@ export function createApp() {
 
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Session configuration
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-session-secret-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  }));
+
+  // Passport middleware
+  app.use(passport.initialize());
+  app.use(passport.session());
 
   // Public API Routes (no tenant required)
   app.use('/api/auth', authRoutes);

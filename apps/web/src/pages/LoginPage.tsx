@@ -12,6 +12,7 @@ const LoginSchema = z.object({
 type LoginRequest = z.infer<typeof LoginSchema>;
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/lib/api';
+import { GoogleLoginButton } from '@/components/ui/GoogleLoginButton';
 
 export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -105,6 +106,26 @@ export function LoginPage() {
             )}
           </button>
         </form>
+
+        {/* Separador */}
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-50 text-gray-500">O continúa con</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Botón de Google */}
+        <div className="mt-6">
+          <GoogleLoginButton
+            onError={(error) => setError(error)}
+            disabled={isLoading}
+          />
+        </div>
 
         <div className="mt-8 p-4 bg-blue-50 rounded-lg">
           <h3 className="text-sm font-medium text-blue-900 mb-2">

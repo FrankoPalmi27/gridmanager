@@ -62,7 +62,8 @@
       "Bash(netlify:*)",
       "Bash(railway login:*)",
       "Bash(railway status:*)",
-      "Bash(railway whoami:*)"
+      "Bash(railway whoami:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../components/ui/Button';
+import { GoogleLoginButton } from '../components/ui/GoogleLoginButton';
 
 interface LoginForm {
   email: string;
@@ -156,6 +157,26 @@ export function TenantLoginPage({ onNavigate }: { onNavigate: (page: string) => 
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </Button>
         </form>
+
+        {/* Separador */}
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">O continúa con</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Botón de Google */}
+        <div className="mt-6">
+          <GoogleLoginButton
+            onError={(error) => setError(error)}
+            disabled={loading}
+          />
+        </div>
 
         <div className="mt-6 text-center space-y-3">
           <p className="text-sm text-gray-600">

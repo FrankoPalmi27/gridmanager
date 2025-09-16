@@ -183,10 +183,16 @@ model User {
   tenantId  String     // NUEVO: vinculación con tenant
   email     String     @unique
   name      String
-  password  String
+  password  String?    // Opcional para usuarios de Google OAuth
   role      UserRole   @default(SELLER)
   status    UserStatus @default(ACTIVE)
   branchId  String?
+
+  // Google OAuth fields
+  googleId  String?    @unique // Google user ID
+  avatar    String?    // Profile picture from Google
+  provider  String?    @default("local") // "local" o "google"
+
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 

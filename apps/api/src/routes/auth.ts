@@ -5,6 +5,7 @@ import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../server';
 import { generateTokens, verifyRefreshToken, hashPassword, comparePassword } from '../utils/auth';
 import { createError } from '../middleware/errorHandler';
+import passport from '../config/passport';
 
 const router = Router();
 
@@ -297,6 +298,187 @@ router.post('/logout', authenticate, async (req: AuthenticatedRequest, res, next
       success: true,
       message: 'Logged out successfully',
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @swagger
+ * /auth/google:
+ *   get:
+ *     summary: Initiate Google OAuth
+ *     tags: [Auth]
+ *     description: Redirects to Google for authentication
+ */
+router.get('/google', passport.authenticate('google', {
+  scope: ['profile', 'email']
+}));
+
+/**
+ * @swagger
+ * /auth/google/callback:
+ *   get:
+ *     summary: Google OAuth callback
+ *     tags: [Auth]
+ *     description: Handles Google OAuth callback
+ */
+router.get('/google/callback',
+  passport.authenticate('google', { session: false, failureRedirect: `${process.env.CORS_ORIGIN}/login?error=google_auth_failed` }),
+  async (req, res, next) => {
+    try {
+      const user = req.user as any;
+
+      if (user.isNewUser) {
+        // For new Google users, redirect to a registration completion page
+        const params = new URLSearchParams({
+          googleId: user.googleId,
+          email: user.email,
+          name: user.name,
+          avatar: user.avatar || '',
+          provider: 'google'
+        });
+
+        return res.redirect(`${process.env.CORS_ORIGIN}/complete-registration?${params.toString()}`);
+      }
+
+      // For existing users, generate tokens and redirect to dashboard
+      const tokens = generateTokens(user.id);
+
+      // Redirect to frontend with tokens in URL (they'll be extracted and stored)
+      const params = new URLSearchParams({
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        user: JSON.stringify({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          avatar: user.avatar,
+          tenant: user.tenant
+        })
+      });
+
+      res.redirect(`${process.env.CORS_ORIGIN}/auth/callback?${params.toString()}`);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /auth/google/complete:
+ *   post:
+ *     summary: Complete Google user registration
+ *     tags: [Auth]
+ *     description: Complete registration for new Google users by creating tenant
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - googleId
+ *               - email
+ *               - name
+ *               - tenantName
+ *             properties:
+ *               googleId:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *               avatar:
+ *                 type: string
+ *               tenantName:
+ *                 type: string
+ */
+router.post('/google/complete', async (req, res, next) => {
+  try {
+    const { googleId, email, name, avatar, tenantName } = req.body;
+
+    if (!googleId || !email || !name || !tenantName) {
+      throw createError('Missing required fields', 400);
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { googleId },
+          { email }
+        ]
+      }
+    });
+
+    if (existingUser) {
+      throw createError('User already exists', 400);
+    }
+
+    // Create tenant and user in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create tenant
+      const tenant = await tx.tenant.create({
+        data: {
+          name: tenantName,
+          slug: tenantName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+          email: email,
+          plan: 'TRIAL',
+          status: 'TRIAL'
+        }
+      });
+
+      // Create default branch
+      const branch = await tx.branch.create({
+        data: {
+          tenantId: tenant.id,
+          name: 'Principal',
+          address: '',
+          phone: '',
+          email: email,
+          isMain: true
+        }
+      });
+
+      // Create user
+      const user = await tx.user.create({
+        data: {
+          tenantId: tenant.id,
+          branchId: branch.id,
+          email,
+          name,
+          googleId,
+          avatar,
+          provider: 'google',
+          role: 'ADMIN',
+          status: 'ACTIVE'
+        }
+      });
+
+      return { user, tenant, branch };
+    });
+
+    // Generate tokens
+    const tokens = generateTokens(result.user.id);
+
+    res.json({
+      success: true,
+      data: {
+        tokens,
+        user: {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name,
+          role: result.user.role,
+          avatar: result.user.avatar,
+          tenant: result.tenant
+        }
+      }
+    });
+
   } catch (error) {
     next(error);
   }

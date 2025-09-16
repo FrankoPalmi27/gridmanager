@@ -1,0 +1,20 @@
+[build]
+  base = "apps/web"
+  publish = "dist"
+  command = "npm ci && npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_VERSION = "10"
+  NODE_OPTIONS = "--max-old-space-size=4096"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[context.production]
+  environment = { VITE_API_URL = "https://gridmanager-api-production.up.railway.app/api" }
+
+[context.deploy-preview]
+  environment = { VITE_API_URL = "https://gridmanager-api-production.up.railway.app/api" }

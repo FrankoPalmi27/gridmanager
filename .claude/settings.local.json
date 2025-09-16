@@ -57,7 +57,12 @@
       "Bash(set PORT=5002)",
       "Bash(netstat:*)",
       "Bash(taskkill:*)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(railway --version)",
+      "Bash(netlify:*)",
+      "Bash(railway login:*)",
+      "Bash(railway status:*)",
+      "Bash(railway whoami:*)"
     ],
     "deny": [],
     "ask": []

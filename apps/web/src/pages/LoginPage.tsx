@@ -35,6 +35,9 @@ export function LoginPage() {
       const response = await authApi.login(data.email, data.password);
       const { user, tokens } = response.data.data;
       setAuth(user, tokens);
+
+      // Redirect to dashboard after successful login
+      window.location.href = '/dashboard';
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al iniciar sesión');
     } finally {

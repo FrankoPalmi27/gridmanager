@@ -1,37 +1,27 @@
-import { useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useAuthStore } from '@/store/authStore';
+import React, { useState } from 'react';
+import { useAuthStore } from '../store/authStore';
 
-const CompleteRegistrationSchema = z.object({
-  tenantName: z.string().min(2, 'El nombre de la empresa debe tener al menos 2 caracteres'),
-});
-
-type CompleteRegistrationRequest = z.infer<typeof CompleteRegistrationSchema>;
-
-export function CompleteRegistrationPage() {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+export function CompleteRegistrationPage({ onNavigate }: { onNavigate: (page: string) => void }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [tenantName, setTenantName] = useState('');
   const { setAuth } = useAuthStore();
 
-  const googleId = searchParams.get('googleId');
-  const email = searchParams.get('email');
-  const name = searchParams.get('name');
-  const avatar = searchParams.get('avatar');
+  // Get URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const googleId = urlParams.get('googleId');
+  const email = urlParams.get('email');
+  const name = urlParams.get('name');
+  const avatar = urlParams.get('avatar');
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<CompleteRegistrationRequest>({
-    resolver: zodResolver(CompleteRegistrationSchema),
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const onSubmit = async (data: CompleteRegistrationRequest) => {
+    if (!tenantName.trim()) {
+      setError('El nombre de la empresa es requerido');
+      return;
+    }
+
     if (!googleId || !email || !name) {
       setError('Faltan datos de Google. Por favor, intenta de nuevo.');
       return;
@@ -41,7 +31,7 @@ export function CompleteRegistrationPage() {
     setError('');
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/v1';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://gridmanager-production.up.railway.app/api/v1';
       const response = await fetch(`${apiUrl}/auth/google/complete`, {
         method: 'POST',
         headers: {
@@ -52,7 +42,7 @@ export function CompleteRegistrationPage() {
           email,
           name,
           avatar,
-          tenantName: data.tenantName,
+          tenantName: tenantName.trim(),
         }),
       });
 
@@ -64,7 +54,7 @@ export function CompleteRegistrationPage() {
 
       const { user, tokens } = result.data;
       setAuth(user, tokens);
-      navigate('/dashboard');
+      onNavigate('dashboard');
     } catch (err: any) {
       setError(err.message || 'Error al completar el registro');
     } finally {
@@ -83,10 +73,10 @@ export function CompleteRegistrationPage() {
             Faltan datos de Google. Por favor, intenta iniciar sesión de nuevo.
           </p>
           <button
-            onClick={() => navigate('/login')}
-            className="btn btn-primary"
+            onClick={() => onNavigate('home')}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
-            Volver al inicio de sesión
+            Volver al inicio
           </button>
         </div>
       </div>
@@ -121,26 +111,25 @@ export function CompleteRegistrationPage() {
           </div>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-md">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
               {error}
             </div>
           )}
 
           <div>
-            <label htmlFor="tenantName" className="label">
+            <label htmlFor="tenantName" className="block text-sm font-medium text-gray-700">
               Nombre de tu empresa
             </label>
             <input
-              {...register('tenantName')}
               type="text"
-              className={`input ${errors.tenantName ? 'input-error' : ''}`}
+              value={tenantName}
+              onChange={(e) => setTenantName(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               placeholder="Mi Empresa S.A."
+              required
             />
-            {errors.tenantName && (
-              <p className="mt-1 text-sm text-error-600">{errors.tenantName.message}</p>
-            )}
             <p className="mt-1 text-sm text-gray-500">
               Este será el nombre de tu organización en Grid Manager.
             </p>
@@ -149,11 +138,11 @@ export function CompleteRegistrationPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="btn btn-primary w-full justify-center"
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
           >
             {isLoading ? (
               <>
-                <div className="loading-spinner mr-2" />
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                 Creando cuenta...
               </>
             ) : (
@@ -164,10 +153,10 @@ export function CompleteRegistrationPage() {
 
         <div className="text-center">
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => onNavigate('home')}
             className="text-sm text-blue-600 hover:text-blue-500"
           >
-            ← Volver al inicio de sesión
+            ← Volver al inicio
           </button>
         </div>
       </div>

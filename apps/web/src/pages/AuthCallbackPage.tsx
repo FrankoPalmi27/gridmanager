@@ -1,38 +1,43 @@
-import { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuthStore } from '@/store/authStore';
+import React, { useEffect } from 'react';
+import { useAuthStore } from '../store/authStore';
 
-export function AuthCallbackPage() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+export function AuthCallbackPage({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { setAuth } = useAuthStore();
 
   useEffect(() => {
-    const accessToken = searchParams.get('accessToken');
-    const refreshToken = searchParams.get('refreshToken');
-    const userStr = searchParams.get('user');
+    const handleCallback = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const accessToken = urlParams.get('accessToken');
+      const refreshToken = urlParams.get('refreshToken');
+      const userString = urlParams.get('user');
 
-    if (accessToken && refreshToken && userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        const tokens = { accessToken, refreshToken };
+      if (accessToken && refreshToken && userString) {
+        try {
+          const user = JSON.parse(userString);
 
-        setAuth(user, tokens);
-        navigate('/dashboard');
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        navigate('/login?error=auth_callback_failed');
+          // Set authentication in store
+          setAuth(user, { accessToken, refreshToken });
+
+          // Navigate to dashboard
+          onNavigate('dashboard');
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          onNavigate('home');
+        }
+      } else {
+        console.error('Missing authentication data in callback');
+        onNavigate('home');
       }
-    } else {
-      navigate('/login?error=missing_auth_data');
-    }
-  }, [searchParams, setAuth, navigate]);
+    };
+
+    handleCallback();
+  }, [onNavigate, setAuth]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
-        <div className="loading-spinner mx-auto mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+        <h2 className="text-xl font-semibold text-gray-900 mt-4">
           Completando inicio de sesión...
         </h2>
         <p className="text-gray-600 mt-2">

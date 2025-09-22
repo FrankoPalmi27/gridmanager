@@ -13,6 +13,8 @@ import { CalculatorPage } from './pages/CalculatorPage';
 import { HomePage } from './pages/HomePage';
 import { TenantRegisterPage } from './pages/TenantRegisterPage';
 import { TenantLoginPage } from './pages/TenantLoginPage';
+import { AuthCallbackPage } from './pages/AuthCallbackPage';
+import { CompleteRegistrationPage } from './pages/CompleteRegistrationPage';
 import { useAuthStore } from './store/authStore';
 
 const navigation = [
@@ -119,7 +121,16 @@ function App() {
     if (isAuthenticated) {
       setCurrentPage('dashboard');
     } else {
-      setCurrentPage('home');
+      // Check URL for special routes
+      const path = window.location.pathname + window.location.search;
+
+      if (path.includes('/auth/callback')) {
+        setCurrentPage('auth-callback');
+      } else if (path.includes('/complete-registration')) {
+        setCurrentPage('complete-registration');
+      } else {
+        setCurrentPage('home');
+      }
     }
   }, [isAuthenticated]);
 
@@ -133,6 +144,10 @@ function App() {
           return <TenantRegisterPage onNavigate={setCurrentPage} />;
         case 'tenant-login':
           return <TenantLoginPage onNavigate={setCurrentPage} />;
+        case 'auth-callback':
+          return <AuthCallbackPage onNavigate={setCurrentPage} />;
+        case 'complete-registration':
+          return <CompleteRegistrationPage onNavigate={setCurrentPage} />;
         default:
           return <HomePage onNavigate={setCurrentPage} />;
       }

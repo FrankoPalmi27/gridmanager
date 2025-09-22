@@ -151,6 +151,14 @@ function App() {
     // Check for existing authentication from authStore
     if (isAuthenticated) {
       console.log('User is authenticated, setting dashboard');
+
+      // Handle tenant-based routes by redirecting to simple routes
+      const pathname = window.location.pathname;
+      if (pathname.includes('/empresa/') && pathname.includes('/dashboard')) {
+        console.log('Tenant-based dashboard URL detected, redirecting to simple /dashboard');
+        window.history.replaceState({}, '', '/dashboard');
+      }
+
       setCurrentPage('dashboard');
     } else {
       // Check URL for special routes

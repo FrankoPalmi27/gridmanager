@@ -36,7 +36,7 @@ export function LoginPage() {
       const { user, tokens } = response.data.data;
       setAuth(user, tokens);
 
-      // Redirect to dashboard after successful login
+      // Redirect to dashboard after successful login (simple route)
       window.location.href = '/dashboard';
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al iniciar sesión');

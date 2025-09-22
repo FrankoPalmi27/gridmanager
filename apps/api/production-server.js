@@ -301,8 +301,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       });
 
       const tokenData = await tokenResponse.json();
+      console.log('🔑 Token response:', tokenData);
 
       if (!tokenData.access_token) {
+        console.log('❌ No access token received');
         return res.redirect(`https://obsidiangridmanager.netlify.app/login?error=google_token_failed`);
       }
 
@@ -312,9 +314,12 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       });
 
       const profile = await profileResponse.json();
+      console.log('👤 User profile received:', profile);
 
       // Check if user exists
+      console.log('🔌 Connecting to database...');
       const client = await getDbClient();
+      console.log('✅ Database connected');
       try {
         const existingUser = await client.query(
           'SELECT * FROM users WHERE "googleId" = $1 OR email = $2',

@@ -11,6 +11,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { UsersPage } from './pages/UsersPage';
 import { CalculatorPage } from './pages/CalculatorPage';
 import { HomePage } from './pages/HomePage';
+import { LoginPage } from './pages/LoginPage';
 import { TenantRegisterPage } from './pages/TenantRegisterPage';
 import { TenantLoginPage } from './pages/TenantLoginPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
@@ -177,6 +178,12 @@ function App() {
       } else if (pathname.includes('/complete-registration') || search.includes('googleId')) {
         console.log('Google registration detected - setting complete-registration page');
         setCurrentPage('complete-registration');
+      } else if (pathname.includes('/login')) {
+        console.log('Login page detected - setting login page');
+        setCurrentPage('login');
+      } else if (pathname.includes('/register')) {
+        console.log('Register page detected - setting tenant-register page');
+        setCurrentPage('tenant-register');
       } else {
         console.log('No special route detected - setting home page');
         setCurrentPage('home');
@@ -211,6 +218,8 @@ function App() {
       switch (currentPage) {
         case 'home':
           return <HomePage onNavigate={setCurrentPage} />;
+        case 'login':
+          return <LoginPage />;
         case 'tenant-register':
           return <TenantRegisterPage onNavigate={setCurrentPage} />;
         case 'tenant-login':

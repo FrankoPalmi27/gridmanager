@@ -282,7 +282,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
       if (!code) {
         console.log('❌ No authorization code received');
-        return res.redirect(`${process.env.CORS_ORIGIN.split(',')[1]}/login?error=google_auth_failed`);
+        return res.redirect(`https://obsidiangridmanager.netlify.app/login?error=google_auth_failed`);
       }
 
       console.log('✅ Authorization code received:', code.substring(0, 20) + '...');
@@ -303,7 +303,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       const tokenData = await tokenResponse.json();
 
       if (!tokenData.access_token) {
-        return res.redirect(`${process.env.CORS_ORIGIN.split(',')[1]}/login?error=google_token_failed`);
+        return res.redirect(`https://obsidiangridmanager.netlify.app/login?error=google_token_failed`);
       }
 
       // Get user profile
@@ -338,7 +338,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             })
           });
 
-          return res.redirect(`${process.env.CORS_ORIGIN.split(',')[1]}/auth/callback?${params.toString()}`);
+          return res.redirect(`https://obsidiangridmanager.netlify.app/auth/callback?${params.toString()}`);
         } else {
           // New user - redirect to complete registration
           const params = new URLSearchParams({
@@ -349,7 +349,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             provider: 'google'
           });
 
-          return res.redirect(`${process.env.CORS_ORIGIN.split(',')[1]}/complete-registration?${params.toString()}`);
+          return res.redirect(`https://obsidiangridmanager.netlify.app/complete-registration?${params.toString()}`);
         }
       } finally {
         await client.end();
@@ -357,7 +357,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
     } catch (error) {
       console.error('❌ Google OAuth error:', error);
-      res.redirect(`${process.env.CORS_ORIGIN.split(',')[1]}/login?error=google_auth_failed`);
+      res.redirect(`https://obsidiangridmanager.netlify.app/login?error=google_auth_failed`);
     }
   });
 

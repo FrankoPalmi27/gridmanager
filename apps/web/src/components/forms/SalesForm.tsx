@@ -66,14 +66,14 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
   const { addSale, updateSale, validateStock } = useSales();
   const { products } = useProductsStore();
   const { accounts, getActiveAccounts } = useAccountsStore();
-  const { customers, getActiveCustomers } = useCustomersStore();
+  const { customers } = useCustomersStore();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<SalesFormErrors>({});
   
   // Get active products, accounts, and customers
   const activeProducts = products.filter(p => p.status === 'active');
   const activeAccounts = getActiveAccounts();
-  const activeCustomers = getActiveCustomers();
+  const activeCustomers = customers.filter(c => c.status === 'active');
   
   const [formData, setFormData] = useState<SalesFormData>({
     client: '',

@@ -6,6 +6,10 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
+
+// Trust proxy for Railway deployment
+app.set('trust proxy', true);
+
 app.use(express.json());
 
 // Load environment variables

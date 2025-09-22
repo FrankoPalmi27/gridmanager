@@ -122,6 +122,16 @@ function App() {
   console.log('Current page state:', currentPage);
   console.log('Is authenticated:', isAuthenticated);
 
+  // Emergency detection
+  if (window.location.search.includes('googleId') && currentPage === 'home') {
+    console.log('EMERGENCY: Google ID detected but still on home page!');
+    // Force navigation immediately
+    setTimeout(() => {
+      console.log('Force setting complete-registration page');
+      setCurrentPage('complete-registration');
+    }, 100);
+  }
+
   useEffect(() => {
     console.log('useEffect triggered, isAuthenticated:', isAuthenticated);
 

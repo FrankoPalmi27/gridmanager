@@ -28,6 +28,9 @@ import { reportRoutes } from './routes/reports';
 export function createApp() {
   const app = express();
 
+  // Trust proxy for Railway deployment
+  app.set('trust proxy', true);
+
   // Database and Redis clients
   // (Redis setup will be done in the main server section)
 

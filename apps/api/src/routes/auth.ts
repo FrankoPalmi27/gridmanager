@@ -397,14 +397,14 @@ router.post('/register-tenant', async (req, res, next) => {
         }
       });
 
-      // Create default branch
+      // Create default branch - FIXED: using 'active' not 'status'
       const branch = await tx.branch.create({
         data: {
           tenantId: tenant.id,
           name: 'Principal',
           address: '',
           phone: '',
-          active: true
+          active: true  // CORRECTED: was 'status: ACTIVE' before
         }
       });
 

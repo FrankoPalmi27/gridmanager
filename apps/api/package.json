@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "npx tsx src/server.ts",
+    "start": "node production-server.js",
     "start:ts": "tsx src/server.ts",
     "test": "vitest",
     "test:coverage": "vitest --coverage",

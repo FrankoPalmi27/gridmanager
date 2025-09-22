@@ -2,11 +2,11 @@
   "name": "@grid-manager/api",
   "version": "1.0.0",
   "description": "Grid Manager API server",
-  "main": "src/production-server.js",
+  "main": "src/server.ts",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node src/production-server.js",
+    "start": "npx tsx src/server.ts",
     "start:ts": "tsx src/server.ts",
     "test": "vitest",
     "test:coverage": "vitest --coverage",

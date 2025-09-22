@@ -93,6 +93,99 @@ export function createApp() {
     });
   });
 
+  // Google OAuth routes
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    console.log('🔗 Setting up Google OAuth routes');
+
+    app.get('/api/v1/auth/google', (req, res) => {
+      console.log('🔗 Google OAuth initiation requested');
+      const googleAuthUrl = `https://accounts.google.com/oauth/authorize?` +
+        `client_id=${process.env.GOOGLE_CLIENT_ID}&` +
+        `redirect_uri=${encodeURIComponent(process.env.GOOGLE_CALLBACK_URL!)}&` +
+        `scope=profile email&` +
+        `response_type=code&` +
+        `access_type=offline`;
+
+      console.log('🔗 Redirecting to Google:', googleAuthUrl);
+      res.redirect(googleAuthUrl);
+    });
+
+    app.get('/api/v1/auth/google/callback', async (req, res) => {
+      try {
+        console.log('🔄 Google OAuth callback received');
+        const { code } = req.query;
+
+        if (!code) {
+          console.log('❌ No authorization code received');
+          return res.redirect(`https://obsidiangridmanager.netlify.app/login?error=google_auth_failed`);
+        }
+
+        // Exchange code for access token
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            code: code as string,
+            client_id: process.env.GOOGLE_CLIENT_ID!,
+            client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+            redirect_uri: process.env.GOOGLE_CALLBACK_URL!,
+            grant_type: 'authorization_code'
+          })
+        });
+
+        const tokenData = await tokenResponse.json();
+        console.log('🔑 Token response received');
+
+        if (!tokenData.access_token) {
+          console.log('❌ No access token received');
+          return res.redirect(`https://obsidiangridmanager.netlify.app/login?error=google_token_failed`);
+        }
+
+        // Get user profile
+        const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` }
+        });
+
+        const profile = await profileResponse.json();
+        console.log('👤 User profile received');
+
+        // Check if user exists
+        const existingUser = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { googleId: profile.id },
+              { email: profile.email }
+            ]
+          }
+        });
+
+        if (existingUser) {
+          // Existing user login - create session and redirect
+          console.log('✅ Existing user found');
+          return res.redirect(`https://obsidiangridmanager.netlify.app/auth/callback?user=${encodeURIComponent(JSON.stringify(existingUser))}`);
+        } else {
+          // New user - redirect to complete registration
+          console.log('🆕 New user - redirect to registration');
+          const params = new URLSearchParams({
+            googleId: profile.id,
+            email: profile.email,
+            name: profile.name,
+            avatar: profile.picture || '',
+            provider: 'google'
+          });
+
+          return res.redirect(`https://obsidiangridmanager.netlify.app/complete-registration?${params.toString()}`);
+        }
+
+      } catch (error) {
+        console.error('❌ Google OAuth error:', error);
+        res.redirect(`https://obsidiangridmanager.netlify.app/login?error=google_auth_failed`);
+      }
+    });
+  } else {
+    console.log('⚠️  Google OAuth not configured');
+  }
+
   // Error handler
   app.use(errorHandler);
 

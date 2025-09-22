@@ -336,8 +336,25 @@ router.post('/register-tenant', async (req, res, next) => {
   try {
     const { email, name, password, tenantName } = req.body;
 
+    // Comprehensive validation
     if (!email || !name || !password || !tenantName) {
       throw createError('All fields are required', 400);
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw createError('Invalid email format', 400);
+    }
+
+    // Password validation
+    if (password.length < 6) {
+      throw createError('Password must be at least 6 characters long', 400);
+    }
+
+    // Tenant name validation
+    if (tenantName.length < 2 || tenantName.length > 100) {
+      throw createError('Company name must be between 2 and 100 characters', 400);
     }
 
     // Check if user with this email already exists

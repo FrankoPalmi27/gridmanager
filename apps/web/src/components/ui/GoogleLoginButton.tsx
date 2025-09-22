@@ -14,7 +14,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
 
     try {
       // Redirect to Google OAuth endpoint on our backend
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://gridmanager-production.up.railway.app/api/v1';
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
       window.location.href = `${apiUrl}/auth/google`;
     } catch (error) {
       onError?.('Error iniciando sesión con Google');

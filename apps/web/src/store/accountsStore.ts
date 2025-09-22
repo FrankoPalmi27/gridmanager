@@ -34,15 +34,15 @@ export interface Transaction {
 }
 
 
-// Mock data for accounts
+// Default accounts for new users
 const initialAccounts: Account[] = [
   {
     id: '1',
-    name: 'Cuenta Principal',
+    name: 'Banco ARS',
     accountNumber: '1234567890',
     bankName: 'Banco Nación',
     accountType: 'Cuenta Corriente',
-    balance: 150000,
+    balance: 0,
     currency: 'ARS',
     active: true,
     createdDate: '2023-01-15',
@@ -50,11 +50,11 @@ const initialAccounts: Account[] = [
   },
   {
     id: '2',
-    name: 'Caja Fuerte',
+    name: 'Efectivo ARS',
     accountNumber: 'CASH-001',
     bankName: 'Efectivo',
     accountType: 'Efectivo',
-    balance: 25000,
+    balance: 0,
     currency: 'ARS',
     active: true,
     createdDate: '2023-01-15',
@@ -62,83 +62,20 @@ const initialAccounts: Account[] = [
   },
   {
     id: '3',
-    name: 'Cuenta USD',
+    name: 'Efectivo USD',
     accountNumber: '0987654321',
-    bankName: 'Banco Galicia',
-    accountType: 'Cuenta USD',
-    balance: 5000,
+    bankName: 'Efectivo',
+    accountType: 'Efectivo',
+    balance: 0,
     currency: 'USD',
     active: true,
     createdDate: '2023-02-01',
-    description: 'Cuenta en dólares para reservas'
-  },
-  {
-    id: '4',
-    name: 'Tarjeta Empresarial',
-    accountNumber: '4532-****-****-1234',
-    bankName: 'Banco Santander',
-    accountType: 'Tarjeta de Crédito',
-    balance: -12000,
-    currency: 'ARS',
-    active: true,
-    createdDate: '2023-01-20',
-    description: 'Tarjeta de crédito para gastos empresariales'
+    description: 'Efectivo en dólares para reservas'
   }
 ];
 
-// Initial transactions data
-const initialTransactions: Transaction[] = [
-  {
-    id: '1',
-    accountId: '1',
-    type: 'income',
-    amount: 25000,
-    description: 'Venta VTA-2024-001 - Juan Pérez',
-    date: '2024-01-20',
-    category: 'Ventas',
-    reference: 'VTA-2024-001'
-  },
-  {
-    id: '2',
-    accountId: '1',
-    type: 'expense',
-    amount: 5000,
-    description: 'Compra insumos oficina',
-    date: '2024-01-19',
-    category: 'Gastos Operativos',
-    reference: 'FAC-001'
-  },
-  {
-    id: '3',
-    accountId: '2',
-    type: 'income',
-    amount: 15000,
-    description: 'Pago en efectivo - María García',
-    date: '2024-01-18',
-    category: 'Ventas',
-    reference: 'VTA-2024-002'
-  },
-  {
-    id: '4',
-    accountId: '1',
-    type: 'expense',
-    amount: 8000,
-    description: 'Servicios públicos',
-    date: '2024-01-17',
-    category: 'Servicios',
-    reference: 'SERV-001'
-  },
-  {
-    id: '5',
-    accountId: '3',
-    type: 'income',
-    amount: 1200,
-    description: 'Venta internacional',
-    date: '2024-01-16',
-    category: 'Ventas',
-    reference: 'VTA-2024-003'
-  }
-];
+// No initial data - users start with empty list
+const initialTransactions: Transaction[] = [];
 
 interface AccountsStore {
   accounts: Account[];

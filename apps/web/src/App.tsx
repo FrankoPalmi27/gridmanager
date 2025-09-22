@@ -13,6 +13,7 @@ import { CalculatorPage } from './pages/CalculatorPage';
 import { HomePage } from './pages/HomePage';
 import { TenantRegisterPage } from './pages/TenantRegisterPage';
 import { TenantLoginPage } from './pages/TenantLoginPage';
+import { useAuthStore } from './store/authStore';
 
 const navigation = [
   { 
@@ -110,22 +111,17 @@ const navigation = [
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [tenantData, setTenantData] = useState(null);
+  const { user, tokens, clearAuth } = useAuthStore();
+  const isAuthenticated = !!(user && tokens);
 
   useEffect(() => {
-    // Check for existing authentication
-    const tokens = localStorage.getItem('gridmanager_tokens');
-    const tenant = localStorage.getItem('gridmanager_tenant');
-
-    if (tokens && tenant) {
-      setIsAuthenticated(true);
-      setTenantData(JSON.parse(tenant));
+    // Check for existing authentication from authStore
+    if (isAuthenticated) {
       setCurrentPage('dashboard');
     } else {
       setCurrentPage('home');
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const renderCurrentPage = () => {
     // Public pages (no authentication required)
@@ -189,8 +185,8 @@ function App() {
         <div className="w-64 bg-white border-r border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h1 className="text-lg font-semibold text-gray-900">Grid Manager</h1>
-            {tenantData && (
-              <p className="text-xs text-gray-500 mt-1">{tenantData.name}</p>
+            {user && (
+              <p className="text-xs text-gray-500 mt-1">{user.name}</p>
             )}
           </div>
 
@@ -224,24 +220,20 @@ function App() {
             <div className="flex items-center">
               <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-gray-600">
-                  {tenantData?.name?.charAt(0) || 'U'}
+                  {user?.name?.charAt(0) || 'U'}
                 </span>
               </div>
               <div className="ml-3 flex-1">
                 <p className="text-sm font-medium text-gray-900">
-                  {tenantData?.name || 'Usuario'}
+                  {user?.name || 'Usuario'}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {tenantData?.slug || 'empresa'}
+                  {user?.role || 'usuario'}
                 </p>
               </div>
               <button
                 onClick={() => {
-                  localStorage.removeItem('gridmanager_tokens');
-                  localStorage.removeItem('gridmanager_user');
-                  localStorage.removeItem('gridmanager_tenant');
-                  setIsAuthenticated(false);
-                  setTenantData(null);
+                  clearAuth();
                   setCurrentPage('home');
                 }}
                 className="text-gray-400 hover:text-gray-600"

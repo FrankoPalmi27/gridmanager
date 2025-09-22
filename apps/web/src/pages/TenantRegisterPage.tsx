@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../components/ui/Button';
+import { GoogleLoginButton } from '../components/ui/GoogleLoginButton';
+import { useAuthStore } from '../store/authStore';
 
 interface RegistrationData {
   companyName: string;
@@ -34,6 +36,8 @@ interface RegistrationResponse {
 }
 
 export function TenantRegisterPage() {
+  const { setAuth } = useAuthStore();
+
   const [formData, setFormData] = useState<RegistrationData>({
     companyName: '',
     ownerName: '',
@@ -144,6 +148,18 @@ export function TenantRegisterPage() {
       const result: RegistrationResponse = await response.json();
 
       if (result.success) {
+        // Guardar autenticación automáticamente
+        const { tokens, user } = result.data!;
+        setAuth(
+          {
+            id: user.email, // Usamos email como ID temporal
+            name: user.name,
+            email: user.email,
+            role: user.role
+          },
+          tokens
+        );
+
         setRegistrationResult(result);
       } else {
         setErrors({ general: result.error || 'Error al registrar empresa' });
@@ -210,7 +226,7 @@ export function TenantRegisterPage() {
 
           <div className="space-y-3">
             <Button
-              onClick={() => window.location.href = `/empresa/${tenant.slug}/dashboard`}
+              onClick={() => window.location.href = '/dashboard'}
               className="w-full"
             >
               Acceder a mi Dashboard
@@ -257,6 +273,26 @@ export function TenantRegisterPage() {
               <p className="text-gray-600">
                 Configura tu empresa en menos de 2 minutos
               </p>
+            </div>
+
+            {/* Botón de Google */}
+            <div className="mb-6">
+              <GoogleLoginButton
+                onError={(error) => setErrors({ general: error })}
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Separador */}
+            <div className="mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">O registra tu empresa manualmente</span>
+                </div>
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">

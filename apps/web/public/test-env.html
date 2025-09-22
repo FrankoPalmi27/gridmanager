@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Environment Variables</title>
+</head>
+<body>
+    <h1>Environment Test</h1>
+    <div id="results"></div>
+
+    <script type="module">
+        const apiUrl = import.meta.env.VITE_API_URL;
+        const results = document.getElementById('results');
+
+        results.innerHTML = `
+            <p><strong>VITE_API_URL:</strong> ${apiUrl || 'undefined'}</p>
+            <p><strong>Current URL would be:</strong> ${apiUrl || 'http://localhost:3001/api/v1'}</p>
+            <p><strong>Google OAuth URL would be:</strong> ${(apiUrl || 'https://gridmanager-production.up.railway.app/api/v1') + '/auth/google'}</p>
+        `;
+
+        // Test actual API connection
+        fetch(`${apiUrl || 'http://localhost:3001/api/v1'}/auth/google`)
+            .then(response => {
+                results.innerHTML += `<p><strong>API Test:</strong> Response status ${response.status}</p>`;
+            })
+            .catch(error => {
+                results.innerHTML += `<p><strong>API Test Error:</strong> ${error.message}</p>`;
+            });
+    </script>
+</body>
+</html>

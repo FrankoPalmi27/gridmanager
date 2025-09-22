@@ -96,17 +96,23 @@ export function createApp() {
   // Google OAuth routes
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     console.log('🔗 Setting up Google OAuth routes');
+    console.log('🔍 GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
+    console.log('🔍 GOOGLE_CALLBACK_URL:', process.env.GOOGLE_CALLBACK_URL);
 
     app.get('/api/v1/auth/google', (req, res) => {
       console.log('🔗 Google OAuth initiation requested');
+
+      const callbackUrl = process.env.GOOGLE_CALLBACK_URL || 'https://gridmanager-production.up.railway.app/api/v1/auth/google/callback';
+      console.log('🔗 Using callback URL:', callbackUrl);
+
       const googleAuthUrl = `https://accounts.google.com/oauth/authorize?` +
         `client_id=${process.env.GOOGLE_CLIENT_ID}&` +
-        `redirect_uri=${encodeURIComponent(process.env.GOOGLE_CALLBACK_URL!)}&` +
+        `redirect_uri=${encodeURIComponent(callbackUrl)}&` +
         `scope=profile email&` +
         `response_type=code&` +
         `access_type=offline`;
 
-      console.log('🔗 Redirecting to Google:', googleAuthUrl);
+      console.log('🔗 Full Google URL:', googleAuthUrl);
       res.redirect(googleAuthUrl);
     });
 
@@ -121,6 +127,9 @@ export function createApp() {
         }
 
         // Exchange code for access token
+        const callbackUrl = process.env.GOOGLE_CALLBACK_URL || 'https://gridmanager-production.up.railway.app/api/v1/auth/google/callback';
+        console.log('🔑 Using callback URL for token exchange:', callbackUrl);
+
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -128,7 +137,7 @@ export function createApp() {
             code: code as string,
             client_id: process.env.GOOGLE_CLIENT_ID!,
             client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-            redirect_uri: process.env.GOOGLE_CALLBACK_URL!,
+            redirect_uri: callbackUrl,
             grant_type: 'authorization_code'
           })
         });

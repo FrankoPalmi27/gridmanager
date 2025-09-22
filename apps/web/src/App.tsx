@@ -11,7 +11,6 @@ import { ReportsPage } from './pages/ReportsPage';
 import { UsersPage } from './pages/UsersPage';
 import { CalculatorPage } from './pages/CalculatorPage';
 import { HomePage } from './pages/HomePage';
-import { LoginPage } from './pages/LoginPage';
 import { TenantRegisterPage } from './pages/TenantRegisterPage';
 import { TenantLoginPage } from './pages/TenantLoginPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
@@ -219,7 +218,7 @@ function App() {
         case 'home':
           return <HomePage onNavigate={setCurrentPage} />;
         case 'login':
-          return <LoginPage />;
+          return <TenantLoginPage onNavigate={setCurrentPage} />;
         case 'tenant-register':
           return <TenantRegisterPage onNavigate={setCurrentPage} />;
         case 'tenant-login':

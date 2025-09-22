@@ -110,6 +110,7 @@ export function createApp() {
 
   // Google OAuth is now handled by authRoutes
   console.log('🔗 Google OAuth routes handled by /api/v1/auth');
+  console.log('🔄 Forcing Railway redeploy - timestamp:', new Date().toISOString());
 
   // Error handler
   app.use(errorHandler);

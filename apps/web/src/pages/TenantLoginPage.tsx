@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../components/ui/Button';
 import { GoogleLoginButton } from '../components/ui/GoogleLoginButton';
+import { useAuthStore } from '../store/authStore';
 
 interface LoginForm {
   email: string;
@@ -33,6 +34,7 @@ interface LoginResponse {
 }
 
 export function TenantLoginPage({ onNavigate }: { onNavigate: (page: string) => void }) {
+  const { setAuth } = useAuthStore();
   const [form, setForm] = useState<LoginForm>({
     email: '',
     password: '',
@@ -58,13 +60,15 @@ export function TenantLoginPage({ onNavigate }: { onNavigate: (page: string) => 
       const data: LoginResponse = await response.json();
 
       if (data.success && data.data) {
-        // Store tokens and user data
-        localStorage.setItem('gridmanager_tokens', JSON.stringify(data.data.tokens));
-        localStorage.setItem('gridmanager_user', JSON.stringify(data.data.user));
+        // Use the auth store to set authentication state
+        const { setAuth } = useAuthStore.getState();
+        setAuth(data.data.user, data.data.tokens);
+
+        // Store tenant data
         localStorage.setItem('gridmanager_tenant', JSON.stringify(data.data.tenant));
 
-        // Redirect to tenant dashboard
-        window.location.href = `/empresa/${data.data.tenant.slug}/dashboard`;
+        // Navigate to dashboard using the onNavigate function
+        onNavigate('dashboard');
       } else {
         setError(data.error || 'Error al iniciar sesión');
       }
@@ -182,7 +186,10 @@ export function TenantLoginPage({ onNavigate }: { onNavigate: (page: string) => 
           <p className="text-sm text-gray-600">
             ¿No tienes una cuenta?{' '}
             <button
-              onClick={() => onNavigate('tenant-register')}
+              onClick={() => {
+                window.history.pushState({}, '', '/register');
+                onNavigate('tenant-register');
+              }}
               className="text-blue-600 hover:text-blue-700 font-medium"
             >
               Crear cuenta gratis
@@ -190,7 +197,10 @@ export function TenantLoginPage({ onNavigate }: { onNavigate: (page: string) => 
           </p>
 
           <button
-            onClick={() => onNavigate('home')}
+            onClick={() => {
+              window.history.pushState({}, '', '/');
+              onNavigate('home');
+            }}
             className="text-gray-500 hover:text-gray-700 text-sm"
           >
             ← Volver al Inicio

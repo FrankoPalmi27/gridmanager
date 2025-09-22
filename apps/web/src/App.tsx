@@ -157,6 +157,8 @@ function App() {
       if (pathname.includes('/empresa/') && pathname.includes('/dashboard')) {
         console.log('Tenant-based dashboard URL detected, redirecting to simple /dashboard');
         window.history.replaceState({}, '', '/dashboard');
+        setCurrentPage('dashboard');
+        return; // Early return to avoid duplicate logic
       }
 
       setCurrentPage('dashboard');

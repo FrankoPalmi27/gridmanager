@@ -15,12 +15,18 @@ export function HomePage({ onNavigate }: { onNavigate: (page: string) => void })
             <div className="flex items-center space-x-4">
               <Button
                 variant="outline"
-                onClick={() => onNavigate('tenant-login')}
+                onClick={() => {
+                  window.history.pushState({}, '', '/login');
+                  onNavigate('login');
+                }}
               >
                 Iniciar Sesión
               </Button>
               <Button
-                onClick={() => onNavigate('tenant-register')}
+                onClick={() => {
+                  window.history.pushState({}, '', '/register');
+                  onNavigate('tenant-register');
+                }}
               >
                 Crear Cuenta
               </Button>
@@ -46,7 +52,10 @@ export function HomePage({ onNavigate }: { onNavigate: (page: string) => void })
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <Button
               size="lg"
-              onClick={() => onNavigate('tenant-register')}
+              onClick={() => {
+                window.history.pushState({}, '', '/register');
+                onNavigate('tenant-register');
+              }}
               className="text-lg px-8 py-4"
             >
               🚀 Probar Gratis 14 Días

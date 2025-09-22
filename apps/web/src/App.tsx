@@ -17,6 +17,12 @@ import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { CompleteRegistrationPage } from './pages/CompleteRegistrationPage';
 import { useAuthStore } from './store/authStore';
 
+// EMERGENCY LOG - ALWAYS FIRST
+console.log('🚨 APP.TSX LOADED - JavaScript is working!');
+console.log('🔍 Current URL:', window.location.href);
+console.log('📍 Path:', window.location.pathname);
+console.log('🔗 Search:', window.location.search);
+
 const navigation = [
   { 
     name: 'Dashboard', 
@@ -122,8 +128,15 @@ function App() {
   console.log('Current page state:', currentPage);
   console.log('Is authenticated:', isAuthenticated);
 
-  // Emergency detection
-  if (window.location.search.includes('googleId') && currentPage === 'home') {
+  // Emergency detection with immediate check
+  const hasGoogleId = window.location.search.includes('googleId');
+  const shouldShowRegistration = hasGoogleId && currentPage === 'home';
+
+  console.log('🔍 hasGoogleId:', hasGoogleId);
+  console.log('🔍 currentPage:', currentPage);
+  console.log('🔍 shouldShowRegistration:', shouldShowRegistration);
+
+  if (shouldShowRegistration) {
     console.log('EMERGENCY: Google ID detected but still on home page!');
     // Force navigation immediately
     setTimeout(() => {
@@ -235,6 +248,24 @@ function App() {
     return (
       <SalesProvider>
         <div className="App">
+          {/* Emergency button for OAuth callback */}
+          {window.location.search.includes('googleId') && currentPage === 'home' && (
+            <div style={{
+              position: 'fixed',
+              top: '10px',
+              right: '10px',
+              zIndex: 9999,
+              background: 'red',
+              color: 'white',
+              padding: '10px',
+              cursor: 'pointer',
+              border: '2px solid white',
+              borderRadius: '5px'
+            }}
+            onClick={() => setCurrentPage('complete-registration')}>
+              🚨 CLICK HERE - OAuth Detected!
+            </div>
+          )}
           {renderCurrentPage()}
         </div>
       </SalesProvider>

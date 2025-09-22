@@ -116,29 +116,62 @@ function App() {
   const { user, tokens, clearAuth } = useAuthStore();
   const isAuthenticated = !!(user && tokens);
 
+  // Debug logs at component level
+  console.log('App component rendered');
+  console.log('Current URL:', window.location.href);
+  console.log('Current page state:', currentPage);
+  console.log('Is authenticated:', isAuthenticated);
+
   useEffect(() => {
+    console.log('useEffect triggered, isAuthenticated:', isAuthenticated);
+
     // Check for existing authentication from authStore
     if (isAuthenticated) {
+      console.log('User is authenticated, setting dashboard');
       setCurrentPage('dashboard');
     } else {
       // Check URL for special routes
       const pathname = window.location.pathname;
       const search = window.location.search;
+      const hash = window.location.hash;
 
       console.log('Current pathname:', pathname);
       console.log('Current search:', search);
+      console.log('Current hash:', hash);
 
-      if (pathname === '/auth/callback' || search.includes('accessToken')) {
-        console.log('Setting page to auth-callback');
+      // More aggressive detection
+      if (pathname.includes('/auth/callback') || search.includes('accessToken')) {
+        console.log('OAuth callback detected - setting auth-callback page');
         setCurrentPage('auth-callback');
-      } else if (pathname === '/complete-registration' || search.includes('googleId')) {
-        console.log('Setting page to complete-registration');
+      } else if (pathname.includes('/complete-registration') || search.includes('googleId')) {
+        console.log('Google registration detected - setting complete-registration page');
         setCurrentPage('complete-registration');
       } else {
-        console.log('Setting page to home');
+        console.log('No special route detected - setting home page');
         setCurrentPage('home');
       }
     }
+  }, [isAuthenticated]);
+
+  // Additional effect to handle URL changes
+  useEffect(() => {
+    const handleUrlChange = () => {
+      console.log('URL changed:', window.location.href);
+      const search = window.location.search;
+
+      if (search.includes('googleId') && !isAuthenticated) {
+        console.log('Google ID detected in URL, forcing complete-registration page');
+        setCurrentPage('complete-registration');
+      }
+    };
+
+    // Listen for URL changes
+    window.addEventListener('popstate', handleUrlChange);
+
+    // Check immediately
+    handleUrlChange();
+
+    return () => window.removeEventListener('popstate', handleUrlChange);
   }, [isAuthenticated]);
 
   const renderCurrentPage = () => {

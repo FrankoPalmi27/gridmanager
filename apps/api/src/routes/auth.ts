@@ -404,7 +404,7 @@ router.post('/register-tenant', async (req, res, next) => {
           name: 'Principal',
           address: '',
           phone: '',
-          status: 'ACTIVE'
+          active: true
         }
       });
 
@@ -595,7 +595,7 @@ router.post('/google/complete', async (req, res, next) => {
           address: '',
           phone: '',
           email: email,
-          isMain: true
+          active: true
         }
       });
 

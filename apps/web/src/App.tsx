@@ -122,13 +122,20 @@ function App() {
       setCurrentPage('dashboard');
     } else {
       // Check URL for special routes
-      const path = window.location.pathname + window.location.search;
+      const pathname = window.location.pathname;
+      const search = window.location.search;
 
-      if (path.includes('/auth/callback')) {
+      console.log('Current pathname:', pathname);
+      console.log('Current search:', search);
+
+      if (pathname === '/auth/callback' || search.includes('accessToken')) {
+        console.log('Setting page to auth-callback');
         setCurrentPage('auth-callback');
-      } else if (path.includes('/complete-registration')) {
+      } else if (pathname === '/complete-registration' || search.includes('googleId')) {
+        console.log('Setting page to complete-registration');
         setCurrentPage('complete-registration');
       } else {
+        console.log('Setting page to home');
         setCurrentPage('home');
       }
     }

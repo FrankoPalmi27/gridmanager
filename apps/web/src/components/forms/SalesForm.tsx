@@ -7,6 +7,7 @@ import { useSales } from '../../store/SalesContext';
 import { useProductsStore } from '../../store/productsStore';
 import { useAccountsStore } from '../../store/accountsStore';
 import { useCustomersStore } from '../../store/customersStore';
+import { useSystemConfigStore } from '../../store/systemConfigStore';
 import { formatAmount } from '../../lib/formatters';
 
 interface SalesFormProps {
@@ -36,6 +37,15 @@ interface SalesFormErrors {
   quantity?: string;
   price?: string;
   accountId?: string;
+  stock?: string;
+}
+
+interface StockValidationState {
+  isChecking: boolean;
+  hasStockIssue: boolean;
+  stockMessage: string;
+  severity: 'error' | 'warning' | 'info';
+  canProceed: boolean;
 }
 
 
@@ -67,8 +77,18 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
   const { products } = useProductsStore();
   const { accounts, getActiveAccounts } = useAccountsStore();
   const { customers } = useCustomersStore();
+  const { toggleNegativeStock, isNegativeStockAllowed } = useSystemConfigStore();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<SalesFormErrors>({});
+
+  // ✅ NUEVO ESTADO PARA VALIDACIÓN DE STOCK MEJORADA
+  const [stockValidation, setStockValidation] = useState<StockValidationState>({
+    isChecking: false,
+    hasStockIssue: false,
+    stockMessage: '',
+    severity: 'info',
+    canProceed: true
+  });
   
   // Get active products, accounts, and customers
   const activeProducts = products.filter(p => p.status === 'active');
@@ -137,20 +157,81 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
     onClose();
   };
 
+  // ✅ FUNCIÓN PARA VALIDAR STOCK EN TIEMPO REAL
+  const checkStockValidation = (productId: string, quantity: number) => {
+    if (!productId || quantity <= 0) {
+      setStockValidation({
+        isChecking: false,
+        hasStockIssue: false,
+        stockMessage: '',
+        severity: 'info',
+        canProceed: true
+      });
+      return;
+    }
+
+    setStockValidation(prev => ({ ...prev, isChecking: true }));
+
+    try {
+      const validation = validateStock(productId, quantity);
+
+      setStockValidation({
+        isChecking: false,
+        hasStockIssue: !validation.valid || validation.severity === 'warning',
+        stockMessage: validation.message || '',
+        severity: validation.severity || 'info',
+        canProceed: validation.valid
+      });
+
+      // Limpiar error anterior de stock si la validación pasa
+      if (validation.valid && errors.stock) {
+        setErrors(prev => ({ ...prev, stock: undefined }));
+      }
+
+    } catch (error) {
+      setStockValidation({
+        isChecking: false,
+        hasStockIssue: true,
+        stockMessage: 'Error validando stock',
+        severity: 'error',
+        canProceed: false
+      });
+    }
+  };
+
   const handleProductChange = (productName: string) => {
     const product = activeProducts.find(p => p.name === productName);
     const price = product ? product.price : 0;
     const productId = product ? product.id : '';
-    
-    setFormData(prev => ({ 
-      ...prev, 
-      product: productName, 
-      productId: productId, // 🔥 CRÍTICO: Guardar productId para integración con inventario
-      price 
+
+    setFormData(prev => ({
+      ...prev,
+      product: productName,
+      productId: productId,
+      price
     }));
-    
+
     if (errors.product) {
       setErrors(prev => ({ ...prev, product: undefined }));
+    }
+
+    // ✅ VALIDAR STOCK INMEDIATAMENTE DESPUÉS DE SELECCIONAR PRODUCTO
+    if (productId && formData.quantity > 0) {
+      checkStockValidation(productId, formData.quantity);
+    }
+  };
+
+  // ✅ FUNCIÓN PARA MANEJAR CAMBIOS EN CANTIDAD
+  const handleQuantityChange = (quantity: number) => {
+    setFormData(prev => ({ ...prev, quantity }));
+
+    if (errors.quantity) {
+      setErrors(prev => ({ ...prev, quantity: undefined }));
+    }
+
+    // ✅ VALIDAR STOCK INMEDIATAMENTE DESPUÉS DE CAMBIAR CANTIDAD
+    if (formData.productId && quantity > 0) {
+      checkStockValidation(formData.productId, quantity);
     }
   };
 
@@ -169,8 +250,9 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
       newErrors.quantity = 'Cantidad debe ser mayor a 0';
     }
 
+    // ✅ Validación mejorada para precio automático
     if (formData.price <= 0) {
-      newErrors.price = 'Precio debe ser mayor a 0';
+      newErrors.price = 'Selecciona un producto válido con precio configurado';
     }
 
     if (formData.paymentStatus === 'paid' && !formData.accountId.trim()) {
@@ -209,34 +291,60 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
           alert(`¡Venta actualizada exitosamente! Nº ${editingSale.number}`);
         }
       } else {
-        // 🚨 VALIDACIÓN CRÍTICA DE STOCK PRE-VENTA
-        const stockValidation = validateStock(formData.productId, formData.quantity);
-        if (!stockValidation.valid) {
-          const confirm = window.confirm(
-            `⚠️ ALERTA DE STOCK:\n\n${stockValidation.message}\n\n¿Desea proceder de todos modos?\n\nEsto podría generar stock negativo.`
+        // ✅ VALIDACIÓN DE STOCK MEJORADA - NO RESETEA FORMULARIO EN CASO DE ERROR
+        if (!stockValidation.canProceed) {
+          setErrors(prev => ({
+            ...prev,
+            stock: stockValidation.stockMessage
+          }));
+          setLoading(false);
+          return;
+        }
+
+        // Si hay warning de stock pero se puede proceder, mostrar confirmación mejorada
+        if (stockValidation.hasStockIssue && stockValidation.severity === 'warning') {
+          const shouldProceed = window.confirm(
+            `⚠️ CONFIRMACIÓN DE VENTA\n\n${stockValidation.stockMessage}\n\n¿Confirma que desea proceder con esta venta?`
           );
-          if (!confirm) {
+          if (!shouldProceed) {
             setLoading(false);
-            return;
+            return; // NO resetear formulario, solo cancelar el submit
           }
         }
 
-        // Create new sale
-        const newSale = addSale(formData);
-        // Sale created successfully
-        
-        if (onSuccess) {
-          onSuccess(newSale);
-        } else {
-          alert(`¡Venta registrada exitosamente! Nº ${newSale.number}`);
+        try {
+          // Create new sale
+          const newSale = addSale(formData);
+
+          if (onSuccess) {
+            onSuccess(newSale);
+          } else {
+            alert(`¡Venta registrada exitosamente! Nº ${newSale.number}`);
+          }
+
+          handleClose(); // Solo cerrar si todo salió bien
+
+        } catch (saleError: any) {
+          console.error('Error creating sale:', saleError);
+          setErrors(prev => ({
+            ...prev,
+            stock: saleError.message || 'Error al crear la venta'
+          }));
+          setLoading(false);
+          return; // NO cerrar formulario, mantener datos
         }
       }
-      
-      handleClose();
+
     } catch (error) {
       console.error(`Error ${editingSale ? 'updating' : 'creating'} sale:`, error);
       console.error('Form data was:', formData);
-      alert(`Error al ${editingSale ? 'actualizar' : 'crear'} la venta. Inténtalo de nuevo.`);
+
+      // ✅ MOSTRAR ERROR SIN RESETEAR FORMULARIO
+      setErrors(prev => ({
+        ...prev,
+        stock: `Error al ${editingSale ? 'actualizar' : 'crear'} la venta. Inténtalo de nuevo.`
+      }));
+
     } finally {
       setLoading(false);
     }
@@ -340,45 +448,86 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
         </div>
 
         {/* Cantidad */}
-        <Input
-          type="number"
-          label="Cantidad"
-          value={formData.quantity?.toString() || ''}
-          onChange={(e) => {
-            const value = e.target.value;
-            const quantity = value === '' ? 0 : parseInt(value) || 0;
-            setFormData(prev => ({ ...prev, quantity }));
-            if (errors.quantity) {
-              setErrors(prev => ({ ...prev, quantity: undefined }));
-            }
-          }}
-          min="1"
-          required
-          disabled={loading}
-          error={errors.quantity}
-          placeholder="1"
-        />
+        <div>
+          <Input
+            type="number"
+            label="Cantidad"
+            value={formData.quantity?.toString() || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              const quantity = value === '' ? 0 : parseInt(value) || 0;
+              handleQuantityChange(quantity);
+            }}
+            min="1"
+            required
+            disabled={loading}
+            error={errors.quantity}
+            placeholder="1"
+          />
 
-        {/* Precio Unitario */}
-        <Input
-          type="number"
-          label="Precio Unitario"
-          value={formData.price?.toString() || ''}
-          onChange={(e) => {
-            const value = e.target.value;
-            const price = value === '' ? 0 : parseFloat(value) || 0;
-            setFormData(prev => ({ ...prev, price }));
-            if (errors.price) {
-              setErrors(prev => ({ ...prev, price: undefined }));
-            }
-          }}
-          step="0.01"
-          min="0"
-          required
-          disabled={loading}
-          error={errors.price}
-          placeholder="0.00"
-        />
+          {/* ✅ MOSTRAR VALIDACIÓN DE STOCK EN TIEMPO REAL */}
+          {stockValidation.isChecking && (
+            <div className="mt-2 flex items-center text-sm text-blue-600">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              Verificando stock...
+            </div>
+          )}
+
+          {stockValidation.hasStockIssue && !stockValidation.isChecking && (
+            <div className={`mt-2 p-3 rounded-lg text-sm ${
+              stockValidation.severity === 'error'
+                ? 'bg-red-50 text-red-800 border border-red-200'
+                : stockValidation.severity === 'warning'
+                ? 'bg-yellow-50 text-yellow-800 border border-yellow-200'
+                : 'bg-blue-50 text-blue-800 border border-blue-200'
+            }`}>
+              <div className="flex items-start">
+                <span className="mr-2">
+                  {stockValidation.severity === 'error' ? '❌' :
+                   stockValidation.severity === 'warning' ? '⚠️' : 'ℹ️'}
+                </span>
+                <div className="flex-1">
+                  <p className="whitespace-pre-line">{stockValidation.stockMessage}</p>
+
+                  {stockValidation.severity === 'error' && !isNegativeStockAllowed() && (
+                    <div className="mt-2 pt-2 border-t border-current border-opacity-20">
+                      <button
+                        type="button"
+                        onClick={toggleNegativeStock}
+                        className="text-xs underline hover:no-underline"
+                      >
+                        🔧 Permitir stock negativo en configuración del sistema
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Precio Unitario - Solo lectura, viene del producto */}
+        <div className="space-y-2">
+          <Input
+            type="number"
+            label="Precio Unitario"
+            value={formData.price?.toString() || ''}
+            readOnly
+            disabled
+            step="0.01"
+            min="0"
+            required
+            error={errors.price}
+            placeholder="Selecciona un producto"
+            className="bg-gray-50 cursor-not-allowed"
+          />
+          <p className="text-xs text-gray-600 flex items-center gap-1">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            El precio se toma automáticamente del producto seleccionado. Para modificarlo, edita el producto en el módulo de Productos.
+          </p>
+        </div>
 
         {/* Descuento */}
         <Input
@@ -528,6 +677,18 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
             <p className="text-xs text-gray-500 mt-1">
               El monto se agregará automáticamente al balance de esta cuenta
             </p>
+          </div>
+        )}
+
+        {/* Error de Stock Global */}
+        {errors.stock && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-start">
+              <span className="text-red-500 mr-2">❌</span>
+              <div className="flex-1">
+                <p className="text-sm text-red-800 whitespace-pre-line">{errors.stock}</p>
+              </div>
+            </div>
           </div>
         )}
 

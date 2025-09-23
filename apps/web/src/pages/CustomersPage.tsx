@@ -173,6 +173,67 @@ export function CustomersPage() {
     setIsModalOpen(true);
   };
 
+  const handleDeleteCustomer = (customer: Customer) => {
+    // ✅ VERIFICACIÓN DE SEGURIDAD: Revisar si tiene ventas asociadas
+    const customerSales = sales.filter(sale => sale.client.name === customer.name);
+
+    if (customerSales.length > 0) {
+      alert(
+        `❌ NO SE PUEDE ELIMINAR EL CLIENTE
+
+` +
+        `El cliente "${customer.name}" tiene ${customerSales.length} venta(s) asociada(s).
+
+` +
+        `Para mantener la integridad de los datos, no se puede eliminar un cliente con ventas registradas.
+
+` +
+        `Si necesitas desactivarlo, puedes cambiar su estado a "Inactivo".
+
+` +
+        `Ventas totales: ${formatCurrency(customerSales.reduce((sum, sale) => sum + sale.amount, 0))}`
+      );
+      return;
+    }
+
+    // ✅ CONFIRMACIÓN DOBLE OBLIGATORIA
+    const firstConfirm = window.confirm(
+      `¿Estás seguro de que quieres eliminar el cliente "${customer.name}"?
+
+` +
+      `Email: ${customer.email}
+` +
+      `Teléfono: ${customer.celular || customer.phone}
+` +
+      `Balance: ${formatCurrency(customer.balance)}
+
+` +
+      `⚠️ Esta acción NO se puede deshacer.`
+    );
+
+    if (!firstConfirm) return;
+
+    // Segunda confirmación con prompt
+    const finalConfirm = prompt(
+      `⚠️ CONFIRMACIÓN FINAL ⚠️
+
+` +
+      `Escribe exactamente "ELIMINAR" para confirmar la eliminación del cliente "${customer.name}":`
+    );
+
+    if (finalConfirm !== "ELIMINAR") {
+      alert("❌ Eliminación cancelada. Texto no coincide.");
+      return;
+    }
+
+    try {
+      deleteCustomer(customer.id);
+      alert(`✅ Cliente "${customer.name}" eliminado correctamente.`);
+    } catch (error) {
+      alert(`❌ Error al eliminar el cliente: ${error}`);
+    }
+  };
+
   // Scroll functions now provided by useTableScroll hook
 
   return (
@@ -350,12 +411,20 @@ export function CustomersPage() {
                       >
                         Editar
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => handleViewCustomer(customer)}
                       >
                         Ver
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-900 ml-2"
+                        onClick={() => handleDeleteCustomer(customer)}
+                      >
+                        Eliminar
                       </Button>
                     </td>
                   </tr>
@@ -432,9 +501,9 @@ export function CustomersPage() {
 
                   {/* Actions */}
                   <div className="flex space-x-2 pt-3 border-t border-gray-100">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="flex-1"
                       onClick={() => handleEditCustomer(customer)}
                     >
@@ -443,8 +512,8 @@ export function CustomersPage() {
                       </svg>
                       Editar
                     </Button>
-                    <Button 
-                      variant="primary" 
+                    <Button
+                      variant="primary"
                       size="sm"
                       className="flex-1"
                       onClick={() => handleViewCustomer(customer)}
@@ -454,6 +523,17 @@ export function CustomersPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
                       Ver
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-red-600 border-red-600 hover:bg-red-50"
+                      onClick={() => handleDeleteCustomer(customer)}
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Eliminar
                     </Button>
                   </div>
                 </div>

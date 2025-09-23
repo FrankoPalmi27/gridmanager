@@ -13,50 +13,20 @@ app.use(express.json());
 
 // Mock data
 const mockDashboardData = {
-  totalAvailable: 125000,
-  accountsCount: 4,
-  customerDebt: 35000,
-  supplierDebt: 18000,
-  pendingTasks: 3,
-  salesLast30Days: [
-    { date: '2024-01-01', amount: 12000 },
-    { date: '2024-01-02', amount: 15000 },
-    { date: '2024-01-03', amount: 8000 },
-    { date: '2024-01-04', amount: 22000 },
-    { date: '2024-01-05', amount: 18000 },
-  ],
+  totalAvailable: 0,
+  accountsCount: 0,
+  customerDebt: 0,
+  supplierDebt: 0,
+  pendingTasks: 0,
+  salesLast30Days: [],
   exchangeRates: [
     { currency: 'USD', officialRate: 350.50, blueRate: 785.00, date: new Date() }
   ],
-  taskList: [
-    { id: '1', title: 'Completar setup inicial', description: 'Configurar datos base del sistema', dueDate: new Date() },
-    { id: '2', title: 'Revisar inventario', description: 'Actualizar stock de productos', dueDate: new Date() },
-  ]
+  taskList: []
 };
 
 const mockActivityData = {
-  recentSales: [
-    {
-      id: '1',
-      number: 'VTA-2024-001',
-      customer: 'Juan Pérez',
-      seller: 'Ana García',
-      total: 25000,
-      currency: 'ARS',
-      status: 'CONFIRMED',
-      createdAt: new Date('2024-01-15')
-    },
-    {
-      id: '2', 
-      number: 'VTA-2024-002',
-      customer: 'María López',
-      seller: 'Carlos Ruiz',
-      total: 45000,
-      currency: 'ARS',
-      status: 'PENDING',
-      createdAt: new Date('2024-01-16')
-    }
-  ],
+  recentSales: [],
   recentPurchases: [
     {
       id: '1',
@@ -70,21 +40,9 @@ const mockActivityData = {
   ]
 };
 
-const mockCustomers = [
-  { id: '1', name: 'Juan Pérez', email: 'juan@email.com', phone: '+54 11 1234-5678' },
-  { id: '2', name: 'María López', email: 'maria@email.com', phone: '+54 11 2345-6789' },
-  { id: '3', name: 'Pedro Martín', email: 'pedro@email.com', phone: '+54 11 3456-7890' },
-  { id: '4', name: 'Ana García', email: 'ana@email.com', phone: '+54 11 4567-8901' },
-  { id: '5', name: 'Carlos Ruiz', email: 'carlos@email.com', phone: '+54 11 5678-9012' },
-];
+const mockCustomers = [];
 
-const mockProducts = [
-  { id: '1', name: 'Producto A', price: 2500, stock: 50, sku: 'PRD-001' },
-  { id: '2', name: 'Producto B', price: 1800, stock: 30, sku: 'PRD-002' },
-  { id: '3', name: 'Producto C', price: 3200, stock: 25, sku: 'PRD-003' },
-  { id: '4', name: 'Servicio Premium', price: 5000, stock: 999, sku: 'SRV-001' },
-  { id: '5', name: 'Consultoría', price: 8000, stock: 999, sku: 'SRV-002' },
-];
+const mockProducts = [];
 
 // API Routes
 app.get('/api/v1/dashboard/summary', (req, res) => {

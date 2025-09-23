@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
 import { useAccountsStore } from './accountsStore';
 import { useProductsStore } from './productsStore';
+import { useSystemConfigStore } from './systemConfigStore';
 
 // Tipo para las ventas
 export interface Sale {
@@ -34,12 +35,12 @@ export interface Sale {
   productName?: string; // Nombre del producto para referencia
 }
 
-// Estado inicial del dashboard
+// Estado inicial del dashboard - LIMPIO
 export const initialDashboardStats = {
-  totalSales: 87420,
-  totalTransactions: 142,
-  averagePerDay: 2914,
-  monthlyGrowth: 18.5
+  totalSales: 0,
+  totalTransactions: 0,
+  averagePerDay: 0,
+  monthlyGrowth: 0
 };
 
 
@@ -55,8 +56,11 @@ export const useSalesStore = () => {
   // Hook para manejar transacciones enlazadas
   const { addLinkedTransaction, removeLinkedTransactions } = useAccountsStore();
   
-  // Hook para manejar inventario  
+  // Hook para manejar inventario
   const { products, updateStockWithMovement, getProductById } = useProductsStore();
+
+  // Hook para configuración del sistema
+  const { isNegativeStockAllowed } = useSystemConfigStore();
 
   // Save to localStorage whenever sales or stats change
   useEffect(() => {
@@ -67,22 +71,55 @@ export const useSalesStore = () => {
     saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, dashboardStats);
   }, [dashboardStats]);
 
-  // Nueva función para validar stock disponible
-  const validateStock = (productId: string, quantity: number): { valid: boolean; message?: string; currentStock?: number } => {
+  // ✅ FUNCIÓN DE VALIDACIÓN DE STOCK MEJORADA
+  const validateStock = (productId: string, quantity: number): {
+    valid: boolean;
+    message?: string;
+    currentStock?: number;
+    allowNegative?: boolean;
+    severity?: 'error' | 'warning' | 'info';
+  } => {
     const product = getProductById(productId);
     if (!product) {
-      return { valid: false, message: 'Producto no encontrado' };
-    }
-    
-    if (product.stock < quantity) {
-      return { 
-        valid: false, 
-        message: `Stock insuficiente. Disponible: ${product.stock}, Solicitado: ${quantity}`,
-        currentStock: product.stock
+      return {
+        valid: false,
+        message: 'Producto no encontrado',
+        severity: 'error'
       };
     }
-    
-    return { valid: true, currentStock: product.stock };
+
+    const negativeStockAllowed = isNegativeStockAllowed();
+    const stockDifference = product.stock - quantity;
+
+    // Si hay stock suficiente, todo OK
+    if (stockDifference >= 0) {
+      return {
+        valid: true,
+        currentStock: product.stock,
+        severity: 'info'
+      };
+    }
+
+    // Si NO hay stock suficiente
+    if (!negativeStockAllowed) {
+      // Configuración NO permite stock negativo - BLOQUEAR
+      return {
+        valid: false,
+        message: `❌ STOCK INSUFICIENTE\n\nDisponible: ${product.stock}\nSolicitado: ${quantity}\nFaltante: ${Math.abs(stockDifference)}\n\n⚙️ El sistema está configurado para NO permitir stock negativo.`,
+        currentStock: product.stock,
+        allowNegative: false,
+        severity: 'error'
+      };
+    } else {
+      // Configuración SÍ permite stock negativo - PERMITIR CON WARNING
+      return {
+        valid: true,
+        message: `⚠️ STOCK NEGATIVO DETECTADO\n\nDisponible: ${product.stock}\nSolicitado: ${quantity}\nStock resultante: ${stockDifference}\n\n✅ El sistema permite stock negativo. La venta se procesará normalmente.`,
+        currentStock: product.stock,
+        allowNegative: true,
+        severity: 'warning'
+      };
+    }
   };
 
   const addSale = (saleData: {
@@ -96,10 +133,20 @@ export const useSalesStore = () => {
     paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other';
     accountId?: string;
   }) => {
-    // 🚨 VALIDACIÓN CRÍTICA: Verificar stock disponible
+    // ✅ VALIDACIÓN CRÍTICA DE STOCK MEJORADA
     const stockValidation = validateStock(saleData.productId, saleData.quantity);
+
+    // Log de auditoría para todas las validaciones de stock
+    console.log('Stock validation result:', {
+      productId: saleData.productId,
+      quantity: saleData.quantity,
+      validation: stockValidation,
+      timestamp: new Date().toISOString()
+    });
+
     if (!stockValidation.valid) {
-      throw new Error(stockValidation.message);
+      // Stock insuficiente y NO permitido stock negativo
+      throw new Error(stockValidation.message || 'Stock insuficiente');
     }
 
     // Generate client avatar (initials)

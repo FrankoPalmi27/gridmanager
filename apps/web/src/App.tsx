@@ -16,6 +16,7 @@ import { TenantLoginPage } from './pages/TenantLoginPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { CompleteRegistrationPage } from './pages/CompleteRegistrationPage';
 import { useAuthStore } from './store/authStore';
+import { runAutoCleanup, hasLegacyData } from './lib/dataCleanup';
 
 // EMERGENCY LOG - ALWAYS FIRST
 console.log('🚨 APP.TSX LOADED - JavaScript is working!');
@@ -147,6 +148,32 @@ function App() {
 
   useEffect(() => {
     console.log('useEffect triggered, isAuthenticated:', isAuthenticated);
+
+    // ✅ AUTO-LIMPIEZA DE DATOS LEGACY AL INICIAR LA APP
+    const initCleanup = async () => {
+      if (hasLegacyData()) {
+        console.log('🧹 Detectados datos legacy, ejecutando limpieza automática...');
+        const result = await runAutoCleanup();
+        if (result.cleaned) {
+          console.log(`✅ Limpieza completada: ${result.itemsRemoved} elementos removidos`);
+          // Mostrar notificación discreta al usuario
+          setTimeout(() => {
+            const notification = document.createElement('div');
+            notification.innerHTML = `
+              <div style="position: fixed; top: 20px; right: 20px; background: #10B981; color: white; padding: 12px 16px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10000; font-family: system-ui; font-size: 14px;">
+                ✅ Datos de demostración limpiados automáticamente
+              </div>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => {
+              document.body.removeChild(notification);
+            }, 3000);
+          }, 1000);
+        }
+      }
+    };
+
+    initCleanup();
 
     // Check for existing authentication from authStore
     if (isAuthenticated) {

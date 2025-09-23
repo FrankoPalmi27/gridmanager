@@ -25,67 +25,7 @@ import { useSales } from '@store/SalesContext';
 import { useProductsStore } from '@store/productsStore';
 import { useTableScroll } from '@hooks/useTableScroll';
 
-// Mock data
-const salesData = [
-  {
-    id: 1,
-    number: 'VTA-2024-001',
-    client: { name: 'Juan Pérez', avatar: 'JP', email: 'juan@email.com' },
-    amount: 25000,
-    date: '2024-01-15',
-    status: 'completed',
-    seller: { name: 'Ana García', initials: 'AG' },
-    items: 3,
-    sparkline: [120, 150, 180, 200, 250],
-    cobrado: 25000,
-    aCobrar: 0,
-    salesChannel: 'store' as const,
-    paymentMethod: 'card' as const,
-  },
-  {
-    id: 2,
-    number: 'VTA-2024-002',
-    client: { name: 'María López', avatar: 'ML', email: 'maria@email.com' },
-    amount: 45000,
-    date: '2024-01-16',
-    status: 'pending',
-    seller: { name: 'Carlos Ruiz', initials: 'CR' },
-    items: 7,
-    sparkline: [80, 100, 120, 140, 450],
-    cobrado: 20000,
-    aCobrar: 25000,
-    salesChannel: 'online' as const,
-    paymentMethod: 'transfer' as const,
-  },
-  {
-    id: 3,
-    number: 'VTA-2024-003',
-    client: { name: 'Pedro Martín', avatar: 'PM', email: 'pedro@email.com' },
-    amount: 18500,
-    date: '2024-01-17',
-    status: 'cancelled',
-    seller: { name: 'Ana García', initials: 'AG' },
-    items: 2,
-    sparkline: [150, 140, 130, 120, 185],
-    cobrado: 0,
-    aCobrar: 18500,
-    salesChannel: 'whatsapp' as const,
-    paymentMethod: 'cash' as const,
-  },
-];
-
-// Mock data for clients and products
-const clientsData = [
-  { id: 1, name: 'Juan Pérez', email: 'juan@email.com', avatar: 'JP' },
-  { id: 2, name: 'María López', email: 'maria@email.com', avatar: 'ML' },
-  { id: 3, name: 'Pedro Martín', email: 'pedro@email.com', avatar: 'PM' },
-];
-
-const productsData = [
-  { id: 1, name: 'Producto A', price: 1500, stock: 50 },
-  { id: 2, name: 'Producto B', price: 2500, stock: 30 },
-  { id: 3, name: 'Producto C', price: 3500, stock: 20 },
-];
+// ✅ DATOS LIMPIOS - Sin datos precargados de demostración
 
 const filters = [
   { id: 'all', label: 'Todas' },
@@ -253,8 +193,8 @@ export function SalesPage() {
     paymentMethod: sale.paymentMethod || 'cash'
   }));
 
-  // Combine mock data with real sales for display
-  const allSales = [...salesData, ...migratedSales];
+  // ✅ USAR SOLO DATOS REALES - Sin mock data
+  const allSales = migratedSales;
   
   // Calculate pending sales count dynamically
   const pendingSalesCount = allSales.filter(sale => sale.status === 'pending').length;

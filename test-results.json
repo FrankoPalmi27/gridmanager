@@ -1,0 +1,269 @@
+{
+  "timestamp": "2025-09-22T18:16:23.344Z",
+  "summary": {
+    "total": 21,
+    "passed": 21,
+    "failed": 0,
+    "warnings": 0
+  },
+  "systemConfig": {
+    "allowNegativeStock": true,
+    "stockWarningThreshold": 120,
+    "defaultCurrency": "ARS",
+    "enableAuditLog": true,
+    "debugMode": true
+  },
+  "finalState": {
+    "accounts": 2,
+    "customers": 1,
+    "suppliers": 1,
+    "products": 1,
+    "sales": 2,
+    "purchases": 1
+  },
+  "tests": [
+    {
+      "name": "Setup-Accounts",
+      "passed": true,
+      "message": "Created 2 initial accounts",
+      "details": {
+        "accountsCount": 2
+      },
+      "timestamp": "2025-09-22T18:16:23.355Z"
+    },
+    {
+      "name": "Setup-Entities",
+      "passed": true,
+      "message": "Created initial customer and supplier",
+      "details": {
+        "customersCount": 1,
+        "suppliersCount": 1
+      },
+      "timestamp": "2025-09-22T18:16:23.355Z"
+    },
+    {
+      "name": "Product-Creation",
+      "passed": true,
+      "message": "Product created with low stock (5 units)",
+      "details": {
+        "productId": "1",
+        "initialStock": 5,
+        "minStock": 3,
+        "isLowStock": false
+      },
+      "timestamp": "2025-09-22T18:16:23.356Z"
+    },
+    {
+      "name": "Purchase-Success",
+      "passed": true,
+      "message": "Purchase completed - Stock updated to 10 units",
+      "details": {
+        "purchaseId": "1",
+        "quantity": 5,
+        "newStock": 10,
+        "totalCost": 5000
+      },
+      "timestamp": "2025-09-22T18:16:23.357Z"
+    },
+    {
+      "name": "Stock-Sufficient",
+      "passed": true,
+      "message": "Stock is sufficient for sale",
+      "details": {
+        "currentStock": 10,
+        "requestedQuantity": 3
+      },
+      "timestamp": "2025-09-22T18:16:23.358Z"
+    },
+    {
+      "name": "Sale-Stock-Update",
+      "passed": true,
+      "message": "Stock updated: 10 → 7",
+      "details": {
+        "saleId": 1758564983358,
+        "previousStock": 10,
+        "newStock": 7,
+        "stockDifference": -3
+      },
+      "timestamp": "2025-09-22T18:16:23.358Z"
+    },
+    {
+      "name": "Sale-Account-Update",
+      "passed": true,
+      "message": "Account balance updated: 50000 → 54500",
+      "details": {
+        "accountId": "1",
+        "previousBalance": 50000,
+        "newBalance": 54500,
+        "saleAmount": 4500
+      },
+      "timestamp": "2025-09-22T18:16:23.358Z"
+    },
+    {
+      "name": "Dashboard-Layout-Capacity",
+      "passed": true,
+      "message": "Dashboard can handle 10 transactions",
+      "details": {
+        "transactionCount": 10,
+        "hasOverflow": true,
+        "needsScrollOrPagination": true
+      },
+      "timestamp": "2025-09-22T18:16:23.359Z"
+    },
+    {
+      "name": "Dashboard-Responsive-Mobile",
+      "passed": true,
+      "message": "Mobile layout (375px) uses 1 columns",
+      "details": {
+        "viewport": "Mobile",
+        "width": 375,
+        "columns": 1
+      },
+      "timestamp": "2025-09-22T18:16:23.359Z"
+    },
+    {
+      "name": "Dashboard-Responsive-Tablet",
+      "passed": true,
+      "message": "Tablet layout (768px) uses 2 columns",
+      "details": {
+        "viewport": "Tablet",
+        "width": 768,
+        "columns": 2
+      },
+      "timestamp": "2025-09-22T18:16:23.359Z"
+    },
+    {
+      "name": "Dashboard-Responsive-Desktop",
+      "passed": true,
+      "message": "Desktop layout (1024px) uses 4 columns",
+      "details": {
+        "viewport": "Desktop",
+        "width": 1024,
+        "columns": 4
+      },
+      "timestamp": "2025-09-22T18:16:23.359Z"
+    },
+    {
+      "name": "Dashboard-Number-Format-0",
+      "passed": true,
+      "message": "Large number formatting: $ 1.234.567,89",
+      "details": {
+        "originalNumber": 1234567.89,
+        "formatted": "$ 1.234.567,89",
+        "fitsInCard": true
+      },
+      "timestamp": "2025-09-22T18:16:23.390Z"
+    },
+    {
+      "name": "Dashboard-Number-Format-1",
+      "passed": true,
+      "message": "Large number formatting: -$ 5.432.109,76",
+      "details": {
+        "originalNumber": -5432109.76,
+        "formatted": "-$ 5.432.109,76",
+        "fitsInCard": true
+      },
+      "timestamp": "2025-09-22T18:16:23.391Z"
+    },
+    {
+      "name": "Dashboard-Number-Format-2",
+      "passed": true,
+      "message": "Large number formatting: $ 999.999.999,99",
+      "details": {
+        "originalNumber": 999999999.99,
+        "formatted": "$ 999.999.999,99",
+        "fitsInCard": true
+      },
+      "timestamp": "2025-09-22T18:16:23.391Z"
+    },
+    {
+      "name": "Stock-Insufficient",
+      "passed": true,
+      "message": "Stock is insufficient (3 units short)",
+      "details": {
+        "currentStock": 7,
+        "requestedQuantity": 10,
+        "deficit": 3
+      },
+      "timestamp": "2025-09-22T18:16:23.392Z"
+    },
+    {
+      "name": "Stock-Negative-Blocked",
+      "passed": true,
+      "message": "Sale blocked due to negative stock configuration",
+      "details": {
+        "systemConfig": false
+      },
+      "timestamp": "2025-09-22T18:16:23.392Z"
+    },
+    {
+      "name": "Stock-Config-Toggle",
+      "passed": true,
+      "message": "Negative stock configuration toggled successfully",
+      "details": {
+        "newConfig": true
+      },
+      "timestamp": "2025-09-22T18:16:23.392Z"
+    },
+    {
+      "name": "Sale-Stock-Update",
+      "passed": true,
+      "message": "Stock updated: 7 → -3",
+      "details": {
+        "saleId": 1758564983392,
+        "previousStock": 7,
+        "newStock": -3,
+        "stockDifference": -10
+      },
+      "timestamp": "2025-09-22T18:16:23.392Z"
+    },
+    {
+      "name": "Sale-Account-Update",
+      "passed": true,
+      "message": "Account balance updated: 54500 → 69500",
+      "details": {
+        "accountId": "1",
+        "previousBalance": 54500,
+        "newBalance": 69500,
+        "saleAmount": 15000
+      },
+      "timestamp": "2025-09-22T18:16:23.392Z"
+    },
+    {
+      "name": "Repeat-Sale-Allowed",
+      "passed": true,
+      "message": "Second sale processed (negative stock allowed)",
+      "details": {
+        "saleId": 1758564983392,
+        "finalStock": -3,
+        "negativeStockAllowed": true
+      },
+      "timestamp": "2025-09-22T18:16:23.392Z"
+    },
+    {
+      "name": "System-Final-State",
+      "passed": true,
+      "message": "System state verification completed",
+      "details": {
+        "salesCount": 2,
+        "productsCount": 1,
+        "finalProductStock": -3,
+        "accountsBalance": 169500
+      },
+      "timestamp": "2025-09-22T18:16:23.392Z"
+    }
+  ],
+  "recommendations": [
+    {
+      "category": "Stock Management",
+      "title": "Implement Stock Configuration",
+      "description": "Add system-wide configuration for negative stock handling",
+      "actions": [
+        "Add allowNegativeStock configuration option",
+        "Implement real-time stock validation",
+        "Add clear warning messages for stock issues",
+        "Provide quick toggle for negative stock in emergency situations"
+      ]
+    }
+  ]
+}

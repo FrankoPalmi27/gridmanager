@@ -1,0 +1,38 @@
+{
+  "timestamp": "2025-09-22T18:26:39.544Z",
+  "storageKeys": 13,
+  "cleanupScript": "\n// Script para ejecutar en el navegador (Consola de DevTools)\n// Este script limpia todos los datos de Grid Manager\n\nconsole.log('🧹 Iniciando limpieza de datos...');\n\ntry {\n    // Limpiar todas las claves específicas de Grid Manager\n    localStorage.removeItem('gridmanager_customers');\n    localStorage.removeItem('gridmanager_products');\n    localStorage.removeItem('gridmanager_categories');\n    localStorage.removeItem('gridmanager_stock_movements');\n    localStorage.removeItem('gridmanager_sales');\n    localStorage.removeItem('gridmanager_accounts');\n    localStorage.removeItem('gridmanager_transactions');\n    localStorage.removeItem('gridmanager_suppliers');\n    localStorage.removeItem('gridmanager_purchases');\n    localStorage.removeItem('gridmanager_purchase_stats');\n    localStorage.removeItem('gridmanager_auth');\n    localStorage.removeItem('gridmanager_dashboard_stats');\n    localStorage.removeItem('gridmanager_system_config');\n\n    // Verificar que se limpiaron correctamente\n    const remainingKeys = [];\n    for (let i = 0; i < localStorage.length; i++) {\n        const key = localStorage.key(i);\n        if (key && key.startsWith('gridmanager_')) {\n            remainingKeys.push(key);\n        }\n    }\n\n    if (remainingKeys.length === 0) {\n        console.log('✅ Todos los datos han sido limpiados correctamente');\n        console.log('🔄 Recarga la página para ver la aplicación en estado limpio');\n    } else {\n        console.warn('⚠️ Algunas claves no se pudieron limpiar:', remainingKeys);\n    }\n\n} catch (error) {\n    console.error('❌ Error durante la limpieza:', error);\n}\n",
+  "validation": {
+    "allClean": true,
+    "totalIssues": 0,
+    "results": {
+      "salesStore": {
+        "issues": []
+      },
+      "accountsStore": {
+        "issues": []
+      },
+      "dashboardStats": {
+        "issues": []
+      },
+      "activitySection": {
+        "issues": []
+      }
+    }
+  },
+  "instructions": {
+    "browser": [
+      "1. Abrir DevTools (F12)",
+      "2. Ir a la pestaña Console",
+      "3. Pegar el script de limpieza",
+      "4. Presionar Enter",
+      "5. Recargar la página (F5)"
+    ],
+    "developer": [
+      "1. Los stores ya están limpios en el código",
+      "2. Para testing local, ejecutar el script del navegador",
+      "3. Para producción, los usuarios nuevos ya verán el estado limpio",
+      "4. Los usuarios existentes pueden limpiar con el script"
+    ]
+  }
+}

@@ -75,108 +75,9 @@ const saveToStorage = <T,>(key: string, value: T): void => {
   }
 };
 
-// Mock data for accounts
-const mockAccounts: Account[] = [
-  {
-    id: '1',
-    name: 'Cuenta Principal',
-    accountNumber: '1234567890',
-    bankName: 'Banco Nación',
-    accountType: 'Cuenta Corriente',
-    balance: 150000,
-    currency: 'ARS',
-    active: true,
-    createdDate: '2023-01-15',
-    description: 'Cuenta principal para operaciones diarias'
-  },
-  {
-    id: '2',
-    name: 'Caja Fuerte',
-    accountNumber: 'CASH-001',
-    bankName: 'Efectivo',
-    accountType: 'Efectivo',
-    balance: 25000,
-    currency: 'ARS',
-    active: true,
-    createdDate: '2023-01-15',
-    description: 'Dinero en efectivo en caja'
-  },
-  {
-    id: '3',
-    name: 'Cuenta USD',
-    accountNumber: '0987654321',
-    bankName: 'Banco Galicia',
-    accountType: 'Cuenta USD',
-    balance: 5000,
-    currency: 'USD',
-    active: true,
-    createdDate: '2023-02-01',
-    description: 'Cuenta en dólares para reservas'
-  },
-  {
-    id: '4',
-    name: 'Tarjeta Empresarial',
-    accountNumber: '4532-****-****-1234',
-    bankName: 'Banco Santander',
-    accountType: 'Tarjeta de Crédito',
-    balance: -12000,
-    currency: 'ARS',
-    active: true,
-    createdDate: '2023-01-20',
-    description: 'Tarjeta de crédito para gastos empresariales'
-  }
-];
-
-// Mock data for transactions
-const mockTransactions: Transaction[] = [
-  {
-    id: '1',
-    accountId: '1',
-    type: 'income',
-    amount: 45000,
-    description: 'Venta a Juan Pérez',
-    date: '2024-01-20',
-    category: 'Ventas',
-    reference: 'VTA-2024-001'
-  },
-  {
-    id: '2',
-    accountId: '1',
-    type: 'expense',
-    amount: 15000,
-    description: 'Pago a proveedor TechDistributor',
-    date: '2024-01-19',
-    category: 'Proveedores',
-    reference: 'PAGO-001'
-  },
-  {
-    id: '3',
-    accountId: '2',
-    type: 'income',
-    amount: 8000,
-    description: 'Venta en efectivo',
-    date: '2024-01-18',
-    category: 'Ventas'
-  },
-  {
-    id: '4',
-    accountId: '3',
-    type: 'transfer',
-    amount: 1000,
-    description: 'Compra de dólares',
-    date: '2024-01-17',
-    category: 'Transferencia Entre Cuentas'
-  },
-  {
-    id: '5',
-    accountId: '4',
-    type: 'expense',
-    amount: 5000,
-    description: 'Gastos de oficina',
-    date: '2024-01-16',
-    category: 'Gastos Operativos'
-  }
-];
+// ✅ ESTADO INICIAL LIMPIO - Sin datos precargados
+const initialAccounts: Account[] = [];
+const initialTransactions: Transaction[] = [];
 
 // Account Modal Component
 function AccountModal({ isOpen, closeModal, account, onAccountSaved }: {
@@ -605,25 +506,13 @@ function TransactionModal({ isOpen, closeModal, accounts, onTransactionSaved }: 
 }
 
 export function AccountsPage() {
-  // Initialize state from localStorage, falling back to mock data
+  // ✅ ESTADO INICIAL LIMPIO - Sin datos precargados
   const [accounts, setAccounts] = useState<Account[]>(() => {
-    const storedAccounts = loadFromStorage(ACCOUNTS_STORAGE_KEY, mockAccounts);
-    // If localStorage is empty (first time), initialize with mock accounts
-    if (storedAccounts.length === 0 || JSON.stringify(storedAccounts) === JSON.stringify([])) {
-      saveToStorage(ACCOUNTS_STORAGE_KEY, mockAccounts);
-      return mockAccounts;
-    }
-    return storedAccounts;
+    return loadFromStorage(ACCOUNTS_STORAGE_KEY, initialAccounts);
   });
-  
+
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const storedTransactions = loadFromStorage(TRANSACTIONS_STORAGE_KEY, mockTransactions);
-    // If localStorage is empty (first time), initialize with mock transactions
-    if (storedTransactions.length === 0 || JSON.stringify(storedTransactions) === JSON.stringify([])) {
-      saveToStorage(TRANSACTIONS_STORAGE_KEY, mockTransactions);
-      return mockTransactions;
-    }
-    return storedTransactions;
+    return loadFromStorage(TRANSACTIONS_STORAGE_KEY, initialTransactions);
   });
   
   const [searchTerm, setSearchTerm] = useState('');

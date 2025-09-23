@@ -3,6 +3,7 @@ import { useSales } from '../store/SalesContext';
 import { useProductsStore } from '../store/productsStore';
 import { useCustomersStore } from '../store/customersStore';
 import { useSuppliersStore } from '../store/suppliersStore';
+import { useMetrics } from '../hooks/useMetrics';
 import { SalesForm } from '../components/forms/SalesForm';
 import { ProductForm } from '../components/forms/ProductForm';
 import { CustomerModal } from '../components/forms/CustomerModal';
@@ -26,12 +27,9 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
   const [showNewProductModal, setShowNewProductModal] = useState(false);
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
   const [exchangeRate, setExchangeRate] = useState<ExchangeRate | null>(null);
-  const [realStats, setRealStats] = useState({
-    totalAvailable: 0,
-    accountsCount: 0,
-    clientDebts: 0,
-    supplierDebts: 0
-  });
+
+  // ✅ SOLUCIÓN: Usar hook centralizado en lugar de estado local desincronizado
+  const metrics = useMetrics(); // Sin período = datos globales
   const { dashboardStats, sales } = useSales();
   const { products } = useProductsStore();
   const { customers } = useCustomersStore();
@@ -68,8 +66,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
     });
   }, [sales]);
 
-  // Get low stock products
-  const lowStockProducts = products.filter(p => p.stock <= p.minStock && p.status === 'active');
+  // ✅ Get low stock products usando métricas centralizadas
+  const lowStockProducts = metrics.lowStockProducts;
   const outOfStockProducts = products.filter(p => p.stock === 0 && p.status === 'active');
 
   // Fetch exchange rate from Banco Nación
@@ -106,42 +104,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // Load real data from localStorage
-  useEffect(() => {
-    const loadRealData = () => {
-      try {
-        // Load accounts data
-        const accountsData = JSON.parse(localStorage.getItem('gridmanager_accounts') || '[]');
-        const totalAvailable = accountsData.reduce((sum: number, account: any) => sum + account.balance, 0);
-        const accountsCount = accountsData.length;
-
-        // Load sales data for debts calculation
-        const salesData = JSON.parse(localStorage.getItem('gridmanager_sales') || '[]');
-        const clientDebts = salesData
-          .filter((sale: any) => sale.paymentStatus === 'pending' || sale.paymentStatus === 'partial')
-          .reduce((sum: number, sale: any) => sum + sale.amount, 0);
-
-        // Calculate real supplier debts from suppliers store
-        const supplierDebts = suppliers
-          .filter(supplier => supplier.active && supplier.currentBalance < 0) // Solo balances negativos (les debemos)
-          .reduce((sum: number, supplier: any) => sum + Math.abs(supplier.currentBalance), 0);
-
-        setRealStats({
-          totalAvailable,
-          accountsCount,
-          clientDebts,
-          supplierDebts
-        });
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
-      }
-    };
-
-    loadRealData();
-    // Update every 5 seconds to keep data fresh
-    const interval = setInterval(loadRealData, 5000);
-    return () => clearInterval(interval);
-  }, [suppliers]);
+  // ✅ ELIMINADO: Polling manual cada 5 segundos
+  // Ahora los datos se actualizan automáticamente vía useMetrics reactivo
 
   const handleModuleClick = (path: string) => {
     if (onNavigate) {
@@ -149,23 +113,23 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
     }
   };
 
-  // Enhanced stats with bigger cards
+  // ✅ Enhanced stats usando métricas centralizadas - se actualiza automáticamente
   const enhancedStats = [
     {
       name: 'Total Disponible',
-      value: formatCurrency(realStats.totalAvailable),
-      rawValue: realStats.totalAvailable,
+      value: formatCurrency(metrics.totalAvailable),
+      rawValue: metrics.totalAvailable,
       icon: '💰',
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200',
-      change: realStats.totalAvailable > 100000 ? '+12.5%' : '+5.2%',
+      change: metrics.totalAvailable > 100000 ? '+12.5%' : '+5.2%',
       description: 'Total en cuentas activas'
     },
     {
       name: 'Cuentas',
-      value: realStats.accountsCount.toString(),
-      rawValue: realStats.accountsCount,
+      value: metrics.accountsCount.toString(),
+      rawValue: metrics.accountsCount,
       icon: '💳',
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
@@ -174,18 +138,18 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
     },
     {
       name: 'Deudas Clientes',
-      value: formatCurrency(realStats.clientDebts),
-      rawValue: realStats.clientDebts,
+      value: formatCurrency(metrics.clientDebts),
+      rawValue: metrics.clientDebts,
       icon: '👥',
-      color: realStats.clientDebts > 0 ? 'text-orange-600' : 'text-green-600',
-      bgColor: realStats.clientDebts > 0 ? 'bg-orange-50' : 'bg-green-50',
-      borderColor: realStats.clientDebts > 0 ? 'border-orange-200' : 'border-green-200',
+      color: metrics.clientDebts > 0 ? 'text-orange-600' : 'text-green-600',
+      bgColor: metrics.clientDebts > 0 ? 'bg-orange-50' : 'bg-green-50',
+      borderColor: metrics.clientDebts > 0 ? 'border-orange-200' : 'border-green-200',
       description: 'Pagos pendientes'
     },
     {
       name: 'Deudas Proveedores',
-      value: formatCurrency(realStats.supplierDebts),
-      rawValue: realStats.supplierDebts,
+      value: formatCurrency(metrics.supplierDebts),
+      rawValue: metrics.supplierDebts,
       icon: '🏢',
       color: 'text-red-600',
       bgColor: 'bg-red-50',
@@ -306,12 +270,12 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           </div>
         )}
 
-        {/* Enhanced Stats Cards - Bigger */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+        {/* Enhanced Stats Cards - Responsive Fixed Layout */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 mb-8">
           {enhancedStats.map((stat, index) => {
             // Determine click handler and styling based on card name
             let clickHandler, cursorStyle;
-            
+
             switch(stat.name) {
               case 'Total Disponible':
               case 'Cuentas':
@@ -330,29 +294,29 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
                 clickHandler = undefined;
                 cursorStyle = '';
             }
-            
+
             return (
-              <div 
-                key={stat.name} 
-                className={`bg-white p-6 rounded-2xl border-2 ${stat.borderColor} shadow-sm hover:shadow-md transition-all ${cursorStyle}`}
+              <div
+                key={stat.name}
+                className={`bg-white p-4 lg:p-6 rounded-2xl border-2 ${stat.borderColor} shadow-sm hover:shadow-md transition-all ${cursorStyle} min-w-0`}
                 onClick={clickHandler}
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                    <span className="text-2xl">{stat.icon}</span>
+                <div className="flex items-start justify-between mb-3 lg:mb-4">
+                  <div className={`p-2 lg:p-3 rounded-xl ${stat.bgColor} flex-shrink-0`}>
+                    <span className="text-xl lg:text-2xl">{stat.icon}</span>
                   </div>
                   {stat.change && (
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <div className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
                         ↗ {stat.change}
                       </div>
                     </div>
                   )}
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">{stat.name}</p>
-                  <p className={`text-3xl font-bold ${stat.color} mb-1`}>{stat.value}</p>
-                  <p className="text-xs text-gray-500">{stat.description}</p>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-500 mb-1 truncate">{stat.name}</p>
+                  <p className={`text-2xl lg:text-3xl font-bold ${stat.color} mb-1 truncate`} title={stat.value}>{stat.value}</p>
+                  <p className="text-xs text-gray-500 truncate">{stat.description}</p>
                 </div>
               </div>
             );
@@ -569,37 +533,49 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           </div>
         </div>
 
-        {/* Recent Activity - Moved to bottom, responsive */}
+        {/* Recent Activity - Dinamica basada en datos reales */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm order-last lg:order-none">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">📊 Actividad Reciente</h3>
             <span className="text-sm text-gray-500">Últimas 24h</span>
           </div>
           <div className="space-y-4">
-            <div className="flex items-center p-3 bg-green-50 rounded-lg">
-              <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">Nueva venta registrada</p>
-                <p className="text-xs text-gray-500">Cliente: Juan Pérez - $2,500</p>
+            {/* ✅ MOSTRAR ACTIVIDAD REAL O ESTADO VACIO */}
+            {sales.length === 0 && products.length === 0 && customers.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-2xl">📊</span>
+                </div>
+                <p className="text-sm text-gray-500">No hay actividad reciente</p>
+                <p className="text-xs text-gray-400 mt-1">La actividad aparecerá aquí cuando comiences a usar el sistema</p>
               </div>
-              <span className="text-xs text-gray-400">10:30 AM</span>
-            </div>
-            <div className="flex items-center p-3 bg-blue-50 rounded-lg">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">Producto agregado al inventario</p>
-                <p className="text-xs text-gray-500">SKU-001 - Stock: 50 unidades</p>
-              </div>
-              <span className="text-xs text-gray-400">09:15 AM</span>
-            </div>
-            <div className="flex items-center p-3 bg-orange-50 rounded-lg">
-              <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">Stock bajo detectado</p>
-                <p className="text-xs text-gray-500">Producto B - Solo quedan 5 unidades</p>
-              </div>
-              <span className="text-xs text-gray-400">08:45 AM</span>
-            </div>
+            ) : (
+              <>
+                {/* Mostrar ventas recientes */}
+                {sales.slice(0, 2).map((sale, index) => (
+                  <div key={sale.id} className="flex items-center p-3 bg-green-50 rounded-lg">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">Nueva venta registrada</p>
+                      <p className="text-xs text-gray-500">Cliente: {sale.client.name} - {formatCurrency(sale.amount)}</p>
+                    </div>
+                    <span className="text-xs text-gray-400">{new Date(sale.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                ))}
+
+                {/* Mostrar productos con stock bajo */}
+                {lowStockProducts.slice(0, 1).map((product) => (
+                  <div key={product.id} className="flex items-center p-3 bg-orange-50 rounded-lg">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">Stock bajo detectado</p>
+                      <p className="text-xs text-gray-500">{product.name} - Solo quedan {product.stock} unidades</p>
+                    </div>
+                    <span className="text-xs text-gray-400">Ahora</span>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </div>
       </div>

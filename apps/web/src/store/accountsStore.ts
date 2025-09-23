@@ -34,45 +34,8 @@ export interface Transaction {
 }
 
 
-// Default accounts for new users
-const initialAccounts: Account[] = [
-  {
-    id: '1',
-    name: 'Banco ARS',
-    accountNumber: '1234567890',
-    bankName: 'Banco Nación',
-    accountType: 'Cuenta Corriente',
-    balance: 0,
-    currency: 'ARS',
-    active: true,
-    createdDate: '2023-01-15',
-    description: 'Cuenta principal para operaciones diarias'
-  },
-  {
-    id: '2',
-    name: 'Efectivo ARS',
-    accountNumber: 'CASH-001',
-    bankName: 'Efectivo',
-    accountType: 'Efectivo',
-    balance: 0,
-    currency: 'ARS',
-    active: true,
-    createdDate: '2023-01-15',
-    description: 'Dinero en efectivo en caja'
-  },
-  {
-    id: '3',
-    name: 'Efectivo USD',
-    accountNumber: '0987654321',
-    bankName: 'Efectivo',
-    accountType: 'Efectivo',
-    balance: 0,
-    currency: 'USD',
-    active: true,
-    createdDate: '2023-02-01',
-    description: 'Efectivo en dólares para reservas'
-  }
-];
+// ✅ ESTADO INICIAL LIMPIO - Sin cuentas precargadas
+const initialAccounts: Account[] = [];
 
 // No initial data - users start with empty list
 const initialTransactions: Transaction[] = [];

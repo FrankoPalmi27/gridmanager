@@ -119,6 +119,50 @@ export function ProductsPage() {
     }
   };
 
+  const handleDeleteProduct = (product: Product) => {
+    // ✅ CONFIRMACIÓN DOBLE OBLIGATORIA
+    const firstConfirm = window.confirm(
+      `¿Estás seguro de que quieres eliminar el producto "${product.name}" (SKU: ${product.sku})?
+
+⚠️ Esta acción NO se puede deshacer.`
+    );
+
+    if (!firstConfirm) return;
+
+    // Segunda confirmación más específica
+    const secondConfirm = window.confirm(
+      `⚠️ CONFIRMACIÓN FINAL ⚠️
+
+Vas a eliminar PERMANENTEMENTE:
+• Producto: ${product.name}
+• SKU: ${product.sku}
+• Stock actual: ${product.stock} unidades
+
+Escribe "ELIMINAR" para confirmar (sin comillas):`
+    );
+
+    if (!secondConfirm) return;
+
+    // Tercera confirmación con prompt para escribir "ELIMINAR"
+    const finalConfirm = prompt(
+      `⚠️ CONFIRMACIÓN FINAL ⚠️
+
+Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name}":`
+    );
+
+    if (finalConfirm !== "ELIMINAR") {
+      alert("❌ Eliminación cancelada. Texto no coincide.");
+      return;
+    }
+
+    try {
+      deleteProduct(product.id);
+      alert(`✅ Producto "${product.name}" eliminado correctamente.`);
+    } catch (error) {
+      alert(`❌ Error al eliminar el producto: ${error}`);
+    }
+  };
+
   // Scroll functions now provided by useTableScroll hook
 
   return (
@@ -542,13 +586,21 @@ export function ProductsPage() {
                         >
                           Stock
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="text-purple-600 hover:text-purple-900 px-2 py-1"
                           onClick={() => handleViewStockMovements(product)}
                         >
                           Movimientos
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-900 px-2 py-1"
+                          onClick={() => handleDeleteProduct(product)}
+                        >
+                          Eliminar
                         </Button>
                       </div>
                     </td>

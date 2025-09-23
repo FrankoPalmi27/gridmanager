@@ -12,27 +12,42 @@ interface EmptyStateProps {
   className?: string;
 }
 
-export function EmptyState({ 
-  icon = '📄', 
-  title, 
-  description, 
-  action, 
-  className = '' 
+export function EmptyState({
+  icon = '📄',
+  title,
+  description,
+  action,
+  className = ''
 }: EmptyStateProps) {
   return (
-    <div className={`text-center py-12 ${className}`}>
-      <div className="text-6xl mb-4 animate-bounce-soft">{icon}</div>
-      <h3 className="text-lg font-medium text-gray-900 mb-2 animate-fade-in">
+    <div className={`empty-state ${className}`}>
+      <div
+        className="text-6xl mb-4 pulse-gentle"
+        style={{
+          fontSize: '3rem',
+          marginBottom: 'var(--spacing-4)'
+        }}
+      >
+        {icon}
+      </div>
+      <h3 className="empty-state-title fade-in">
         {title}
       </h3>
-      <p className="text-gray-500 mb-6 max-w-md mx-auto animate-slide-up" style={{ animationDelay: '100ms' }}>
+      <p
+        className="empty-state-description slide-in-up"
+        style={{ animationDelay: '100ms' }}
+      >
         {description}
       </p>
       {action && (
-        <button 
+        <button
           onClick={action.onClick}
-          className="btn btn-primary inline-flex items-center gap-2 animate-scale-up ripple-effect"
-          style={{ animationDelay: '200ms' }}
+          className="btn btn-primary inline-flex items-center gap-2 hover-lift slide-in-up"
+          style={{
+            animationDelay: '200ms',
+            marginTop: 'var(--spacing-6)',
+            gap: 'var(--spacing-2)'
+          }}
         >
           {action.icon && <action.icon className="h-5 w-5" />}
           {action.label}

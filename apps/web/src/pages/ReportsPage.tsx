@@ -40,9 +40,18 @@ const PieChart = ({ data, title }: {
   const total = data.reduce((sum, item) => sum + item.value, 0);
   let currentAngle = 0;
   
+  // Colores usando nuestro sistema de diseño
   const colors = [
-    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
-    '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6B7280'
+    'var(--primary-500)',    // Azul principal
+    'var(--success-500)',    // Verde éxito
+    'var(--warning-500)',    // Ámbar advertencia
+    'var(--error-500)',      // Rojo error
+    'var(--info-500)',       // Azul info
+    'var(--secondary-500)',  // Verde secundario
+    'var(--primary-400)',    // Azul claro
+    'var(--success-400)',    // Verde claro
+    'var(--warning-400)',    // Ámbar claro
+    'var(--neutral-400)'     // Gris neutral
   ];
 
   const paths = data.map((item, index) => {
@@ -110,7 +119,7 @@ const PieChart = ({ data, title }: {
 };
 
 // Area Chart Component
-const AreaChart = ({ data, title, color = '#3B82F6' }: {
+const AreaChart = ({ data, title, color = 'var(--primary-500)' }: {
   data: { date: string; value: number }[];
   title: string;
   color?: string;

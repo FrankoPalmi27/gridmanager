@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useNavigate } from 'react-router-dom';
 
 // Inline types for deployment
 const LoginSchema = z.object({
@@ -18,6 +19,7 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { setAuth } = useAuthStore();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -26,6 +28,26 @@ export function LoginPage() {
   } = useForm<LoginRequest>({
     resolver: zodResolver(LoginSchema),
   });
+
+  // Función para saltear login (solo para testing)
+  const handleSkipLogin = () => {
+    // Crear usuario mock para testing
+    const mockUser = {
+      id: 'test-user',
+      email: 'test@example.com',
+      name: 'Usuario Test',
+      role: 'ADMIN',
+      tenantId: 'test-tenant'
+    };
+
+    const mockTokens = {
+      accessToken: 'mock-access-token',
+      refreshToken: 'mock-refresh-token'
+    };
+
+    setAuth(mockUser, mockTokens);
+    navigate('/');
+  };
 
   const onSubmit = async (data: LoginRequest) => {
     setIsLoading(true);
@@ -140,6 +162,17 @@ export function LoginPage() {
             onError={(error) => setError(error)}
             disabled={isLoading}
           />
+        </div>
+
+        {/* Botón de desarrollo para saltear login */}
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={handleSkipLogin}
+            className="w-full flex justify-center py-2 px-4 border border-yellow-300 rounded-md shadow-sm text-sm font-medium text-yellow-800 bg-yellow-50 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
+          >
+            🚀 Saltear Login (Testing)
+          </button>
         </div>
 
         <div className="mt-8 p-4 bg-blue-50 rounded-lg">

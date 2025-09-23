@@ -1,22 +1,24 @@
 import React, { useState, Fragment } from 'react';
 import {
-  PlusIcon,
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  EllipsisHorizontalIcon,
-  UserCircleIcon,
-  CalendarDaysIcon,
-  CurrencyDollarIcon,
-  DocumentDuplicateIcon,
-  ArchiveBoxIcon,
-  ShareIcon,
-  ClockIcon,
-  XMarkIcon,
-  CheckIcon,
-  PencilIcon,
-  TrashIcon,
-  DocumentTextIcon,
-} from '@heroicons/react/24/outline';
+  PlusOutlined,
+  SearchOutlined,
+  FilterOutlined,
+  MoreOutlined,
+  UserOutlined,
+  CalendarOutlined,
+  DollarOutlined,
+  CopyOutlined,
+  InboxOutlined,
+  ShareAltOutlined,
+  ClockCircleOutlined,
+  CloseOutlined,
+  CheckOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  FileTextOutlined,
+  BarChartOutlined,
+  CaretUpOutlined
+} from '@ant-design/icons';
 import { Button } from '@ui/Button';
 import { SaleStatusBadge } from '@ui/StatusBadge';
 import { SalesForm } from '@forms/SalesForm';
@@ -69,27 +71,27 @@ function QuickActions({ sale, onEdit }: { sale: any; onEdit: (sale: any) => void
 
   const getStatusActions = () => {
     const baseActions = [
-      { icon: PencilIcon, label: 'Editar', action: () => onEdit(sale) },
-      { icon: DocumentDuplicateIcon, label: 'Duplicar', action: () => {} /* TODO: Implement duplicate functionality */ },
-      { icon: ShareIcon, label: 'Compartir', action: () => {} /* TODO: Implement share functionality */ },
-      { icon: TrashIcon, label: 'Eliminar', action: handleDeleteSale, className: 'text-red-600 hover:text-red-700' },
+      { icon: EditOutlined, label: 'Editar', action: () => onEdit(sale) },
+      { icon: CopyOutlined, label: 'Duplicar', action: () => {} /* TODO: Implement duplicate functionality */ },
+      { icon: ShareAltOutlined, label: 'Compartir', action: () => {} /* TODO: Implement share functionality */ },
+      { icon: DeleteOutlined, label: 'Eliminar', action: handleDeleteSale, className: 'text-red-600 hover:text-red-700' },
     ];
 
     // Add status-specific actions
     if (sale.status === 'completed') {
       baseActions.push(
-        { icon: ClockIcon, label: 'Marcar Pendiente', action: () => updateSaleStatus(sale.id, 'pending') },
-        { icon: XMarkIcon, label: 'Cancelar', action: () => updateSaleStatus(sale.id, 'cancelled') }
+        { icon: ClockCircleOutlined, label: 'Marcar Pendiente', action: () => updateSaleStatus(sale.id, 'pending') },
+        { icon: CloseOutlined, label: 'Cancelar', action: () => updateSaleStatus(sale.id, 'cancelled') }
       );
     } else if (sale.status === 'pending') {
       baseActions.push(
-        { icon: CheckIcon, label: 'Completar', action: () => updateSaleStatus(sale.id, 'completed') },
-        { icon: XMarkIcon, label: 'Cancelar', action: () => updateSaleStatus(sale.id, 'cancelled') }
+        { icon: CheckOutlined, label: 'Completar', action: () => updateSaleStatus(sale.id, 'completed') },
+        { icon: CloseOutlined, label: 'Cancelar', action: () => updateSaleStatus(sale.id, 'cancelled') }
       );
     } else if (sale.status === 'cancelled') {
       baseActions.push(
-        { icon: CheckIcon, label: 'Completar', action: () => updateSaleStatus(sale.id, 'completed') },
-        { icon: ClockIcon, label: 'Marcar Pendiente', action: () => updateSaleStatus(sale.id, 'pending') }
+        { icon: CheckOutlined, label: 'Completar', action: () => updateSaleStatus(sale.id, 'completed') },
+        { icon: ClockCircleOutlined, label: 'Marcar Pendiente', action: () => updateSaleStatus(sale.id, 'pending') }
       );
     }
 
@@ -106,7 +108,7 @@ function QuickActions({ sale, onEdit }: { sale: any; onEdit: (sale: any) => void
         onClick={() => setIsOpen(!isOpen)}
         className="opacity-0 group-hover:opacity-100"
       >
-        <EllipsisHorizontalIcon className="h-5 w-5" />
+        <MoreOutlined className="h-5 w-5" />
       </Button>
       
       {isOpen && (
@@ -594,9 +596,7 @@ export function SalesPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <DollarOutlined className="w-6 h-6 text-blue-600" />
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Ventas Hoy</h3>
@@ -614,9 +614,7 @@ export function SalesPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-green-100 rounded-lg">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+                <BarChartOutlined className="w-6 h-6 text-green-600" />
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Ventas Mes</h3>
@@ -634,9 +632,7 @@ export function SalesPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-orange-100 rounded-lg">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <ClockCircleOutlined className="w-6 h-6 text-orange-600" />
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Pendientes</h3>
@@ -649,9 +645,7 @@ export function SalesPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-purple-100 rounded-lg">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                </svg>
+                <BarChartOutlined className="w-6 h-6 text-purple-600" />
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Ticket Promedio</h3>
@@ -690,7 +684,7 @@ export function SalesPage() {
           {/* Search and filters */}
           <div className="flex gap-3 lg:ml-auto">
             <div className="relative flex-1 sm:flex-none">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <SearchOutlined className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Buscar por cliente..."
@@ -742,9 +736,7 @@ export function SalesPage() {
                   <div className="flex items-center gap-1">
                     <span>Venta</span>
                     {sortField === 'number' && (
-                      <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                      </svg>
+                      <CaretUpOutlined className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} />
                     )}
                   </div>
                 </th>
@@ -756,9 +748,7 @@ export function SalesPage() {
                   <div className="flex items-center gap-1">
                     <span>Cliente</span>
                     {sortField === 'client' && (
-                      <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                      </svg>
+                      <CaretUpOutlined className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} />
                     )}
                   </div>
                 </th>
@@ -770,9 +760,7 @@ export function SalesPage() {
                   <div className="flex items-center gap-1">
                     <span>Fecha</span>
                     {sortField === 'date' && (
-                      <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                      </svg>
+                      <CaretUpOutlined className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} />
                     )}
                   </div>
                 </th>
@@ -787,9 +775,7 @@ export function SalesPage() {
                   <div className="flex items-center gap-1">
                     <span>Total</span>
                     {sortField === 'amount' && (
-                      <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                      </svg>
+                      <CaretUpOutlined className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} />
                     )}
                   </div>
                 </th>
@@ -807,9 +793,7 @@ export function SalesPage() {
                   <div className="flex items-center gap-1">
                     <span>Estado</span>
                     {sortField === 'status' && (
-                      <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                      </svg>
+                      <CaretUpOutlined className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} />
                     )}
                   </div>
                 </th>
@@ -830,7 +814,7 @@ export function SalesPage() {
                         className="w-10 h-10 bg-blue-100 hover:bg-blue-200 rounded-lg flex items-center justify-center mr-4"
                         title="Previsualizar PDF"
                       >
-                        <DocumentTextIcon className="w-5 h-5 text-blue-600" />
+                        <FileTextOutlined className="w-5 h-5 text-blue-600" />
                       </Button>
                       <div>
                         <div className="text-sm font-medium text-gray-900">{sale.number}</div>
@@ -919,9 +903,7 @@ export function SalesPage() {
 
         {filteredAndSortedSales.length === 0 && (
           <div className="text-center py-12">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <DollarOutlined className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No hay ventas</h3>
             <p className="mt-1 text-sm text-gray-500">
               {searchTerm || activeFilter !== 'all' ? 'No se encontraron ventas con esos filtros.' : 'Comienza registrando tu primera venta.'}
@@ -935,7 +917,7 @@ export function SalesPage() {
                 variant="primary"
                 className="inline-flex items-center gap-2"
               >
-                <PlusIcon className="h-5 w-5" />
+                <PlusOutlined className="h-5 w-5" />
                 Nueva Venta
               </Button>
             </div>

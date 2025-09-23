@@ -11,6 +11,19 @@ import BulkProductImport from '@components/BulkProductImport';
 import { useProductsStore, Product } from '@store/productsStore';
 import { formatCurrency } from '@lib/formatters';
 import { useTableScroll } from '@hooks/useTableScroll';
+import {
+  CloseOutlined,
+  AppstoreOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  DollarOutlined,
+  SearchOutlined,
+  CaretUpOutlined,
+  FileTextOutlined,
+  RiseOutlined,
+  BarChartOutlined,
+  InboxOutlined
+} from '@ant-design/icons';
 
 type SortField = 'name' | 'category' | 'brand' | 'price' | 'cost' | 'stock' | 'status';
 type SortOrder = 'asc' | 'desc';
@@ -243,9 +256,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                   onClick={() => setShowBulkImport(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <CloseOutlined className="w-6 h-6" />
                 </button>
               </div>
               <div className="p-6">
@@ -269,9 +280,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
           <div className="bg-white p-6 rounded-xl border border-gray-200">
             <div className="flex items-center">
               <div className="p-3 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
+                <AppstoreOutlined className="w-6 h-6 text-blue-600" />
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Total Productos</p>
@@ -283,9 +292,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
           <div className="bg-white p-6 rounded-xl border border-gray-200">
             <div className="flex items-center">
               <div className="p-3 bg-green-100 rounded-lg">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <CheckCircleOutlined className="w-6 h-6 text-green-600" />
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Productos Activos</p>
@@ -297,9 +304,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
           <div className="bg-white p-6 rounded-xl border border-gray-200">
             <div className="flex items-center">
               <div className="p-3 bg-red-100 rounded-lg">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
+                <ExclamationCircleOutlined className="w-6 h-6 text-red-600" />
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Stock Bajo</p>
@@ -311,9 +316,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
           <div className="bg-white p-6 rounded-xl border border-gray-200">
             <div className="flex items-center">
               <div className="p-3 bg-green-100 rounded-lg">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <DollarOutlined className="w-6 h-6 text-green-600" />
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-500">Valor Inventario</p>
@@ -331,9 +334,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
               placeholder="Buscar productos por nombre o SKU..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              icon={<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>}
+              icon={<SearchOutlined className="h-5 w-5" />}
               iconPosition="left"
               className="w-full"
             />
@@ -384,9 +385,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                     <div className="flex items-center gap-1">
                       <span>Producto</span>
                       {sortField === 'name' && (
-                        <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                        </svg>
+                        <CaretUpOutlined className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} />
                       )}
                     </div>
                   </th>
@@ -401,9 +400,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                     <div className="flex items-center gap-1">
                       <span>Categoría</span>
                       {sortField === 'category' && (
-                        <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                        </svg>
+                        <CaretUpOutlined className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} />
                       )}
                     </div>
                   </th>
@@ -415,9 +412,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                     <div className="flex items-center gap-1">
                       <span>Marca</span>
                       {sortField === 'brand' && (
-                        <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                        </svg>
+                        <CaretUpOutlined className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} />
                       )}
                     </div>
                   </th>
@@ -432,9 +427,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                     <div className="flex items-center gap-1">
                       <span>Costo Mercadería</span>
                       {sortField === 'cost' && (
-                        <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                        </svg>
+                        <CaretUpOutlined className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} />
                       )}
                     </div>
                   </th>
@@ -446,9 +439,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                     <div className="flex items-center gap-1">
                       <span>Precio Vta</span>
                       {sortField === 'price' && (
-                        <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                        </svg>
+                        <CaretUpOutlined className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} />
                       )}
                     </div>
                   </th>
@@ -463,9 +454,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                     <div className="flex items-center gap-1">
                       <span>Stock</span>
                       {sortField === 'stock' && (
-                        <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                        </svg>
+                        <CaretUpOutlined className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} />
                       )}
                     </div>
                   </th>
@@ -477,9 +466,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                     <div className="flex items-center gap-1">
                       <span>Estado</span>
                       {sortField === 'status' && (
-                        <svg className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                        </svg>
+                        <CaretUpOutlined className={`w-3 h-3 ${sortOrder === 'asc' ? '' : 'transform rotate-180'}`} />
                       )}
                     </div>
                   </th>
@@ -497,9 +484,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                          </svg>
+                          <AppstoreOutlined className="w-4 h-4 text-gray-500" />
                         </div>
                         <div className="ml-3">
                           <div className="text-sm font-medium text-gray-900">{product.name}</div>
@@ -611,9 +596,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
 
               {sortedAndFilteredProducts.length === 0 && (
                 <div className="text-center py-12">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
+                  <AppstoreOutlined className="mx-auto h-12 w-12 text-gray-400" />
                   <h3 className="mt-2 text-sm font-medium text-gray-900">No hay productos</h3>
                   <p className="mt-1 text-sm text-gray-500">
                     {searchTerm || categoryFilter !== 'all' ? 'No se encontraron productos con esos filtros.' : 'Comienza agregando tu primer producto.'}
@@ -773,9 +756,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
               
               {getStockMovementsByProduct(stockMovementsModal.product.id).length === 0 && (
                 <div className="text-center py-12">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  <FileTextOutlined className="mx-auto h-12 w-12 text-gray-400" />
                   <h3 className="mt-2 text-sm font-medium text-gray-900">Sin movimientos</h3>
                   <p className="mt-1 text-sm text-gray-500">
                     Este producto aún no tiene movimientos de stock registrados.
@@ -907,9 +888,7 @@ function InventoryValuationView({ products }: InventoryValuationViewProps) {
         <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M12 11l8-4" />
-              </svg>
+              <AppstoreOutlined className="w-6 h-6 text-white" />
             </div>
             <div>
               <p className="text-sm font-medium text-blue-600">Valor Total (Venta)</p>
@@ -921,9 +900,7 @@ function InventoryValuationView({ products }: InventoryValuationViewProps) {
         <div className="bg-green-50 rounded-xl p-6 border border-green-200">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-              </svg>
+              <DollarOutlined className="w-6 h-6 text-white" />
             </div>
             <div>
               <p className="text-sm font-medium text-green-600">Valor Total (Costo)</p>
@@ -935,9 +912,7 @@ function InventoryValuationView({ products }: InventoryValuationViewProps) {
         <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
+              <RiseOutlined className="w-6 h-6 text-white" />
             </div>
             <div>
               <p className="text-sm font-medium text-purple-600">Margen Potencial</p>
@@ -949,9 +924,7 @@ function InventoryValuationView({ products }: InventoryValuationViewProps) {
         <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
+              <BarChartOutlined className="w-6 h-6 text-white" />
             </div>
             <div>
               <p className="text-sm font-medium text-orange-600">Categorías</p>
@@ -1070,9 +1043,7 @@ function InventoryValuationView({ products }: InventoryValuationViewProps) {
       {inventoryByCategory.length === 0 && (
         <div className="text-center py-12">
           <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-            <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-            </svg>
+            <InboxOutlined className="w-12 h-12 text-gray-400" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No hay productos registrados</h3>
           <p className="text-gray-500">

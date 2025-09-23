@@ -86,6 +86,26 @@ export function TenantLoginPage({ onNavigate }: { onNavigate: (page: string) => 
     }));
   };
 
+  // Función para saltear login (solo para testing)
+  const handleSkipLogin = () => {
+    // Crear usuario mock para testing
+    const mockUser = {
+      id: 'test-user',
+      email: 'test@example.com',
+      name: 'Usuario Test',
+      role: 'ADMIN',
+      tenantId: 'test-tenant'
+    };
+
+    const mockTokens = {
+      accessToken: 'mock-access-token',
+      refreshToken: 'mock-refresh-token'
+    };
+
+    setAuth(mockUser, mockTokens);
+    onNavigate('dashboard');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
@@ -180,6 +200,17 @@ export function TenantLoginPage({ onNavigate }: { onNavigate: (page: string) => 
             onError={(error) => setError(error)}
             disabled={loading}
           />
+        </div>
+
+        {/* Botón de desarrollo para saltear login */}
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={handleSkipLogin}
+            className="w-full flex justify-center py-2 px-4 border border-yellow-300 rounded-lg shadow-sm text-sm font-medium text-yellow-800 bg-yellow-50 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
+          >
+            🚀 Saltear Login (Testing)
+          </button>
         </div>
 
         <div className="mt-6 text-center space-y-3">

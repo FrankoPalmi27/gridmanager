@@ -10,6 +10,16 @@ import { CustomerModal } from '../components/forms/CustomerModal';
 import { Button } from '../components/ui/Button';
 import { formatCurrency } from '../lib/formatters';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import {
+  DollarOutlined,
+  TeamOutlined,
+  AppstoreOutlined,
+  CreditCardOutlined,
+  BarChartOutlined,
+  ShopOutlined,
+  CalculatorOutlined,
+  ExclamationCircleOutlined
+} from '@ant-design/icons';
 
 interface DashboardPageProps {
   onNavigate?: (page: string) => void;
@@ -162,77 +172,49 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
     {
       name: 'Ventas',
       description: 'Gestionar ventas y facturación',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
+      icon: <DollarOutlined className="w-5 h-5" />,
       path: 'sales',
       color: 'bg-green-100 text-green-600'
     },
     {
       name: 'Clientes',
       description: 'Administrar clientes',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-      ),
+      icon: <TeamOutlined className="w-5 h-5" />,
       path: 'customers',
       color: 'bg-blue-100 text-blue-600'
     },
     {
       name: 'Productos',
       description: 'Control de inventario',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-        </svg>
-      ),
+      icon: <AppstoreOutlined className="w-5 h-5" />,
       path: 'products',
       color: 'bg-purple-100 text-purple-600'
     },
     {
       name: 'Cuentas',
       description: 'Gestión financiera',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-        </svg>
-      ),
+      icon: <CreditCardOutlined className="w-5 h-5" />,
       path: 'accounts',
       color: 'bg-amber-100 text-amber-600'
     },
     {
       name: 'Reportes',
       description: 'Análisis y estadísticas',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      ),
+      icon: <BarChartOutlined className="w-5 h-5" />,
       path: 'reports',
       color: 'bg-indigo-100 text-indigo-600'
     },
     {
       name: 'Proveedores',
       description: 'Gestión de proveedores',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-        </svg>
-      ),
+      icon: <ShopOutlined className="w-5 h-5" />,
       path: 'suppliers',
       color: 'bg-orange-100 text-orange-600'
     },
     {
       name: 'Calculadora ML',
       description: 'Calculadora MercadoLibre',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-        </svg>
-      ),
+      icon: <CalculatorOutlined className="w-5 h-5" />,
       path: 'calculator',
       color: 'bg-yellow-100 text-yellow-600'
     }
@@ -330,9 +312,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-orange-100 rounded-lg">
-                  <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.996-.833-2.464 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
+                  <ExclamationCircleOutlined className="w-5 h-5 text-orange-600" />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-orange-800">⚠️ Alerta de Stock</h3>

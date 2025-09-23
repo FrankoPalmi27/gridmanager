@@ -17,6 +17,20 @@ import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { CompleteRegistrationPage } from './pages/CompleteRegistrationPage';
 import { useAuthStore } from './store/authStore';
 import { runAutoCleanup, hasLegacyData } from './lib/dataCleanup';
+import {
+  DashboardOutlined,
+  ShoppingCartOutlined,
+  ShoppingOutlined,
+  ShopOutlined,
+  UserOutlined,
+  TeamOutlined,
+  AppstoreOutlined,
+  CreditCardOutlined,
+  BarChartOutlined,
+  CalculatorOutlined,
+  SettingOutlined,
+  LogoutOutlined
+} from '@ant-design/icons';
 
 // EMERGENCY LOG - ALWAYS FIRST
 console.log('🚨 APP.TSX LOADED - JavaScript is working!');
@@ -25,96 +39,55 @@ console.log('📍 Path:', window.location.pathname);
 console.log('🔗 Search:', window.location.search);
 
 const navigation = [
-  { 
-    name: 'Dashboard', 
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-      </svg>
-    ), 
-    component: 'dashboard' 
+  {
+    name: 'Dashboard',
+    icon: <DashboardOutlined style={{ fontSize: '20px' }} />,
+    component: 'dashboard'
   },
-  { 
-    name: 'Ventas', 
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ), 
-    component: 'sales' 
+  {
+    name: 'Ventas',
+    icon: <ShoppingCartOutlined style={{ fontSize: '20px' }} />,
+    component: 'sales'
   },
-  { 
-    name: 'Clientes', 
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-      </svg>
-    ), 
-    component: 'customers' 
+  {
+    name: 'Clientes',
+    icon: <UserOutlined style={{ fontSize: '20px' }} />,
+    component: 'customers'
   },
-  { 
-    name: 'Productos', 
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-      </svg>
-    ), 
-    component: 'products' 
+  {
+    name: 'Productos',
+    icon: <AppstoreOutlined style={{ fontSize: '20px' }} />,
+    component: 'products'
   },
-  { 
-    name: 'Proveedores', 
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-      </svg>
-    ), 
-    component: 'suppliers' 
+  {
+    name: 'Proveedores',
+    icon: <ShopOutlined style={{ fontSize: '20px' }} />,
+    component: 'suppliers'
   },
-  { 
-    name: 'Compras', 
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17M17 13v4a2 2 0 01-2 2H9a2 2 0 01-2-2v-4m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
-      </svg>
-    ), 
-    component: 'purchases' 
+  {
+    name: 'Compras',
+    icon: <ShoppingOutlined style={{ fontSize: '20px' }} />,
+    component: 'purchases'
   },
-  { 
-    name: 'Cuentas', 
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-      </svg>
-    ), 
-    component: 'accounts' 
+  {
+    name: 'Cuentas',
+    icon: <CreditCardOutlined style={{ fontSize: '20px' }} />,
+    component: 'accounts'
   },
-  { 
-    name: 'Reportes', 
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-      </svg>
-    ), 
-    component: 'reports' 
+  {
+    name: 'Reportes',
+    icon: <BarChartOutlined style={{ fontSize: '20px' }} />,
+    component: 'reports'
   },
-  { 
-    name: 'Calculadora ML', 
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-      </svg>
-    ), 
-    component: 'calculator' 
+  {
+    name: 'Calculadora ML',
+    icon: <CalculatorOutlined style={{ fontSize: '20px' }} />,
+    component: 'calculator'
   },
-  { 
-    name: 'Usuarios', 
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ), 
-    component: 'users' 
+  {
+    name: 'Usuarios',
+    icon: <SettingOutlined style={{ fontSize: '20px' }} />,
+    component: 'users'
   },
 ];
 
@@ -321,54 +294,168 @@ function App() {
   return (
     <SalesProvider>
       <div className="App">
-        <div className="min-h-screen bg-gray-50/30 flex">
+        <div className="min-h-screen flex" style={{ backgroundColor: 'var(--neutral-50)' }}>
         {/* Sidebar */}
-        <div className="w-64 bg-white border-r border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h1 className="text-lg font-semibold text-gray-900">Grid Manager</h1>
-            {user && (
-              <p className="text-xs text-gray-500 mt-1">{user.name}</p>
-            )}
+        <div className="w-72 flex flex-col" style={{
+          backgroundColor: 'var(--neutral-0)',
+          borderRight: `1px solid var(--neutral-200)`,
+          boxShadow: 'var(--shadow-card)'
+        }}>
+          <div style={{
+            padding: 'var(--spacing-6)',
+            borderBottom: `1px solid var(--neutral-200)`,
+            background: `linear-gradient(135deg, var(--primary-50) 0%, var(--neutral-0) 100%)`
+          }}>
+            <div className="flex items-center gap-3">
+              <div style={{
+                width: '32px',
+                height: '32px',
+                background: `linear-gradient(135deg, var(--primary-500), var(--primary-600))`,
+                borderRadius: 'var(--radius-lg)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <span style={{ color: 'var(--neutral-0)', fontSize: '14px', fontWeight: 'bold' }}>G</span>
+              </div>
+              <div>
+                <h1 style={{
+                  fontSize: 'var(--font-size-lg)',
+                  fontWeight: 'var(--font-weight-bold)',
+                  color: 'var(--neutral-800)',
+                  fontFamily: 'var(--font-primary)',
+                  margin: 0
+                }}>Grid Manager</h1>
+                {user && (
+                  <p style={{
+                    fontSize: 'var(--font-size-xs)',
+                    color: 'var(--neutral-500)',
+                    margin: 0,
+                    marginTop: 'var(--spacing-1)'
+                  }}>{user.name}</p>
+                )}
+              </div>
+            </div>
           </div>
 
-          <nav className="pt-6">
-            <div className="px-6 mb-4">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <nav className="flex-1 overflow-y-auto" style={{ paddingTop: 'var(--spacing-6)' }}>
+            <div style={{
+              padding: `0 var(--spacing-6)`,
+              marginBottom: 'var(--spacing-4)'
+            }}>
+              <p style={{
+                fontSize: 'var(--font-size-xs)',
+                fontWeight: 'var(--font-weight-semibold)',
+                color: 'var(--neutral-500)',
+                textTransform: 'uppercase',
+                letterSpacing: 'var(--letter-spacing-wide)',
+                margin: 0
+              }}>
                 Navegación
               </p>
             </div>
 
-            <div className="space-y-1">
+            <div style={{ paddingBottom: 'var(--spacing-6)' }}>
               {navigation.map((item) => (
                 <button
                   key={item.component}
                   onClick={() => setCurrentPage(item.component)}
-                  className={`w-full flex items-center px-6 py-2.5 text-sm font-medium transition-colors duration-150 ${
-                    currentPage === item.component
-                      ? 'bg-blue-50 border-r-2 border-blue-600 text-blue-700'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: `var(--spacing-3) var(--spacing-6)`,
+                    fontSize: 'var(--font-size-sm)',
+                    fontWeight: 'var(--font-weight-medium)',
+                    fontFamily: 'var(--font-primary)',
+                    transition: 'var(--transition-colors)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    borderRadius: currentPage === item.component ? `0 var(--radius-lg) var(--radius-lg) 0` : '0',
+                    margin: currentPage === item.component ? `0 0 var(--spacing-2) var(--spacing-3)` : `0 0 var(--spacing-1) 0`,
+                    backgroundColor: currentPage === item.component ? 'var(--primary-100)' : 'transparent',
+                    color: currentPage === item.component ? 'var(--primary-700)' : 'var(--neutral-700)',
+                    borderLeft: currentPage === item.component ? `3px solid var(--primary-500)` : '3px solid transparent',
+                    position: 'relative'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentPage !== item.component) {
+                      e.currentTarget.style.backgroundColor = 'var(--neutral-100)';
+                      e.currentTarget.style.color = 'var(--neutral-800)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentPage !== item.component) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = 'var(--neutral-700)';
+                    }
+                  }}
                 >
-                  <div className="mr-3">{item.icon}</div>
+                  <div style={{
+                    marginRight: 'var(--spacing-3)',
+                    width: '20px',
+                    height: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>{item.icon}</div>
                   {item.name}
+                  {currentPage === item.component && (
+                    <div style={{
+                      position: 'absolute',
+                      right: 'var(--spacing-4)',
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--primary-500)'
+                    }} />
+                  )}
                 </button>
               ))}
             </div>
           </nav>
 
           {/* User Section */}
-          <div className="absolute bottom-0 w-64 p-6 border-t border-gray-200">
+          <div style={{
+            padding: 'var(--spacing-6)',
+            borderTop: `1px solid var(--neutral-200)`,
+            background: 'var(--neutral-50)'
+          }}>
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-gray-600">
+              <div style={{
+                width: '40px',
+                height: '40px',
+                background: `linear-gradient(135deg, var(--secondary-500), var(--secondary-600))`,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: 'var(--shadow-xs)'
+              }}>
+                <span style={{
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: 'var(--font-weight-bold)',
+                  color: 'var(--neutral-0)'
+                }}>
                   {user?.name?.charAt(0) || 'U'}
                 </span>
               </div>
-              <div className="ml-3 flex-1">
-                <p className="text-sm font-medium text-gray-900">
+              <div style={{ marginLeft: 'var(--spacing-3)', flex: 1 }}>
+                <p style={{
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: 'var(--font-weight-medium)',
+                  color: 'var(--neutral-800)',
+                  margin: 0
+                }}>
                   {user?.name || 'Usuario'}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p style={{
+                  fontSize: 'var(--font-size-xs)',
+                  color: 'var(--neutral-500)',
+                  margin: 0,
+                  textTransform: 'capitalize'
+                }}>
                   {user?.role || 'usuario'}
                 </p>
               </div>
@@ -377,12 +464,29 @@ function App() {
                   clearAuth();
                   setCurrentPage('home');
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                style={{
+                  color: 'var(--neutral-400)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 'var(--spacing-2)',
+                  borderRadius: 'var(--radius-md)',
+                  transition: 'var(--transition-colors)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--error-500)';
+                  e.currentTarget.style.backgroundColor = 'var(--error-50)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--neutral-400)';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
                 title="Cerrar sesión"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
+                <LogoutOutlined style={{ fontSize: '16px' }} />
               </button>
             </div>
           </div>

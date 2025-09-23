@@ -7,6 +7,18 @@ import { formatCurrency } from '@lib/formatters';
 import { useSales } from '@store/SalesContext';
 import { useCustomersStore, Customer } from '@store/customersStore';
 import { useTableScroll } from '@hooks/useTableScroll';
+import {
+  TeamOutlined,
+  CheckCircleOutlined,
+  DollarOutlined,
+  PlusOutlined,
+  SearchOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  EditOutlined,
+  EyeOutlined,
+  DeleteOutlined
+} from '@ant-design/icons';
 
 
 export function CustomersPage() {
@@ -260,9 +272,7 @@ export function CustomersPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                </svg>
+                <TeamOutlined className="w-6 h-6 text-blue-600" />
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Total Clientes</h3>
@@ -274,9 +284,7 @@ export function CustomersPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-green-100 rounded-lg">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <CheckCircleOutlined className="w-6 h-6 text-green-600" />
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Clientes Activos</h3>
@@ -288,9 +296,7 @@ export function CustomersPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-green-100 rounded-lg">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
+                <DollarOutlined className="w-6 h-6 text-green-600" />
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Balance Positivo</h3>
@@ -302,9 +308,7 @@ export function CustomersPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-red-100 rounded-lg">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <PlusOutlined className="w-6 h-6 text-red-600" />
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Balance Negativo</h3>
@@ -318,9 +322,7 @@ export function CustomersPage() {
         <div className="mb-6">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              <SearchOutlined className="h-5 w-5 text-gray-400" />
             </div>
             <input
               type="text"
@@ -431,9 +433,7 @@ export function CustomersPage() {
                 )) : (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center">
-                      <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                      </svg>
+                      <TeamOutlined className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No hay clientes</h3>
                       <p className="text-gray-500 mb-4">
                         {searchTerm ? 'No se encontraron clientes con ese filtro.' : 'Comienza agregando tu primer cliente.'}
@@ -472,15 +472,11 @@ export function CustomersPage() {
                   {/* Contact Info */}
                   <div className="space-y-2 mb-3">
                     <div className="flex items-center text-sm text-gray-600">
-                      <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                      </svg>
+                      <MailOutlined className="w-4 h-4 mr-2 text-gray-400" />
                       <span className="truncate">{customer.email}</span>
                     </div>
                     <div className="flex items-center text-sm text-gray-600">
-                      <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                      </svg>
+                      <PhoneOutlined className="w-4 h-4 mr-2 text-gray-400" />
                       <span>{customer.celular || customer.phone}</span>
                     </div>
                   </div>
@@ -507,9 +503,7 @@ export function CustomersPage() {
                       className="flex-1"
                       onClick={() => handleEditCustomer(customer)}
                     >
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
+                      <EditOutlined className="w-4 h-4 mr-1" />
                       Editar
                     </Button>
                     <Button
@@ -518,10 +512,7 @@ export function CustomersPage() {
                       className="flex-1"
                       onClick={() => handleViewCustomer(customer)}
                     >
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
+                      <EyeOutlined className="w-4 h-4 mr-1" />
                       Ver
                     </Button>
                     <Button
@@ -530,9 +521,7 @@ export function CustomersPage() {
                       className="flex-1 text-red-600 border-red-600 hover:bg-red-50"
                       onClick={() => handleDeleteCustomer(customer)}
                     >
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                      <DeleteOutlined className="w-4 h-4 mr-1" />
                       Eliminar
                     </Button>
                   </div>

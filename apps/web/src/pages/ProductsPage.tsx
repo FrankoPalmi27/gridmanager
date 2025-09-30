@@ -180,32 +180,37 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Productos</h1>
-            <p className="text-gray-600">Gestiona tu catálogo de productos y stock</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Productos</h1>
+            <p className="text-sm sm:text-base text-gray-600">Gestiona tu catálogo de productos y stock</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             {activeTab === 'productos' ? (
               <>
                 <Button
                   onClick={() => setShowBulkImport(true)}
                   variant="outline"
-                  className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                  size="sm"
+                  className="text-orange-600 border-orange-600 hover:bg-orange-50 w-full sm:w-auto"
                 >
                   Importar CSV
                 </Button>
                 <Button
                   onClick={() => setIsCategoryModalOpen(true)}
                   variant="secondary"
+                  size="sm"
+                  className="w-full sm:w-auto"
                 >
                   Gestionar Categorías
                 </Button>
                 <Button
                   onClick={handleNewProduct}
                   variant="primary"
+                  size="sm"
+                  className="w-full sm:w-auto"
                 >
                   + Nuevo Producto
                 </Button>
@@ -222,6 +227,8 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                   setCategories([...categories, newCategory]);
                 }}
                 variant="primary"
+                size="sm"
+                className="w-full sm:w-auto"
               >
                 + Nueva Categoría
               </Button>
@@ -276,51 +283,51 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200">
             <div className="flex items-center">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <AppstoreOutlined className="w-6 h-6 text-blue-600" />
+              <div className="p-2 sm:p-3 bg-blue-100 rounded-lg flex-shrink-0">
+                <AppstoreOutlined className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-500">Total Productos</p>
-                <p className="text-lg font-semibold text-gray-900">{stats.totalProducts}</p>
+              <div className="ml-3 sm:ml-4 min-w-0">
+                <p className="text-xs sm:text-sm text-gray-500 truncate">Total Productos</p>
+                <p className="text-base sm:text-lg font-semibold text-gray-900">{stats.totalProducts}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200">
             <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <CheckCircleOutlined className="w-6 h-6 text-green-600" />
+              <div className="p-2 sm:p-3 bg-green-100 rounded-lg flex-shrink-0">
+                <CheckCircleOutlined className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-500">Productos Activos</p>
-                <p className="text-lg font-semibold text-gray-900">{stats.activeProducts}</p>
+              <div className="ml-3 sm:ml-4 min-w-0">
+                <p className="text-xs sm:text-sm text-gray-500 truncate">Productos Activos</p>
+                <p className="text-base sm:text-lg font-semibold text-gray-900">{stats.activeProducts}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200">
             <div className="flex items-center">
-              <div className="p-3 bg-red-100 rounded-lg">
-                <ExclamationCircleOutlined className="w-6 h-6 text-red-600" />
+              <div className="p-2 sm:p-3 bg-red-100 rounded-lg flex-shrink-0">
+                <ExclamationCircleOutlined className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-500">Stock Bajo</p>
-                <p className="text-lg font-semibold text-red-600">{stats.lowStockProducts}</p>
+              <div className="ml-3 sm:ml-4 min-w-0">
+                <p className="text-xs sm:text-sm text-gray-500 truncate">Stock Bajo</p>
+                <p className="text-base sm:text-lg font-semibold text-red-600">{stats.lowStockProducts}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200">
             <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <DollarOutlined className="w-6 h-6 text-green-600" />
+              <div className="p-2 sm:p-3 bg-green-100 rounded-lg flex-shrink-0">
+                <DollarOutlined className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-500">Valor Inventario</p>
-                <p className="text-lg font-semibold text-green-600">{formatCurrency(stats.totalValue)}</p>
+              <div className="ml-3 sm:ml-4 min-w-0">
+                <p className="text-xs sm:text-sm text-gray-500 truncate">Valor Inventario</p>
+                <p className="text-base sm:text-lg font-semibold text-green-600">{formatCurrency(stats.totalValue)}</p>
               </div>
             </div>
           </div>
@@ -342,7 +349,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             {allCategories.map(category => (
               <option key={category} value={category}>
@@ -354,12 +361,12 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
 
         {/* Products Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Lista de Productos</h3>
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Lista de Productos</h3>
           </div>
-          
-          {/* Scrollable table container with fixed height and vertical scroll */}
-          <div className="relative">
+
+          {/* Desktop Table - Hidden on mobile */}
+          <div className="hidden lg:block relative">
             <div
               ref={tableScrollRef}
               className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
@@ -611,6 +618,114 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                 <span className="text-gray-400">
                   {sortedAndFilteredProducts.length} producto{sortedAndFilteredProducts.length !== 1 ? 's' : ''}
                 </span>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Cards - Shown on mobile/tablet only */}
+          <div className="lg:hidden p-4 space-y-4">
+            {sortedAndFilteredProducts.length > 0 ? (
+              sortedAndFilteredProducts.map((product) => {
+                const margin = product.price > 0 && product.cost > 0
+                  ? ((product.price - product.cost) / product.price * 100).toFixed(1)
+                  : '0';
+                const marginColor = parseFloat(margin) >= 30 ? 'text-green-600'
+                  : parseFloat(margin) >= 15 ? 'text-yellow-600'
+                  : 'text-red-600';
+
+                return (
+                  <div key={product.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                    {/* Header with name and status */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold text-gray-900 truncate mb-1">
+                          {product.name}
+                        </h3>
+                        <p className="text-xs text-gray-500">SKU: {product.sku}</p>
+                      </div>
+                      <StatusBadge variant={product.status === 'active' ? 'active' : 'inactive'} dot>
+                        {product.status === 'active' ? 'Activo' : 'Inactivo'}
+                      </StatusBadge>
+                    </div>
+
+                    {/* Product details grid */}
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <p className="text-xs text-gray-500">Categoría</p>
+                        <p className="text-sm font-medium text-gray-900">{product.category}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Marca</p>
+                        <p className="text-sm font-medium text-gray-900">{product.brand}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Costo</p>
+                        <p className="text-sm font-medium text-gray-900">{formatCurrency(product.cost)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Precio Venta</p>
+                        <p className="text-sm font-medium text-gray-900">{formatCurrency(product.price)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Stock</p>
+                        <div className="flex items-center gap-2">
+                          <p className={`text-sm font-bold ${product.stock <= product.minStock ? 'text-red-600' : 'text-gray-900'}`}>
+                            {product.stock}
+                          </p>
+                          <StockStatusBadge currentStock={product.stock} minStock={product.minStock} />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Margen</p>
+                        <p className={`text-sm font-bold ${marginColor}`}>{margin}%</p>
+                      </div>
+                    </div>
+
+                    {/* Description if available */}
+                    {product.description && (
+                      <div className="mb-3">
+                        <p className="text-xs text-gray-500">Descripción</p>
+                        <p className="text-sm text-gray-700 line-clamp-2">{product.description}</p>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50 touch-target"
+                        onClick={() => handleEditProduct(product)}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-green-600 border-green-600 hover:bg-green-50 touch-target"
+                        onClick={() => handleStockAdjustment(product)}
+                      >
+                        Stock
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-purple-600 border-purple-600 hover:bg-purple-50 touch-target"
+                        onClick={() => handleViewStockMovements(product)}
+                      >
+                        Movimientos
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-12">
+                <AppstoreOutlined className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-base font-medium text-gray-900 mb-2">No hay productos</h3>
+                <p className="text-sm text-gray-500">
+                  {searchTerm || categoryFilter !== 'all' ? 'No se encontraron productos con esos filtros.' : 'Comienza agregando tu primer producto.'}
+                </p>
               </div>
             )}
           </div>

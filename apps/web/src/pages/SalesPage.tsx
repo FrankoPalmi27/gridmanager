@@ -572,34 +572,36 @@ export function SalesPage() {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Ventas</h1>
-            <p className="text-gray-600">Gestiona tus ventas, presupuestos y clientes</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Ventas</h1>
+            <p className="text-sm sm:text-base text-gray-600">Gestiona tus ventas, presupuestos y clientes</p>
           </div>
-          <Button 
+          <Button
             onClick={() => {
               setEditingSale(null);
               setIsNewSaleModalOpen(true);
             }}
             variant="primary"
+            size="sm"
+            className="w-full sm:w-auto"
           >
             + Nueva Venta
           </Button>
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Total Ventas Hoy */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <DollarOutlined className="w-6 h-6 text-blue-600" />
+              <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                <DollarOutlined className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
               </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">Ventas Hoy</h3>
+              <div className="ml-3 sm:ml-4 min-w-0">
+                <h3 className="text-xs sm:text-sm font-medium text-gray-500 truncate">Ventas Hoy</h3>
                 <p className="text-2xl font-bold text-gray-900">
                   {formatCurrency(migratedSales.filter(sale => {
                     const today = new Date().toISOString().split('T')[0];
@@ -709,11 +711,12 @@ export function SalesPage() {
 
         {/* Sales Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Lista de Ventas</h3>
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Lista de Ventas</h3>
           </div>
-        
-          <div className="relative">
+
+          {/* Desktop Table - Hidden on mobile */}
+          <div className="hidden lg:block relative">
             <div
               ref={tableScrollRef}
               className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
@@ -898,31 +901,158 @@ export function SalesPage() {
               ))}
             </tbody>
           </table>
+
+          {filteredAndSortedSales.length === 0 && (
+            <div className="text-center py-12">
+              <DollarOutlined className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No hay ventas</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {searchTerm || activeFilter !== 'all' ? 'No se encontraron ventas con esos filtros.' : 'Comienza registrando tu primera venta.'}
+              </p>
+              <div className="mt-6">
+                <Button
+                  onClick={() => {
+                    setEditingSale(null);
+                    setIsNewSaleModalOpen(true);
+                  }}
+                  variant="primary"
+                  className="inline-flex items-center gap-2"
+                >
+                  <PlusOutlined className="h-5 w-5" />
+                  Nueva Venta
+                </Button>
+              </div>
+            </div>
+          )}
             </div>
           </div>
 
-        {filteredAndSortedSales.length === 0 && (
-          <div className="text-center py-12">
-            <DollarOutlined className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No hay ventas</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              {searchTerm || activeFilter !== 'all' ? 'No se encontraron ventas con esos filtros.' : 'Comienza registrando tu primera venta.'}
-            </p>
-            <div className="mt-6">
-              <Button 
-                onClick={() => {
-                  setEditingSale(null);
-                  setIsNewSaleModalOpen(true);
-                }}
-                variant="primary"
-                className="inline-flex items-center gap-2"
-              >
-                <PlusOutlined className="h-5 w-5" />
-                Nueva Venta
-              </Button>
-            </div>
+          {/* Mobile Cards - Shown on mobile/tablet only */}
+          <div className="lg:hidden p-4 space-y-4">
+            {filteredAndSortedSales.length > 0 ? (
+              filteredAndSortedSales.map((sale) => (
+                <div key={sale.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                  {/* Header with sale number and status */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handlePreviewPDF(sale)}
+                          className="w-8 h-8 bg-blue-100 hover:bg-blue-200 rounded-lg flex items-center justify-center flex-shrink-0"
+                          title="Previsualizar PDF"
+                        >
+                          <FileTextOutlined className="w-4 h-4 text-blue-600" />
+                        </Button>
+                        <h3 className="text-sm font-semibold text-gray-900 truncate">
+                          {sale.number}
+                        </h3>
+                      </div>
+                      <p className="text-xs text-gray-500">{sale.client.name}</p>
+                    </div>
+                    <StatusDropdown sale={sale} />
+                  </div>
+
+                  {/* Sale details grid */}
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <p className="text-xs text-gray-500">Fecha</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {new Date(sale.date).toLocaleDateString('es-AR')}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Items</p>
+                      <p className="text-sm font-medium text-gray-900">{sale.items} productos</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Total</p>
+                      <p className="text-base font-bold text-gray-900">{formatCurrency(sale.amount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Canal</p>
+                      <p className="text-sm font-medium text-gray-900 capitalize">
+                        {sale.salesChannel === 'store' ? 'Tienda' :
+                         sale.salesChannel === 'online' ? 'Online' :
+                         sale.salesChannel === 'phone' ? 'Teléfono' :
+                         sale.salesChannel === 'whatsapp' ? 'WhatsApp' : 'Otro'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Cobrado</p>
+                      <p className="text-sm font-medium text-green-600">{formatCurrency(sale.cobrado || 0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">A Cobrar</p>
+                      <p className="text-sm font-medium text-orange-600">{formatCurrency(sale.aCobrar || 0)}</p>
+                    </div>
+                  </div>
+
+                  {/* Payment method */}
+                  {sale.paymentMethod && (
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-500">Método de pago</p>
+                      <p className="text-sm font-medium text-gray-900 capitalize">
+                        {sale.paymentMethod === 'cash' ? 'Efectivo' :
+                         sale.paymentMethod === 'transfer' ? 'Transferencia' :
+                         sale.paymentMethod === 'card' ? 'Tarjeta' :
+                         sale.paymentMethod === 'check' ? 'Cheque' : 'Otro'}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50 touch-target"
+                      onClick={() => handleEditSale(sale)}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-green-600 border-green-600 hover:bg-green-50 touch-target"
+                    >
+                      Facturar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-red-600 border-red-600 hover:bg-red-50 touch-target"
+                      onClick={() => handleDeleteSale(sale)}
+                    >
+                      Eliminar
+                    </Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <DollarOutlined className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-base font-medium text-gray-900 mb-2">No hay ventas</h3>
+                <p className="text-sm text-gray-500">
+                  {searchTerm || activeFilter !== 'all' ? 'No se encontraron ventas con esos filtros.' : 'Comienza registrando tu primera venta.'}
+                </p>
+                <div className="mt-6">
+                  <Button
+                    onClick={() => {
+                      setEditingSale(null);
+                      setIsNewSaleModalOpen(true);
+                    }}
+                    variant="primary"
+                    className="inline-flex items-center gap-2"
+                  >
+                    <PlusOutlined className="h-5 w-5" />
+                    Nueva Venta
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
-        )}
         </div>
       </div>
       

@@ -691,3 +691,46 @@ textarea.input {
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background-color: rgba(156, 163, 175, 0.7);
 }
+
+/* Mobile Responsive Utilities */
+@layer utilities {
+  /* Touch-friendly minimum sizes */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Mobile card component */
+  .mobile-card {
+    @apply bg-white rounded-lg shadow-sm p-4 border border-gray-200;
+  }
+
+  /* Hide on mobile, show on desktop */
+  .mobile-hidden {
+    @apply hidden md:block;
+  }
+
+  /* Show on mobile, hide on desktop */
+  .mobile-only {
+    @apply block md:hidden;
+  }
+
+  /* Responsive text truncation */
+  .truncate-mobile {
+    @apply truncate sm:whitespace-normal;
+  }
+
+  /* Mobile-friendly spacing */
+  .mobile-spacing {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Responsive grid auto-fit */
+  .grid-responsive {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
+  }
+
+  /* Stack buttons vertically on mobile */
+  .btn-stack-mobile {
+    @apply flex flex-col sm:flex-row gap-2;
+  }
+}

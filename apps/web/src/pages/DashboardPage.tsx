@@ -222,30 +222,30 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50/30">
-      <div className="p-6 max-w-7xl mx-auto space-y-8">
-        
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 sm:space-y-8">
+
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Panel de Control</h1>
-          <p className="text-gray-600">Resumen de tu negocio en tiempo real</p>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Panel de Control</h1>
+          <p className="text-sm sm:text-base text-gray-600">Resumen de tu negocio en tiempo real</p>
         </div>
 
         {/* Exchange Rate - Moved to top */}
         {exchangeRate && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-2xl border border-blue-200 shadow-sm mb-8">
-            <div className="flex items-center justify-between">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 sm:p-6 rounded-2xl border border-blue-200 shadow-sm mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">💵 Tipo de Cambio USD - Banco Nación</h3>
-                <p className="text-sm text-gray-600">Actualizado: {exchangeRate.fecha} a las {exchangeRate.hora}</p>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">💵 Tipo de Cambio USD - Banco Nación</h3>
+                <p className="text-xs sm:text-sm text-gray-600">Actualizado: {exchangeRate.fecha} a las {exchangeRate.hora}</p>
               </div>
-              <div className="flex gap-6">
+              <div className="flex gap-4 sm:gap-6">
                 <div className="text-center">
-                  <p className="text-sm text-gray-600">Compra</p>
-                  <p className="text-2xl font-bold text-green-600">${exchangeRate.compra.toFixed(2)}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Compra</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-600">${exchangeRate.compra.toFixed(2)}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-gray-600">Venta</p>
-                  <p className="text-2xl font-bold text-blue-600">${exchangeRate.venta.toFixed(2)}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Venta</p>
+                  <p className="text-xl sm:text-2xl font-bold text-blue-600">${exchangeRate.venta.toFixed(2)}</p>
                 </div>
               </div>
             </div>
@@ -253,7 +253,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
         )}
 
         {/* Enhanced Stats Cards - Responsive Fixed Layout */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 mb-6 sm:mb-8">
           {enhancedStats.map((stat, index) => {
             // Determine click handler and styling based on card name
             let clickHandler, cursorStyle;
@@ -366,18 +366,18 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
         )}
 
         {/* Quick Actions */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-8">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-sm mb-6 sm:mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">⚡ Acciones Rápidas</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">⚡ Acciones Rápidas</h3>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Button 
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            <Button
               onClick={() => setShowNewSaleModal(true)}
               variant="outline"
-              className="flex flex-col items-center p-4 h-auto bg-green-50 hover:bg-green-100 border-green-200 text-gray-700"
+              className="flex flex-col items-center p-3 sm:p-4 h-auto bg-green-50 hover:bg-green-100 border-green-200 text-gray-700 touch-target"
             >
-              <span className="text-2xl mb-2">💰</span>
-              <span className="text-sm font-medium">Nueva Venta</span>
+              <span className="text-xl sm:text-2xl mb-1 sm:mb-2">💰</span>
+              <span className="text-xs sm:text-sm font-medium">Nueva Venta</span>
             </Button>
             <Button 
               onClick={() => setShowNewCustomerModal(true)}
@@ -407,14 +407,14 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
         </div>
 
         {/* Sales Evolution Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Sales by Amount Chart */}
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-sm">
             <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">📈 Evolución de Ventas por Facturado</h3>
-              <p className="text-sm text-gray-500">Últimos 30 días - Total facturado por día</p>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">📈 Evolución de Ventas por Facturado</h3>
+              <p className="text-xs sm:text-sm text-gray-500">Últimos 30 días - Total facturado por día</p>
             </div>
-            <div className="h-64">
+            <div className="h-48 sm:h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={salesEvolutionData}>
                   <CartesianGrid strokeDasharray="3 3" />

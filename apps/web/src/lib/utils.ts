@@ -1,44 +1,34 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+/**
+ * Re-export all formatters for backward compatibility
+ * All formatting functions are now centralized in formatters.ts
+ */
+export * from './formatters';
+
+/**
+ * Re-export translations for convenience
+ */
+export * from './translations';
+
+/**
+ * ============================================
+ * GENERAL UTILITIES (NON-FORMATTING)
+ * ============================================
+ */
+
+/**
+ * Tailwind utility for merging CSS classes
+ */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// formatCurrency moved to formatters.ts to avoid duplication
-
-export function formatNumber(
-  value: number,
-  locale: string = 'es-AR'
-) {
-  return new Intl.NumberFormat(locale).format(value);
-}
-
-export function formatDate(
-  date: string | Date,
-  options: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }
-) {
-  return new Intl.DateTimeFormat('es-AR', options).format(new Date(date));
-}
-
-export function formatDateTime(date: string | Date) {
-  return new Intl.DateTimeFormat('es-AR', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(date));
-}
-
-export function capitalizeFirst(str: string) {
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-}
-
+/**
+ * Get status badge configuration (label + CSS class)
+ * Used for UI components that need styled status badges
+ */
 export function getStatusBadge(status: string) {
   const statusMap = {
     ACTIVE: { label: 'Activo', class: 'badge-success' },
@@ -54,12 +44,16 @@ export function getStatusBadge(status: string) {
     COMPLETED: { label: 'Completada', class: 'badge-success' },
   };
 
-  return statusMap[status as keyof typeof statusMap] || { 
-    label: status, 
-    class: 'badge-gray' 
+  return statusMap[status as keyof typeof statusMap] || {
+    label: status,
+    class: 'badge-gray'
   };
 }
 
+/**
+ * Get user role label (translated)
+ * @deprecated Use translateUserRole from translations.ts instead
+ */
 export function getUserRoleLabel(role: string) {
   const roleMap = {
     ADMIN: 'Administrador',
@@ -71,6 +65,10 @@ export function getUserRoleLabel(role: string) {
   return roleMap[role as keyof typeof roleMap] || role;
 }
 
+/**
+ * Debounce function for delaying execution
+ * @deprecated Consider using useDebounce hook for React components
+ */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
@@ -82,6 +80,10 @@ export function debounce<T extends (...args: any[]) => any>(
   };
 }
 
+/**
+ * Generate pagination array with ellipsis
+ * Used for pagination components
+ */
 export function generatePagination(
   currentPage: number,
   totalPages: number,
@@ -115,11 +117,14 @@ export function generatePagination(
   return rangeWithDots;
 }
 
+/**
+ * Download data as CSV file
+ */
 export function downloadCSV(data: any[], filename: string) {
   const csvContent = convertToCSV(data);
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
-  
+
   if (link.download !== undefined) {
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
@@ -131,6 +136,10 @@ export function downloadCSV(data: any[], filename: string) {
   }
 }
 
+/**
+ * Convert array of objects to CSV string
+ * @private
+ */
 function convertToCSV(data: any[]): string {
   if (data.length === 0) return '';
 

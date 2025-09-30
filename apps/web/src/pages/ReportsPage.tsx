@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '../components/ui/Button';
 import { formatCurrency, formatDate } from '../lib/formatters';
-import { useSales } from '../store/SalesContext';
+import { useSalesStore } from '../store/salesStore';
 import { useCustomersStore } from '../store/customersStore';
 import { useProductsStore } from '../store/productsStore';
 import { useAccountsStore } from '../store/accountsStore';
@@ -356,7 +356,7 @@ export function ReportsPage() {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Get real data from stores
-  const { sales, dashboardStats } = useSales();
+  const { sales, dashboardStats } = useSalesStore();
   const { customers } = useCustomersStore();
   const { products } = useProductsStore();
   const { accounts, transactions } = useAccountsStore();

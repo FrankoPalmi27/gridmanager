@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useSales } from '../store/SalesContext';
+import { useSalesStore } from '../store/salesStore';
 import { useCustomersStore } from '../store/customersStore';
 import { useProductsStore } from '../store/productsStore';
 import { useAccountsStore } from '../store/accountsStore';
@@ -11,7 +11,7 @@ import { useSuppliersStore } from '../store/suppliersStore';
  * Reemplaza el polling manual y los acumuladores desactualizados
  */
 export const useMetrics = (period?: string) => {
-  const { sales } = useSales();
+  const { sales } = useSalesStore();
   const { customers } = useCustomersStore();
   const { products } = useProductsStore();
   const { accounts, transactions } = useAccountsStore();

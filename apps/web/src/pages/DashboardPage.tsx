@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSales } from '../store/SalesContext';
+import { useSalesStore } from '../store/salesStore';
 import { useProductsStore } from '../store/productsStore';
 import { useCustomersStore } from '../store/customersStore';
 import { useSuppliersStore } from '../store/suppliersStore';
@@ -40,7 +40,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
 
   // ✅ SOLUCIÓN: Usar hook centralizado en lugar de estado local desincronizado
   const metrics = useMetrics(); // Sin período = datos globales
-  const { dashboardStats, sales } = useSales();
+  const { dashboardStats, sales } = useSalesStore();
   const { products } = useProductsStore();
   const { customers } = useCustomersStore();
   const { suppliers } = useSuppliersStore();

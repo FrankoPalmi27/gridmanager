@@ -23,7 +23,7 @@ import { Button } from '@ui/Button';
 import { SaleStatusBadge } from '@ui/StatusBadge';
 import { SalesForm } from '@forms/SalesForm';
 import { formatCurrency } from '@lib/formatters';
-import { useSales } from '@store/SalesContext';
+import { useSalesStore } from '@store/salesStore';
 import { useProductsStore } from '@store/productsStore';
 import { useTableScroll } from '@hooks/useTableScroll';
 
@@ -61,7 +61,7 @@ function MiniSparkline({ data }: { data: number[] }) {
 // Quick actions dropdown
 function QuickActions({ sale, onEdit }: { sale: any; onEdit: (sale: any) => void }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { updateSaleStatus, deleteSale } = useSales();
+  const { updateSaleStatus, deleteSale } = useSalesStore();
 
   const handleDeleteSale = () => {
     if (window.confirm(`¿Estás seguro de que deseas eliminar la venta ${sale.number}? Esta acción no se puede deshacer.`)) {
@@ -143,7 +143,7 @@ type SortOrder = 'asc' | 'desc';
 
 // Status dropdown component
 function StatusDropdown({ sale }: { sale: any }) {
-  const { updateSaleStatus } = useSales();
+  const { updateSaleStatus } = useSalesStore();
   
   const handleStatusChange = (newStatus: 'completed' | 'pending' | 'cancelled') => {
     updateSaleStatus(sale.id, newStatus);
@@ -181,7 +181,7 @@ export function SalesPage() {
   const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
   
   // Get real sales data from context
-  const { sales, deleteSale } = useSales();
+  const { sales, deleteSale } = useSalesStore();
   const { products } = useProductsStore();
   
   // Migrate existing sales to include new payment fields if missing

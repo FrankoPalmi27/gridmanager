@@ -72,7 +72,8 @@
       "Bash(PORT=3001 npm run dev)",
       "WebFetch(domain:gridmanager-production.up.railway.app)",
       "WebFetch(domain:obsidiangridmanager.netlify.app)",
-      "WebFetch(domain:accounts.google.com)"
+      "WebFetch(domain:accounts.google.com)",
+      "Bash(git merge:*)"
     ],
     "deny": [],
     "ask": []

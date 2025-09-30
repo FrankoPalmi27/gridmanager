@@ -1,10 +1,14 @@
-import { useState, useEffect } from 'react';
+import { create } from 'zustand';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
 import { useAccountsStore } from './accountsStore';
 import { useProductsStore } from './productsStore';
 import { useSystemConfigStore } from './systemConfigStore';
+import { useCustomersStore } from './customersStore';
 
-// Tipo para las ventas
+// ============================================
+// TYPES & INTERFACES
+// ============================================
+
 export interface Sale {
   id: number;
   number: string;
@@ -22,63 +26,115 @@ export interface Sale {
     initials: string;
   };
   sparkline?: number[];
-  // Nuevos campos para canal de venta y estado de pago
+  // Sales channel and payment info
   salesChannel?: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
   paymentStatus?: 'paid' | 'pending' | 'partial';
   paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other';
   accountId?: string; // ID de la cuenta donde se registró el pago
-  // Nuevos campos de tracking de pagos
+  // Payment tracking
   cobrado: number; // Monto cobrado
   aCobrar: number; // Monto pendiente de cobro
-  // Integración con inventario
+  // Inventory integration
   productId?: string; // ID del producto vendido
   productName?: string; // Nombre del producto para referencia
 }
 
-// Estado inicial del dashboard - LIMPIO
-export const initialDashboardStats = {
+export interface DashboardStats {
+  totalSales: number;
+  totalTransactions: number;
+  averagePerDay: number;
+  monthlyGrowth: number;
+}
+
+interface StockValidationResult {
+  valid: boolean;
+  message?: string;
+  currentStock?: number;
+  allowNegative?: boolean;
+  severity?: 'error' | 'warning' | 'info';
+}
+
+interface AddSaleData {
+  client: string;
+  product: string;
+  productId: string;
+  quantity: number;
+  price: number;
+  salesChannel?: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
+  paymentStatus?: 'paid' | 'pending' | 'partial';
+  paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other';
+  accountId?: string;
+}
+
+interface UpdateSaleData {
+  client: string;
+  product: string;
+  quantity: number;
+  price: number;
+  salesChannel?: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
+  paymentStatus?: 'paid' | 'pending' | 'partial';
+  paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other';
+  accountId?: string;
+}
+
+interface SalesStore {
+  // State
+  sales: Sale[];
+  dashboardStats: DashboardStats;
+
+  // Actions
+  addSale: (saleData: AddSaleData) => Sale;
+  updateSale: (saleId: number, updatedData: UpdateSaleData) => void;
+  updateSaleStatus: (saleId: number, newStatus: 'completed' | 'pending' | 'cancelled') => void;
+  deleteSale: (saleId: number) => void;
+  updateDashboardStats: (newStats: Partial<DashboardStats>) => void;
+  setSales: (sales: Sale[]) => void;
+  validateStock: (productId: string, quantity: number) => StockValidationResult;
+}
+
+// ============================================
+// INITIAL STATE
+// ============================================
+
+const initialDashboardStats: DashboardStats = {
   totalSales: 0,
   totalTransactions: 0,
   averagePerDay: 0,
   monthlyGrowth: 0
 };
 
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
 
-// Hook personalizado para manejar las ventas
-export const useSalesStore = () => {
-  const [dashboardStats, setDashboardStats] = useState(() => 
-    loadFromStorage(STORAGE_KEYS.DASHBOARD_STATS, initialDashboardStats)
-  );
-  const [sales, setSales] = useState<Sale[]>(() => 
-    loadFromStorage(STORAGE_KEYS.SALES, [])
-  );
-  
-  // Hook para manejar transacciones enlazadas
-  const { addLinkedTransaction, removeLinkedTransactions } = useAccountsStore();
-  
-  // Hook para manejar inventario
-  const { products, updateStockWithMovement, getProductById } = useProductsStore();
+const generateAvatar = (name: string): string => {
+  return name
+    .split(' ')
+    .map(n => n.charAt(0))
+    .join('')
+    .toUpperCase();
+};
 
-  // Hook para configuración del sistema
-  const { isNegativeStockAllowed } = useSystemConfigStore();
+// ============================================
+// ZUSTAND STORE
+// ============================================
 
-  // Save to localStorage whenever sales or stats change
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.SALES, sales);
-  }, [sales]);
+export const useSalesStore = create<SalesStore>((set, get) => ({
+  // ============================================
+  // INITIAL STATE
+  // ============================================
 
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, dashboardStats);
-  }, [dashboardStats]);
+  sales: loadFromStorage(STORAGE_KEYS.SALES, []),
+  dashboardStats: loadFromStorage(STORAGE_KEYS.DASHBOARD_STATS, initialDashboardStats),
 
-  // ✅ FUNCIÓN DE VALIDACIÓN DE STOCK MEJORADA
-  const validateStock = (productId: string, quantity: number): {
-    valid: boolean;
-    message?: string;
-    currentStock?: number;
-    allowNegative?: boolean;
-    severity?: 'error' | 'warning' | 'info';
-  } => {
+  // ============================================
+  // STOCK VALIDATION
+  // ============================================
+
+  validateStock: (productId: string, quantity: number): StockValidationResult => {
+    const { getProductById } = useProductsStore.getState();
+    const { isNegativeStockAllowed } = useSystemConfigStore.getState();
+
     const product = getProductById(productId);
     if (!product) {
       return {
@@ -120,23 +176,22 @@ export const useSalesStore = () => {
         severity: 'warning'
       };
     }
-  };
+  },
 
-  const addSale = (saleData: {
-    client: string;
-    product: string;
-    productId: string; // Nuevo campo requerido
-    quantity: number;
-    price: number;
-    salesChannel?: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
-    paymentStatus?: 'paid' | 'pending' | 'partial';
-    paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other';
-    accountId?: string;
-  }) => {
-    // ✅ VALIDACIÓN CRÍTICA DE STOCK MEJORADA
+  // ============================================
+  // ADD SALE
+  // ============================================
+
+  addSale: (saleData: AddSaleData) => {
+    const { validateStock } = get();
+    const { updateStockWithMovement } = useProductsStore.getState();
+    const { addLinkedTransaction } = useAccountsStore.getState();
+    const { getCustomerByName, updateCustomerBalance } = useCustomersStore.getState();
+
+    // ✅ VALIDACIÓN CRÍTICA DE STOCK
     const stockValidation = validateStock(saleData.productId, saleData.quantity);
 
-    // Log de auditoría para todas las validaciones de stock
+    // Log de auditoría
     console.log('Stock validation result:', {
       productId: saleData.productId,
       quantity: saleData.quantity,
@@ -145,19 +200,15 @@ export const useSalesStore = () => {
     });
 
     if (!stockValidation.valid) {
-      // Stock insuficiente y NO permitido stock negativo
       throw new Error(stockValidation.message || 'Stock insuficiente');
     }
 
-    // Generate client avatar (initials)
-    const generateAvatar = (name: string) => {
-      return name.split(' ').map(n => n.charAt(0)).join('').toUpperCase();
-    };
-    
+    const state = get();
     const totalAmount = saleData.quantity * saleData.price;
+
     const newSale: Sale = {
       id: Date.now(),
-      number: `VTA-2024-${String(sales.length + 1).padStart(3, '0')}`,
+      number: `VTA-2024-${String(state.sales.length + 1).padStart(3, '0')}`,
       client: {
         name: saleData.client,
         email: `${saleData.client.toLowerCase().replace(' ', '.')}@email.com`,
@@ -172,21 +223,15 @@ export const useSalesStore = () => {
         initials: 'UA'
       },
       sparkline: [50, 80, 120, 150, totalAmount / 100],
-      // Nuevos campos
       salesChannel: saleData.salesChannel || 'store',
       paymentStatus: saleData.paymentStatus || 'pending',
       paymentMethod: saleData.paymentMethod || 'cash',
       accountId: saleData.accountId,
-      // Inicializar campos de tracking de pagos
       cobrado: saleData.paymentStatus === 'paid' ? totalAmount : 0,
       aCobrar: saleData.paymentStatus === 'paid' ? 0 : totalAmount,
-      // Integración con inventario
       productId: saleData.productId,
       productName: saleData.product
     };
-
-    // Agregar la nueva venta
-    setSales(prev => [newSale, ...prev]);
 
     // 🔥 ACTUALIZACIÓN AUTOMÁTICA DE INVENTARIO
     try {
@@ -197,24 +242,48 @@ export const useSalesStore = () => {
         newSale.number
       );
     } catch (error) {
-      // Si falla la actualización de stock, revertir la venta
-      setSales(prev => prev.filter(sale => sale.id !== newSale.id));
       throw new Error(`Error actualizando inventario: ${error}`);
     }
 
-    // Actualizar estadísticas del dashboard
-    setDashboardStats(prev => ({
-      totalSales: prev.totalSales + newSale.amount,
-      totalTransactions: prev.totalTransactions + 1,
-      averagePerDay: Math.round((prev.totalSales + newSale.amount) / 30),
-      monthlyGrowth: prev.monthlyGrowth + 0.1 // Pequeño incremento
-    }));
+    // Actualizar state con nueva venta y stats
+    set((state) => {
+      const newSales = [newSale, ...state.sales];
+      const newStats = {
+        totalSales: state.dashboardStats.totalSales + newSale.amount,
+        totalTransactions: state.dashboardStats.totalTransactions + 1,
+        averagePerDay: Math.round((state.dashboardStats.totalSales + newSale.amount) / 30),
+        monthlyGrowth: state.dashboardStats.monthlyGrowth + 0.1
+      };
 
-    // Si el pago está marcado como pagado y se especificó una cuenta, crear transacción enlazada
+      saveToStorage(STORAGE_KEYS.SALES, newSales);
+      saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, newStats);
+
+      return {
+        sales: newSales,
+        dashboardStats: newStats
+      };
+    });
+
+    // 🔥 INTEGRACIÓN: Actualizar balance del cliente (cuenta corriente)
+    try {
+      const customer = getCustomerByName(saleData.client);
+      if (customer) {
+        // Si la venta está pendiente o parcial, aumenta la deuda del cliente (balance negativo)
+        if (saleData.paymentStatus === 'pending' || saleData.paymentStatus === 'partial') {
+          updateCustomerBalance(customer.id, -totalAmount); // Balance negativo = debe al negocio
+        }
+        // Si está pagado, no afecta el balance (ya fue cobrado)
+      }
+    } catch (error) {
+      console.error('Error actualizando balance de cliente:', error);
+      // No lanzar error para no bloquear la venta
+    }
+
+    // Si el pago está marcado como pagado, crear transacción enlazada
     if (saleData.paymentStatus === 'paid' && saleData.accountId) {
       addLinkedTransaction(
-        saleData.accountId, 
-        newSale.amount, 
+        saleData.accountId,
+        newSale.amount,
         `Venta ${newSale.number} - ${saleData.client}`,
         {
           type: 'sale',
@@ -225,145 +294,163 @@ export const useSalesStore = () => {
     }
 
     return newSale;
-  };
+  },
 
-  const updateDashboardStats = (newStats: Partial<typeof initialDashboardStats>) => {
-    setDashboardStats(prev => ({ ...prev, ...newStats }));
-  };
+  // ============================================
+  // UPDATE SALE
+  // ============================================
 
-  const updateSaleStatus = (saleId: number, newStatus: 'completed' | 'pending' | 'cancelled') => {
-    setSales(prevSales => 
-      prevSales.map(sale => 
-        sale.id === saleId 
-          ? { ...sale, status: newStatus }
-          : sale
-      )
-    );
-  };
+  updateSale: (saleId: number, updatedData: UpdateSaleData) => {
+    const { addLinkedTransaction, removeLinkedTransactions } = useAccountsStore.getState();
 
-  const deleteSale = (saleId: number) => {
-    setSales(prevSales => {
-      const saleToDelete = prevSales.find(sale => sale.id === saleId);
-      if (saleToDelete) {
-        // Actualizar estadísticas del dashboard
-        setDashboardStats(prev => ({
-          totalSales: prev.totalSales - saleToDelete.amount,
-          totalTransactions: prev.totalTransactions - 1,
-          averagePerDay: Math.round((prev.totalSales - saleToDelete.amount) / 30),
-          monthlyGrowth: prev.monthlyGrowth
-        }));
+    set((state) => {
+      const newSales = state.sales.map(sale => {
+        if (sale.id !== saleId) return sale;
 
-        // 🔥 REVERSIÓN AUTOMÁTICA DE INVENTARIO  
-        if (saleToDelete.productId) {
-          try {
-            const currentProduct = getProductById(saleToDelete.productId);
-            if (currentProduct) {
-              updateStockWithMovement(
-                saleToDelete.productId,
-                currentProduct.stock + saleToDelete.items, // Restaurar stock
-                `Eliminación venta ${saleToDelete.number} - Cliente: ${saleToDelete.client.name}`,
-                `CANCEL-${saleToDelete.number}`
-              );
+        const originalAmount = sale.amount;
+        const newAmount = updatedData.quantity * updatedData.price;
+        const amountDifference = newAmount - originalAmount;
+
+        // Handle account balance updates if payment status changes
+        if (sale.paymentStatus === 'paid' && sale.accountId) {
+          removeLinkedTransactions('sale', sale.id.toString());
+        }
+
+        // Add new linked transaction if marked as paid
+        if (updatedData.paymentStatus === 'paid' && updatedData.accountId) {
+          addLinkedTransaction(
+            updatedData.accountId,
+            newAmount,
+            `Venta ${sale.number} - ${updatedData.client}`,
+            {
+              type: 'sale',
+              id: sale.id.toString(),
+              number: sale.number
             }
-          } catch (error) {
-            console.error('Error revirtiendo stock al eliminar venta:', error);
-            // Continuar con eliminación aunque falle la reversión de stock
-          }
+          );
         }
 
-        // Si la venta tenía pagos registrados, eliminar transacciones enlazadas
-        if (saleToDelete.paymentStatus === 'paid' && saleToDelete.accountId) {
-          removeLinkedTransactions('sale', saleToDelete.id.toString());
-        }
-      }
-      
-      return prevSales.filter(sale => sale.id !== saleId);
+        // Update dashboard stats
+        const newStats = {
+          totalSales: state.dashboardStats.totalSales + amountDifference,
+          totalTransactions: state.dashboardStats.totalTransactions,
+          averagePerDay: Math.round((state.dashboardStats.totalSales + amountDifference) / 30),
+          monthlyGrowth: state.dashboardStats.monthlyGrowth
+        };
+        saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, newStats);
+
+        return {
+          ...sale,
+          client: {
+            name: updatedData.client,
+            email: `${updatedData.client.toLowerCase().replace(' ', '.')}@email.com`,
+            avatar: generateAvatar(updatedData.client)
+          },
+          amount: newAmount,
+          items: updatedData.quantity,
+          status: (updatedData.paymentStatus === 'paid' ? 'completed' : 'pending') as 'completed' | 'pending' | 'cancelled',
+          salesChannel: updatedData.salesChannel || sale.salesChannel,
+          paymentStatus: updatedData.paymentStatus || sale.paymentStatus,
+          paymentMethod: updatedData.paymentMethod || sale.paymentMethod,
+          accountId: updatedData.accountId,
+          cobrado: updatedData.paymentStatus === 'paid' ? newAmount : (sale.cobrado || 0),
+          aCobrar: updatedData.paymentStatus === 'paid' ? 0 : newAmount - (sale.cobrado || 0)
+        };
+      });
+
+      saveToStorage(STORAGE_KEYS.SALES, newSales);
+      return { sales: newSales };
     });
-  };
+  },
 
-  const updateSale = (saleId: number, updatedData: {
-    client: string;
-    product: string;
-    quantity: number;
-    price: number;
-    salesChannel?: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
-    paymentStatus?: 'paid' | 'pending' | 'partial';
-    paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other';
-    accountId?: string;
-  }) => {
-    setSales(prevSales => {
-      return prevSales.map(sale => {
-        if (sale.id === saleId) {
-          // Generate client avatar (initials)
-          const generateAvatar = (name: string) => {
-            return name.split(' ').map(n => n.charAt(0)).join('').toUpperCase();
-          };
+  // ============================================
+  // UPDATE SALE STATUS
+  // ============================================
 
-          const originalAmount = sale.amount;
-          const newAmount = updatedData.quantity * updatedData.price;
-          const amountDifference = newAmount - originalAmount;
+  updateSaleStatus: (saleId: number, newStatus: 'completed' | 'pending' | 'cancelled') => {
+    set((state) => {
+      const newSales = state.sales.map(sale =>
+        sale.id === saleId ? { ...sale, status: newStatus } : sale
+      );
+      saveToStorage(STORAGE_KEYS.SALES, newSales);
+      return { sales: newSales };
+    });
+  },
 
-          // Update dashboard stats
-          setDashboardStats(prev => ({
-            totalSales: prev.totalSales + amountDifference,
-            totalTransactions: prev.totalTransactions, // Keep same transaction count
-            averagePerDay: Math.round((prev.totalSales + amountDifference) / 30),
-            monthlyGrowth: prev.monthlyGrowth
-          }));
+  // ============================================
+  // DELETE SALE
+  // ============================================
 
-          // Handle account balance updates if payment status changes
-          if (sale.paymentStatus === 'paid' && sale.accountId) {
-            // Remove previous linked transactions
-            removeLinkedTransactions('sale', sale.id.toString());
-          }
+  deleteSale: (saleId: number) => {
+    const { updateStockWithMovement, getProductById } = useProductsStore.getState();
+    const { removeLinkedTransactions } = useAccountsStore.getState();
 
-          // Add new linked transaction if marked as paid
-          if (updatedData.paymentStatus === 'paid' && updatedData.accountId) {
-            addLinkedTransaction(
-              updatedData.accountId, 
-              newAmount, 
-              `Venta ${sale.number} - ${updatedData.client}`,
-              {
-                type: 'sale',
-                id: sale.id.toString(),
-                number: sale.number
-              }
+    set((state) => {
+      const saleToDelete = state.sales.find(sale => sale.id === saleId);
+      if (!saleToDelete) {
+        return state;
+      }
+
+      // 🔥 REVERSIÓN AUTOMÁTICA DE INVENTARIO
+      if (saleToDelete.productId) {
+        try {
+          const currentProduct = getProductById(saleToDelete.productId);
+          if (currentProduct) {
+            updateStockWithMovement(
+              saleToDelete.productId,
+              currentProduct.stock + saleToDelete.items,
+              `Eliminación venta ${saleToDelete.number} - Cliente: ${saleToDelete.client.name}`,
+              `CANCEL-${saleToDelete.number}`
             );
           }
-
-          return {
-            ...sale,
-            client: {
-              name: updatedData.client,
-              email: `${updatedData.client.toLowerCase().replace(' ', '.')}@email.com`,
-              avatar: generateAvatar(updatedData.client)
-            },
-            amount: newAmount,
-            items: updatedData.quantity,
-            status: updatedData.paymentStatus === 'paid' ? 'completed' : 'pending',
-            salesChannel: updatedData.salesChannel || sale.salesChannel,
-            paymentStatus: updatedData.paymentStatus || sale.paymentStatus,
-            paymentMethod: updatedData.paymentMethod || sale.paymentMethod,
-            accountId: updatedData.accountId,
-            // Actualizar campos de tracking de pagos
-            cobrado: updatedData.paymentStatus === 'paid' ? newAmount : (sale.cobrado || 0),
-            aCobrar: updatedData.paymentStatus === 'paid' ? 0 : newAmount - (sale.cobrado || 0)
-          };
+        } catch (error) {
+          console.error('Error revirtiendo stock al eliminar venta:', error);
         }
-        return sale;
-      });
-    });
-  };
+      }
 
-  return {
-    dashboardStats,
-    sales,
-    addSale,
-    updateSale,
-    updateSaleStatus,
-    deleteSale,
-    updateDashboardStats,
-    setSales,
-    validateStock // Exponer función de validación
-  };
-};
+      // Eliminar transacciones enlazadas
+      if (saleToDelete.paymentStatus === 'paid' && saleToDelete.accountId) {
+        removeLinkedTransactions('sale', saleToDelete.id.toString());
+      }
+
+      // Actualizar stats
+      const newStats = {
+        totalSales: state.dashboardStats.totalSales - saleToDelete.amount,
+        totalTransactions: state.dashboardStats.totalTransactions - 1,
+        averagePerDay: Math.round((state.dashboardStats.totalSales - saleToDelete.amount) / 30),
+        monthlyGrowth: state.dashboardStats.monthlyGrowth
+      };
+
+      const newSales = state.sales.filter(sale => sale.id !== saleId);
+
+      saveToStorage(STORAGE_KEYS.SALES, newSales);
+      saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, newStats);
+
+      return {
+        sales: newSales,
+        dashboardStats: newStats
+      };
+    });
+  },
+
+  // ============================================
+  // UPDATE DASHBOARD STATS
+  // ============================================
+
+  updateDashboardStats: (newStats: Partial<DashboardStats>) => {
+    set((state) => {
+      const updatedStats = { ...state.dashboardStats, ...newStats };
+      saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, updatedStats);
+      return { dashboardStats: updatedStats };
+    });
+  },
+
+  // ============================================
+  // SET SALES
+  // ============================================
+
+  setSales: (sales: Sale[]) => {
+    set({ sales });
+    saveToStorage(STORAGE_KEYS.SALES, sales);
+  },
+}));

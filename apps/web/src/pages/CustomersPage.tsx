@@ -4,7 +4,7 @@ import { UserStatusBadge } from '@ui/StatusBadge';
 import { Modal } from '@ui/Modal';
 import { Input } from '@ui/Input';
 import { formatCurrency } from '@lib/formatters';
-import { useSales } from '@store/SalesContext';
+import { useSalesStore } from '@store/salesStore';
 import { useCustomersStore, Customer } from '@store/customersStore';
 import { useTableScroll } from '@hooks/useTableScroll';
 import {
@@ -47,7 +47,7 @@ export function CustomersPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   
   // Get sales data to calculate updated balances
-  const { sales } = useSales();
+  const { sales } = useSalesStore();
   
   // Calculate updated customer balances based on sales
   const customersWithUpdatedBalances = useMemo(() => {
@@ -85,30 +85,27 @@ export function CustomersPage() {
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
-    
+
     if (!formData.name.trim()) {
       errors.name = 'El nombre es requerido';
     }
-    
-    if (!formData.email.trim()) {
-      errors.email = 'El email es requerido';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+
+    // Email validation - only validate format if provided
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       errors.email = 'El email no es válido';
     }
-    
-    if (!formData.celular.trim()) {
-      errors.celular = 'El celular es requerido';
-    }
-    
+
     // Check if email already exists (excluding current customer when editing)
-    const emailExists = customers.some(customer => 
-      customer.email === formData.email && customer.id !== editingCustomer?.id
-    );
-    
-    if (emailExists) {
-      errors.email = 'Este email ya está registrado';
+    if (formData.email.trim()) {
+      const emailExists = customers.some(customer =>
+        customer.email === formData.email && customer.id !== editingCustomer?.id
+      );
+
+      if (emailExists) {
+        errors.email = 'Este email ya está registrado';
+      }
     }
-    
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -601,7 +598,6 @@ export function CustomersPage() {
             }}
             error={formErrors.email}
             disabled={loading}
-            required
           />
 
           <Input
@@ -615,7 +611,6 @@ export function CustomersPage() {
             }}
             error={formErrors.celular}
             disabled={loading}
-            required
           />
 
           <Input

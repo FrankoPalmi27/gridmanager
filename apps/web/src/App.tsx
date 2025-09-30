@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { DashboardPage } from './pages/DashboardPage';
-import { SalesProvider } from './store/SalesContext';
 import { SalesPage } from './pages/SalesPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { ProductsPage } from './pages/ProductsPage';
@@ -31,12 +30,6 @@ import {
   SettingOutlined,
   LogoutOutlined
 } from '@ant-design/icons';
-
-// EMERGENCY LOG - ALWAYS FIRST
-console.log('🚨 APP.TSX LOADED - JavaScript is working!');
-console.log('🔍 Current URL:', window.location.href);
-console.log('📍 Path:', window.location.pathname);
-console.log('🔗 Search:', window.location.search);
 
 const navigation = [
   {
@@ -96,39 +89,23 @@ function App() {
   const { user, tokens, clearAuth } = useAuthStore();
   const isAuthenticated = !!(user && tokens);
 
-  // Debug logs at component level
-  console.log('App component rendered');
-  console.log('Current URL:', window.location.href);
-  console.log('Current page state:', currentPage);
-  console.log('Is authenticated:', isAuthenticated);
-
   // Emergency detection with immediate check
   const hasGoogleId = window.location.search.includes('googleId');
   const shouldShowRegistration = hasGoogleId && currentPage === 'home';
 
-  console.log('🔍 hasGoogleId:', hasGoogleId);
-  console.log('🔍 currentPage:', currentPage);
-  console.log('🔍 shouldShowRegistration:', shouldShowRegistration);
-
   if (shouldShowRegistration) {
-    console.log('EMERGENCY: Google ID detected but still on home page!');
     // Force navigation immediately
     setTimeout(() => {
-      console.log('Force setting complete-registration page');
       setCurrentPage('complete-registration');
     }, 100);
   }
 
   useEffect(() => {
-    console.log('useEffect triggered, isAuthenticated:', isAuthenticated);
-
     // ✅ AUTO-LIMPIEZA DE DATOS LEGACY AL INICIAR LA APP
     const initCleanup = async () => {
       if (hasLegacyData()) {
-        console.log('🧹 Detectados datos legacy, ejecutando limpieza automática...');
         const result = await runAutoCleanup();
         if (result.cleaned) {
-          console.log(`✅ Limpieza completada: ${result.itemsRemoved} elementos removidos`);
           // Mostrar notificación discreta al usuario
           setTimeout(() => {
             const notification = document.createElement('div');
@@ -150,12 +127,9 @@ function App() {
 
     // Check for existing authentication from authStore
     if (isAuthenticated) {
-      console.log('User is authenticated, setting dashboard');
-
       // Handle tenant-based routes by redirecting to simple routes
       const pathname = window.location.pathname;
       if (pathname.includes('/empresa/') && pathname.includes('/dashboard')) {
-        console.log('Tenant-based dashboard URL detected, redirecting to simple /dashboard');
         window.history.replaceState({}, '', '/dashboard');
         setCurrentPage('dashboard');
         return; // Early return to avoid duplicate logic
@@ -168,25 +142,16 @@ function App() {
       const search = window.location.search;
       const hash = window.location.hash;
 
-      console.log('Current pathname:', pathname);
-      console.log('Current search:', search);
-      console.log('Current hash:', hash);
-
       // More aggressive detection
       if (pathname.includes('/auth/callback') || search.includes('accessToken')) {
-        console.log('OAuth callback detected - setting auth-callback page');
         setCurrentPage('auth-callback');
       } else if (pathname.includes('/complete-registration') || search.includes('googleId')) {
-        console.log('Google registration detected - setting complete-registration page');
         setCurrentPage('complete-registration');
       } else if (pathname.includes('/login')) {
-        console.log('Login page detected - setting login page');
         setCurrentPage('login');
       } else if (pathname.includes('/register')) {
-        console.log('Register page detected - setting tenant-register page');
         setCurrentPage('tenant-register');
       } else {
-        console.log('No special route detected - setting home page');
         setCurrentPage('home');
       }
     }
@@ -195,11 +160,9 @@ function App() {
   // Additional effect to handle URL changes
   useEffect(() => {
     const handleUrlChange = () => {
-      console.log('URL changed:', window.location.href);
       const search = window.location.search;
 
       if (search.includes('googleId') && !isAuthenticated) {
-        console.log('Google ID detected in URL, forcing complete-registration page');
         setCurrentPage('complete-registration');
       }
     };
@@ -264,7 +227,6 @@ function App() {
   // For public pages, render without sidebar
   if (!isAuthenticated) {
     return (
-      <SalesProvider>
         <div className="App">
           {/* Emergency button for OAuth callback */}
           {window.location.search.includes('googleId') && currentPage === 'home' && (
@@ -286,13 +248,11 @@ function App() {
           )}
           {renderCurrentPage()}
         </div>
-      </SalesProvider>
     );
   }
 
   // For authenticated pages, render with sidebar
   return (
-    <SalesProvider>
       <div className="App">
         <div className="min-h-screen flex" style={{ backgroundColor: 'var(--neutral-50)' }}>
         {/* Sidebar */}
@@ -498,7 +458,6 @@ function App() {
         </div>
       </div>
       </div>
-    </SalesProvider>
   );
 }
 

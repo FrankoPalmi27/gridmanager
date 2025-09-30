@@ -35,6 +35,7 @@ interface CustomersStore {
     totalNegativeBalance: number;
   };
   getCustomerById: (id: string) => Customer | undefined;
+  getCustomerByName: (name: string) => Customer | undefined;
   resetStore: () => void;
 }
 
@@ -105,6 +106,12 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
 
   getCustomerById: (id) => {
     return get().customers.find(customer => customer.id === id);
+  },
+
+  getCustomerByName: (name: string) => {
+    return get().customers.find(customer =>
+      customer.name.toLowerCase() === name.toLowerCase()
+    );
   },
 
   resetStore: () => {

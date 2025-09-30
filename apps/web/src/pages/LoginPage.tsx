@@ -54,21 +54,12 @@ export function LoginPage() {
     setError('');
 
     try {
-      console.log('🔐 Starting login with:', data.email);
       const response = await authApi.login(data.email, data.password);
-      console.log('🔐 Login response:', response);
-      console.log('🔐 Response data:', response.data);
-
       const { user, tokens } = response.data.data;
-      console.log('🔐 Extracted user:', user);
-      console.log('🔐 Extracted tokens:', tokens);
 
-      console.log('🔐 Calling setAuth...');
       setAuth(user, tokens);
-      console.log('🔐 setAuth completed');
 
       // Redirect to dashboard after successful login (simple route)
-      console.log('🔐 Redirecting to dashboard...');
       window.location.href = '/dashboard';
     } catch (err: any) {
       console.error('🔐 Login error:', err);

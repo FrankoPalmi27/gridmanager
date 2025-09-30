@@ -3,7 +3,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { SearchableSelect } from '../ui/SearchableSelect';
-import { useSales } from '../../store/SalesContext';
+import { useSalesStore } from '../../store/salesStore';
 import { useProductsStore } from '../../store/productsStore';
 import { useAccountsStore } from '../../store/accountsStore';
 import { useCustomersStore } from '../../store/customersStore';
@@ -73,7 +73,7 @@ const PAYMENT_METHODS = [
 
 
 export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess, editingSale }) => {
-  const { addSale, updateSale, validateStock } = useSales();
+  const { addSale, updateSale, validateStock } = useSalesStore();
   const { products } = useProductsStore();
   const { accounts, getActiveAccounts } = useAccountsStore();
   const { customers } = useCustomersStore();

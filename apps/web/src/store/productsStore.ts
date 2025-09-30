@@ -74,8 +74,15 @@ const generateSKU = (category: string, name: string): string => {
 // Get all unique categories (custom + from products)
 const getAllCategories = (products: Product[], categories: Category[]) => {
   const customCategoryNames = categories.map(cat => cat.name);
-  const productCategories = Array.from(new Set(products.map(p => p.category)));
+  const productCategories = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
   const allCategoryNames = [...new Set([...customCategoryNames, ...productCategories])];
+
+  // Debug logging to understand what's happening
+  console.log('🔍 getAllCategories Debug:');
+  console.log('customCategoryNames:', customCategoryNames);
+  console.log('productCategories:', productCategories);
+  console.log('allCategoryNames:', allCategoryNames);
+
   return allCategoryNames;
 };
 

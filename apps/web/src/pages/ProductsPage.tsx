@@ -236,7 +236,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
               Productos ({products.length})
             </TabsTrigger>
             <TabsTrigger value="categorias">
-              Categorías ({categories.length})
+              Categorías ({stats.categories.length})
             </TabsTrigger>
             <TabsTrigger value="inventario">
               Inventario Valorizado

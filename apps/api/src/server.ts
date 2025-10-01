@@ -41,6 +41,10 @@ export function createApp() {
     origin: function (origin, callback) {
       const allowedOrigins = [
         'http://localhost:3000',
+        'http://localhost:5000',
+        'http://localhost:5001',
+        'http://localhost:5002',
+        'http://localhost:5003',
         'https://obsidiangridmanager.netlify.app',
         'https://gridmanager-production.up.railway.app'
       ];
@@ -51,10 +55,17 @@ export function createApp() {
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
+        // In development, be more permissive
+        if (process.env.NODE_ENV !== 'production') {
+          return callback(null, true);
+        }
         callback(new Error('Not allowed by CORS'));
       }
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID'],
+    exposedHeaders: ['X-Tenant-ID'],
   }));
 
   // Rate limiting

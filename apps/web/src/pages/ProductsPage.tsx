@@ -199,14 +199,6 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                   Importar CSV
                 </Button>
                 <Button
-                  onClick={() => setIsCategoryModalOpen(true)}
-                  variant="secondary"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                >
-                  Gestionar Categorías
-                </Button>
-                <Button
                   onClick={handleNewProduct}
                   variant="primary"
                   size="sm"

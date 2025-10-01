@@ -29,19 +29,7 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Categorías comunes predefinidas
-  const commonCategories = [
-    'Electrónicos',
-    'Hogar',
-    'Ropa',
-    'Deportes',
-    'Libros',
-    'Juguetes',
-    'Belleza',
-    'Automotriz',
-    'Jardinería',
-    'Varios'
-  ];
+  // Removed predefined categories - only show custom and existing categories
 
   // Reset form when modal opens/closes or editing product changes
   useEffect(() => {
@@ -120,9 +108,12 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
       newErrors.stock = 'El stock debe ser un número mayor o igual a 0';
     }
 
-    const minStock = parseInt(formData.minStock);
-    if (!formData.minStock || isNaN(minStock) || minStock < 0) {
-      newErrors.minStock = 'El stock mínimo debe ser un número mayor o igual a 0';
+    // Stock mínimo es opcional
+    if (formData.minStock) {
+      const minStock = parseInt(formData.minStock);
+      if (isNaN(minStock) || minStock < 0) {
+        newErrors.minStock = 'El stock mínimo debe ser un número mayor o igual a 0';
+      }
     }
 
     setErrors(newErrors);
@@ -147,7 +138,7 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
         cost: parseFloat(formData.cost),
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
-        minStock: parseInt(formData.minStock),
+        minStock: formData.minStock ? parseInt(formData.minStock) : 0,
         status: formData.status,
         supplier: formData.supplier.trim()
       };
@@ -225,34 +216,24 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
                 required
               >
                 <option value="">Selecciona una categoría</option>
-                
+
                 {/* Custom categories from store */}
                 {categories.length > 0 && (
-                  <optgroup label="Categorías Personalizadas">
+                  <>
                     {categories.map(cat => (
                       <option key={cat.id} value={cat.name}>{cat.name}</option>
                     ))}
-                  </optgroup>
+                  </>
                 )}
-                
+
                 {/* Existing categories from products */}
                 {stats.categories.length > 0 && (
-                  <optgroup label="Categorías Existentes">
+                  <>
                     {stats.categories.filter(cat => !categories.some(customCat => customCat.name === cat)).map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
-                  </optgroup>
+                  </>
                 )}
-                
-                {/* Common predefined categories */}
-                <optgroup label="Categorías Predefinidas">
-                  {commonCategories.filter(cat => 
-                    !stats.categories.includes(cat) && 
-                    !categories.some(customCat => customCat.name === cat)
-                  ).map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </optgroup>
               </select>
               {errors.category && (
                 <p className="mt-1 text-sm text-red-600">{errors.category}</p>
@@ -391,8 +372,7 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
                   value={formData.minStock}
                   onChange={handleInputChange}
                   error={errors.minStock}
-                  required
-                  placeholder="0"
+                  placeholder="0 (opcional)"
                 />
               </div>
             </div>

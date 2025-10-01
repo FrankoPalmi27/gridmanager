@@ -17,7 +17,6 @@ interface SupplierFormData {
   contactPerson: string;
   paymentTerms: number;
   creditLimit: number;
-  category: string;
   active: boolean;
 }
 
@@ -40,7 +39,6 @@ export function SuppliersPage() {
     contactPerson: '',
     paymentTerms: 30,
     creditLimit: 0,
-    category: '',
     active: true
   });
 
@@ -72,7 +70,6 @@ export function SuppliersPage() {
       contactPerson: '',
       paymentTerms: 30,
       creditLimit: 0,
-      category: '',
       active: true
     });
     setErrors({});
@@ -82,26 +79,18 @@ export function SuppliersPage() {
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
+    // Solo el nombre comercial es obligatorio
     if (!formData.name.trim()) {
-      newErrors.name = 'El nombre es requerido';
+      newErrors.name = 'El nombre comercial es requerido';
     }
 
-    if (!formData.businessName.trim()) {
-      newErrors.businessName = 'La razón social es requerida';
-    }
-
-    if (!formData.taxId.trim()) {
-      newErrors.taxId = 'El CUIT es requerido';
-    } else if (formData.taxId.length < 11) {
-      newErrors.taxId = 'El CUIT debe tener al menos 11 caracteres';
-    }
-
+    // Validaciones opcionales
     if (formData.email && !formData.email.includes('@')) {
       newErrors.email = 'Email inválido';
     }
 
-    if (!formData.contactPerson.trim()) {
-      newErrors.contactPerson = 'La persona de contacto es requerida';
+    if (formData.taxId && formData.taxId.length < 11) {
+      newErrors.taxId = 'El CUIT debe tener al menos 11 caracteres';
     }
 
     if (formData.paymentTerms < 0) {
@@ -110,10 +99,6 @@ export function SuppliersPage() {
 
     if (formData.creditLimit < 0) {
       newErrors.creditLimit = 'El límite de crédito debe ser positivo';
-    }
-
-    if (!formData.category.trim()) {
-      newErrors.category = 'La categoría es requerida';
     }
 
     setErrors(newErrors);
@@ -157,15 +142,14 @@ export function SuppliersPage() {
   const handleEditSupplier = (supplier: any) => {
     setFormData({
       name: supplier.name,
-      businessName: supplier.businessName,
-      taxId: supplier.taxId,
+      businessName: supplier.businessName || '',
+      taxId: supplier.taxId || '',
       email: supplier.email || '',
       phone: supplier.phone || '',
       address: supplier.address || '',
       contactPerson: supplier.contactPerson || '',
       paymentTerms: supplier.paymentTerms,
       creditLimit: supplier.creditLimit || 0,
-      category: supplier.category,
       active: supplier.active
     });
     setEditingSupplier(supplier);
@@ -463,7 +447,7 @@ export function SuppliersPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Razón Social <span className="text-red-500">*</span>
+                  Razón Social
                 </label>
                 <input
                   type="text"
@@ -473,7 +457,6 @@ export function SuppliersPage() {
                     errors.businessName ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Ej: Tech Distributor Sociedad Anónima"
-                  required
                 />
                 {errors.businessName && (
                   <p className="mt-1 text-sm text-red-600">{errors.businessName}</p>
@@ -482,7 +465,7 @@ export function SuppliersPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  CUIT <span className="text-red-500">*</span>
+                  CUIT
                 </label>
                 <input
                   type="text"
@@ -492,41 +475,12 @@ export function SuppliersPage() {
                     errors.taxId ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Ej: 20-12345678-9"
-                  required
                 />
                 {errors.taxId && (
                   <p className="mt-1 text-sm text-red-600">{errors.taxId}</p>
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Categoría <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => handleInputChange('category', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.category ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  required
-                >
-                  <option value="">Seleccionar categoría...</option>
-                  <option value="Tecnología">Tecnología</option>
-                  <option value="Logística">Logística</option>
-                  <option value="Oficina">Oficina</option>
-                  <option value="Servicios">Servicios</option>
-                  <option value="Materiales">Materiales</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Alimentación">Alimentación</option>
-                  <option value="Construcción">Construcción</option>
-                  <option value="Textil">Textil</option>
-                  <option value="Otro">Otro</option>
-                </select>
-                {errors.category && (
-                  <p className="mt-1 text-sm text-red-600">{errors.category}</p>
-                )}
-              </div>
             </div>
           </div>
 
@@ -536,7 +490,7 @@ export function SuppliersPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Persona de Contacto <span className="text-red-500">*</span>
+                  Persona de Contacto
                 </label>
                 <input
                   type="text"
@@ -546,7 +500,6 @@ export function SuppliersPage() {
                     errors.contactPerson ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Ej: Juan Carlos Pérez"
-                  required
                 />
                 {errors.contactPerson && (
                   <p className="mt-1 text-sm text-red-600">{errors.contactPerson}</p>

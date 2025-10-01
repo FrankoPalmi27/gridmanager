@@ -3,9 +3,9 @@ import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorag
 
 export interface Supplier {
   id: string;
-  name: string;
-  businessName: string;
-  taxId: string;
+  name: string; // Nombre comercial (único campo obligatorio)
+  businessName?: string; // Razón social (opcional)
+  taxId?: string; // CUIT (opcional)
   email?: string;
   phone?: string;
   address?: string;
@@ -13,7 +13,6 @@ export interface Supplier {
   paymentTerms: number; // días
   currentBalance: number; // saldo actual (positivo = nos deben, negativo = les debemos)
   creditLimit?: number;
-  category: string;
   active: boolean;
   lastPurchaseDate?: string;
   totalPurchases: number;

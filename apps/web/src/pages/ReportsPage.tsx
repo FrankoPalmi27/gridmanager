@@ -622,21 +622,21 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
               <MetricCard
                 title="Ganancia Neta"
                 value={metrics.profit}
-                change={metrics.profit > 0 ? "+22.1" : "-12.3"}
+                change={metrics.profitGrowth > 0 ? `+${metrics.profitGrowth.toFixed(1)}` : metrics.profitGrowth.toFixed(1)}
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>}
                 color="text-blue-600"
               />
               <MetricCard
                 title="Promedio por Venta"
                 value={metrics.avgOrderValue}
-                change="+5.8"
+                change={metrics.avgOrderValueGrowth > 0 ? `+${metrics.avgOrderValueGrowth.toFixed(1)}` : metrics.avgOrderValueGrowth.toFixed(1)}
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>}
                 color="text-purple-600"
               />
               <MetricCard
                 title="Transacciones"
                 value={salesCount.toString()}
-                change="+12.5"
+                change={metrics.transactionsGrowth > 0 ? `+${metrics.transactionsGrowth.toFixed(1)}` : metrics.transactionsGrowth.toFixed(1)}
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>}
                 color="text-indigo-600"
               />
@@ -725,11 +725,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
         );
 
       case 'financial':
-  const totalIncome = filteredTransactions
-          .filter(t => t.type === 'income')
-          .reduce((sum, t) => sum + t.amount, 0);
-        
-  const expensesByCategory = filteredTransactions
+        const expensesByCategory = filteredTransactions
           .filter(t => t.type === 'expense')
           .reduce((acc: any[], transaction) => {
             const category = transaction.category || 'Sin categoría';
@@ -747,29 +743,28 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <MetricCard
                 title="Ingresos"
-                value={totalIncome}
-                change="+15.2"
+                value={metrics.totalIncome}
+                change={metrics.incomeGrowth > 0 ? `+${metrics.incomeGrowth.toFixed(1)}` : metrics.incomeGrowth.toFixed(1)}
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>}
                 color="text-green-600"
               />
               <MetricCard
                 title="Egresos"
                 value={metrics.totalExpenses}
-                change="+8.7"
+                change={metrics.expensesGrowth > 0 ? `+${metrics.expensesGrowth.toFixed(1)}` : metrics.expensesGrowth.toFixed(1)}
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>}
                 color="text-red-600"
               />
               <MetricCard
                 title="Ganancia Neta"
                 value={metrics.profit}
-                change={metrics.profit > 0 ? "+18.3" : "-12.1"}
+                change={metrics.profitGrowth > 0 ? `+${metrics.profitGrowth.toFixed(1)}` : metrics.profitGrowth.toFixed(1)}
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>}
                 color="text-blue-600"
               />
               <MetricCard
                 title="Margen"
                 value={`${metrics.totalSales > 0 ? ((metrics.profit / metrics.totalSales) * 100).toFixed(1) : '0'}%`}
-                change="+5.8"
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>}
                 color="text-purple-600"
               />
@@ -781,7 +776,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
                 <div className="space-y-4">
                   <div className="flex justify-between items-center py-3 border-b border-gray-100">
                     <span className="text-gray-600 font-medium">Ingresos Totales</span>
-                    <span className="font-semibold text-green-600 text-lg">+{formatCurrency(totalIncome)}</span>
+                    <span className="font-semibold text-green-600 text-lg">+{formatCurrency(metrics.totalIncome)}</span>
                   </div>
                   <div className="flex justify-between items-center py-3 border-b border-gray-100">
                     <span className="text-gray-600 font-medium">Gastos Operativos</span>
@@ -996,28 +991,24 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
               <MetricCard
                 title="Tasa de Conversión"
                 value={`${conversionRate.toFixed(1)}%`}
-                change="+3.2"
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" /></svg>}
                 color="text-blue-600"
               />
               <MetricCard
                 title="Margen Promedio"
                 value={`${averageMargin.toFixed(1)}%`}
-                change="+1.8"
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>}
                 color="text-green-600"
               />
               <MetricCard
                 title="ROI Mensual"
                 value={`${metrics.totalSales > 0 ? ((metrics.profit / metrics.totalExpenses) * 100).toFixed(1) : '0'}%`}
-                change="+12.4"
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
                 color="text-purple-600"
               />
               <MetricCard
                 title="Productividad"
                 value={`${(salesCount / 30).toFixed(1)} ventas/día`}
-                change="+8.7"
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
                 color="text-indigo-600"
               />

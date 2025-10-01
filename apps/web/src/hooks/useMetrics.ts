@@ -108,6 +108,47 @@ export const useMetrics = (period?: string) => {
     const prevTotalSales = previousPeriodSales.reduce((sum, sale) => sum + sale.amount, 0);
     const salesGrowth = prevTotalSales > 0 ? ((totalSales - prevTotalSales) / prevTotalSales) * 100 : 0;
 
+    // Crecimiento de ganancias
+    const previousPeriodExpenses = dateRange ? transactions.filter(t => {
+      const transactionDate = new Date(t.date);
+      const prevStartDate = new Date(dateRange.startDate);
+      const periodDiff = dateRange.endDate.getTime() - dateRange.startDate.getTime();
+      prevStartDate.setTime(dateRange.startDate.getTime() - periodDiff);
+      return transactionDate >= prevStartDate && transactionDate < dateRange.startDate && t.type === 'expense';
+    }) : [];
+
+    const prevTotalExpenses = previousPeriodExpenses.reduce((sum, t) => sum + t.amount, 0);
+    const prevProfit = prevTotalSales - prevTotalExpenses;
+    const profitGrowth = prevProfit !== 0 ? ((profit - prevProfit) / Math.abs(prevProfit)) * 100 : (profit > 0 ? 100 : 0);
+
+    // Crecimiento de valor promedio
+    const prevAvgOrderValue = previousPeriodSales.length > 0 ? prevTotalSales / previousPeriodSales.length : 0;
+    const avgOrderValueGrowth = prevAvgOrderValue > 0 ? ((avgOrderValue - prevAvgOrderValue) / prevAvgOrderValue) * 100 : 0;
+
+    // Crecimiento de transacciones
+    const transactionsGrowth = previousPeriodSales.length > 0
+      ? ((totalTransactions - previousPeriodSales.length) / previousPeriodSales.length) * 100
+      : (totalTransactions > 0 ? 100 : 0);
+
+    // Crecimiento de ingresos (income transactions)
+    const totalIncome = filteredTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const previousPeriodIncome = dateRange ? transactions.filter(t => {
+      const transactionDate = new Date(t.date);
+      const prevStartDate = new Date(dateRange.startDate);
+      const periodDiff = dateRange.endDate.getTime() - dateRange.startDate.getTime();
+      prevStartDate.setTime(dateRange.startDate.getTime() - periodDiff);
+      return transactionDate >= prevStartDate && transactionDate < dateRange.startDate && t.type === 'income';
+    }) : [];
+
+    const prevTotalIncome = previousPeriodIncome.reduce((sum, t) => sum + t.amount, 0);
+    const incomeGrowth = prevTotalIncome > 0 ? ((totalIncome - prevTotalIncome) / prevTotalIncome) * 100 : (totalIncome > 0 ? 100 : 0);
+
+    // Crecimiento de egresos
+    const expensesGrowth = prevTotalExpenses > 0 ? ((totalExpenses - prevTotalExpenses) / prevTotalExpenses) * 100 : (totalExpenses > 0 ? 100 : 0);
+
     return {
       // Métricas principales para Dashboard
       totalAvailable,
@@ -119,9 +160,15 @@ export const useMetrics = (period?: string) => {
       totalSales,
       totalTransactions,
       totalExpenses,
+      totalIncome,
       profit,
       avgOrderValue,
       salesGrowth,
+      profitGrowth,
+      avgOrderValueGrowth,
+      transactionsGrowth,
+      incomeGrowth,
+      expensesGrowth,
 
       // Contadores generales
       customersCount,

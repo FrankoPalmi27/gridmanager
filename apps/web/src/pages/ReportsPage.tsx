@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '../components/ui/Button';
 import { formatCurrency, formatDate } from '../lib/formatters';
-import { useSalesStore } from '../store/salesStore';
 import { useCustomersStore } from '../store/customersStore';
 import { useProductsStore } from '../store/productsStore';
 import { useAccountsStore } from '../store/accountsStore';
+import { useMetrics } from '../hooks/useMetrics';
 
 const getDateRange = (period: string) => {
   const today = new Date();
@@ -356,10 +356,13 @@ export function ReportsPage() {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Get real data from stores
-  const { sales, dashboardStats } = useSalesStore();
   const { customers } = useCustomersStore();
   const { products } = useProductsStore();
-  const { accounts, transactions } = useAccountsStore();
+  const { accounts } = useAccountsStore();
+  const metrics = useMetrics(selectedPeriod);
+  const filteredSales = metrics.filteredSales;
+  const filteredTransactions = metrics.filteredTransactions;
+  const salesCount = metrics.totalTransactions;
 
   const periodOptions = [
     { value: '7days', label: 'Últimos 7 días' },
@@ -377,111 +380,60 @@ export function ReportsPage() {
     { id: 'performance', label: 'Rendimiento', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> }
   ];
 
-  // Enhanced metrics calculation using real data
-  const metrics = useMemo(() => {
-    const { startDate, endDate } = getDateRange(selectedPeriod);
-    
-    const filteredSales = sales.filter(sale => {
-      const saleDate = new Date(sale.date);
-      return saleDate >= startDate && saleDate <= endDate;
-    });
-
-    const filteredTransactions = transactions.filter(transaction => {
-      const transactionDate = new Date(transaction.date);
-      return transactionDate >= startDate && transactionDate <= endDate;
-    });
-
-    const totalSales = filteredSales.reduce((sum, sale) => sum + sale.amount, 0);
-    const totalExpenses = filteredTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-    const profit = totalSales - totalExpenses;
-    const avgOrderValue = filteredSales.length > 0 ? totalSales / filteredSales.length : 0;
-
-    // Calculate trends
-    const previousPeriodSales = sales.filter(sale => {
-      const saleDate = new Date(sale.date);
-      const prevStartDate = new Date(startDate);
-      const periodDiff = endDate.getTime() - startDate.getTime();
-      prevStartDate.setTime(startDate.getTime() - periodDiff);
-      return saleDate >= prevStartDate && saleDate < startDate;
-    });
-    
-    const prevTotalSales = previousPeriodSales.reduce((sum, sale) => sum + sale.amount, 0);
-    const salesGrowth = prevTotalSales > 0 ? ((totalSales - prevTotalSales) / prevTotalSales) * 100 : 0;
-
-    return {
-      totalSales,
-      totalExpenses,
-      profit,
-      avgOrderValue,
-      salesCount: filteredSales.length,
-      filteredSales,
-      filteredTransactions,
-      salesGrowth,
-      customersCount: customers.length,
-      activeProducts: products.filter(p => p.status === 'active').length
-    };
-  }, [selectedPeriod, sales, transactions, customers, products]);
-
-  // Enhanced chart data preparation
   const chartData = useMemo(() => {
-    // Sales by day for area chart
-    const salesByDay = sales.slice(-30).reduce((acc: any[], sale) => {
-      const existingDay = acc.find(item => item.date === sale.date);
-      if (existingDay) {
-        existingDay.value += sale.amount;
-      } else {
-        acc.push({ date: sale.date, value: sale.amount });
-      }
-      return acc;
-    }, []).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const salesSource = filteredSales;
 
-    // Sales by channel (pie chart)
-    const salesByChannel = sales.reduce((acc: any[], sale) => {
+    const salesByDayMap = new Map<string, number>();
+    salesSource.forEach(sale => {
+      const currentTotal = salesByDayMap.get(sale.date) || 0;
+      salesByDayMap.set(sale.date, currentTotal + sale.amount);
+    });
+
+    const salesByDay = Array.from(salesByDayMap.entries())
+      .map(([date, value]) => ({ date, value }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(-30);
+
+    const channelLabels: Record<string, string> = {
+      store: 'Tienda',
+      online: 'Online',
+      phone: 'Teléfono',
+      whatsapp: 'WhatsApp',
+      other: 'Otros'
+    };
+
+    const salesByChannelMap = new Map<string, number>();
+    salesSource.forEach(sale => {
       const channel = sale.salesChannel || 'store';
-      const existing = acc.find(item => item.label === channel);
-      if (existing) {
-        existing.value += sale.amount;
-      } else {
-        acc.push({ 
-          label: channel === 'store' ? 'Tienda' : 
-                channel === 'online' ? 'Online' : 
-                channel === 'phone' ? 'Teléfono' : 
-                channel === 'whatsapp' ? 'WhatsApp' : 'Otros',
-          value: sale.amount 
-        });
-      }
-      return acc;
-    }, []);
+      const label = channelLabels[channel] || 'Otros';
+      const currentTotal = salesByChannelMap.get(label) || 0;
+      salesByChannelMap.set(label, currentTotal + sale.amount);
+    });
 
-    // Top products by revenue
-    const productSales = sales.reduce((acc: any, sale) => {
-      // Since we don't have product details in sales, we'll use a simplified approach
-      const productName = `Producto ${sale.id % 5 + 1}`;
-      if (!acc[productName]) {
-        acc[productName] = { revenue: 0, quantity: 0 };
-      }
-      acc[productName].revenue += sale.amount;
-      acc[productName].quantity += sale.items;
-      return acc;
-    }, {});
+    const salesByChannel = Array.from(salesByChannelMap.entries()).map(([label, value]) => ({
+      label,
+      value
+    }));
 
-    const topProducts = Object.entries(productSales)
-      .map(([name, data]: [string, any]) => ({
-        label: name,
-        value: data.revenue
-      }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
+    const productSalesMap = new Map<string, { label: string; revenue: number }>();
+    salesSource.forEach(sale => {
+      const key = sale.productId || sale.productName || sale.number;
+      const label = sale.productName || sale.productId || `Venta ${sale.number}`;
+      const current = productSalesMap.get(key) || { label, revenue: 0 };
+      current.revenue += sale.amount;
+      productSalesMap.set(key, current);
+    });
 
-    // Customer distribution
+    const topProducts = Array.from(productSalesMap.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5)
+      .map(item => ({ label: item.label, value: item.revenue }));
+
     const customersByStatus = [
       { label: 'Activos', value: customers.filter(c => c.status === 'active').length },
       { label: 'Inactivos', value: customers.filter(c => c.status === 'inactive').length }
     ];
 
-    // Account balances
     const accountBalances = accounts.map(account => ({
       label: account.name,
       value: account.balance
@@ -494,7 +446,7 @@ export function ReportsPage() {
       customersByStatus,
       accountBalances
     };
-  }, [sales, customers, accounts]);
+  }, [filteredSales, customers, accounts]);
 
   // Enhanced export functions
   const exportToCSV = () => {
@@ -504,7 +456,7 @@ export function ReportsPage() {
     switch (activeTab) {
       case 'sales':
         csvContent = 'Fecha,Cliente,Vendedor,Items,Monto,Canal,Estado Pago,Método Pago\n';
-        csvContent += metrics.filteredSales.map(sale => 
+  csvContent += filteredSales.map(sale => 
           `${sale.date},${sale.client.name},${sale.seller?.name || 'N/A'},${sale.items},${sale.amount},${sale.salesChannel || 'store'},${sale.paymentStatus || 'pending'},${sale.paymentMethod || 'cash'}`
         ).join('\n');
         filename = `ventas_${selectedPeriod}_${new Date().toISOString().split('T')[0]}.csv`;
@@ -512,7 +464,7 @@ export function ReportsPage() {
       
       case 'financial':
         csvContent = 'Fecha,Tipo,Descripción,Monto,Categoría,Referencia\n';
-        csvContent += metrics.filteredTransactions.map(transaction => 
+  csvContent += filteredTransactions.map(transaction => 
           `${transaction.date},${transaction.type},${transaction.description},${transaction.amount},${transaction.category || 'N/A'},${transaction.reference || 'N/A'}`
         ).join('\n');
         filename = `financiero_${selectedPeriod}_${new Date().toISOString().split('T')[0]}.csv`;
@@ -564,7 +516,7 @@ export function ReportsPage() {
       tab: activeTab,
       date: new Date().toLocaleDateString(),
       metrics,
-      sales: metrics.filteredSales,
+  sales: filteredSales,
       customers,
       products
     };
@@ -606,13 +558,13 @@ export function ReportsPage() {
             </div>
             <div class="metric-card">
               <h3>Transacciones</h3>
-              <p>${reportData.metrics.salesCount}</p>
+              <p>${reportData.metrics.totalTransactions}</p>
             </div>
           </div>
 
           <div class="summary">
             <h3>Resumen Ejecutivo</h3>
-            <p>Durante el período de ${selectedPeriod}, se registraron ${reportData.metrics.salesCount} transacciones 
+            <p>Durante el período de ${selectedPeriod}, se registraron ${reportData.metrics.totalTransactions} transacciones 
             por un total de ${formatCurrency(reportData.metrics.totalSales)}, con una ganancia neta de 
             ${formatCurrency(reportData.metrics.profit)}.</p>
           </div>
@@ -638,7 +590,7 @@ MÉTRICAS PRINCIPALES:
 • Gastos Totales: ${formatCurrency(metrics.totalExpenses)}
 • Ganancia Neta: ${formatCurrency(metrics.profit)}
 • Promedio por Transacción: ${formatCurrency(metrics.avgOrderValue)}
-• Total de Transacciones: ${metrics.salesCount}
+• Total de Transacciones: ${salesCount}
 • Clientes Totales: ${metrics.customersCount}
 • Productos Activos: ${metrics.activeProducts}
 
@@ -683,7 +635,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
               />
               <MetricCard
                 title="Transacciones"
-                value={metrics.salesCount.toString()}
+                value={salesCount.toString()}
                 change="+12.5"
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 10H6L5 9z" /></svg>}
                 color="text-indigo-600"
@@ -720,7 +672,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
         );
 
       case 'sales':
-        const salesByPerson = metrics.filteredSales.reduce((acc: any[], sale) => {
+  const salesByPerson = filteredSales.reduce((acc: any[], sale) => {
           const seller = sale.seller?.name || 'Sin asignar';
           const existing = acc.find(item => item.label === seller);
           if (existing) {
@@ -736,7 +688,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <MetricCard
                 title="Ventas del Período"
-                value={metrics.salesCount.toString()}
+                value={salesCount.toString()}
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5H3m4 8l-2-2m0 0l2-2m-2 2h12m-6 4a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4z" /></svg>}
               />
               <MetricCard
@@ -759,7 +711,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
             <ReportTable
               title="Detalle de Ventas"
               headers={['Fecha', 'Cliente', 'Vendedor', 'Items', 'Monto', 'Canal', 'Estado']}
-              data={metrics.filteredSales.slice(0, 50).map(sale => ({
+              data={filteredSales.slice(0, 50).map(sale => ({
                 fecha: formatDate(sale.date),
                 cliente: sale.client.name,
                 vendedor: sale.seller?.name || 'N/A',
@@ -773,11 +725,11 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
         );
 
       case 'financial':
-        const totalIncome = metrics.filteredTransactions
+  const totalIncome = filteredTransactions
           .filter(t => t.type === 'income')
           .reduce((sum, t) => sum + t.amount, 0);
         
-        const expensesByCategory = metrics.filteredTransactions
+  const expensesByCategory = filteredTransactions
           .filter(t => t.type === 'expense')
           .reduce((acc: any[], transaction) => {
             const category = transaction.category || 'Sin categoría';
@@ -853,7 +805,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
             <ReportTable
               title="Detalle de Transacciones"
               headers={['Fecha', 'Tipo', 'Descripción', 'Categoría', 'Monto']}
-              data={metrics.filteredTransactions.slice(0, 50).map(transaction => ({
+              data={filteredTransactions.slice(0, 50).map(transaction => ({
                 fecha: formatDate(transaction.date),
                 tipo: transaction.type === 'income' ? 'Ingreso' : 'Egreso',
                 descripcion: transaction.description,
@@ -1034,7 +986,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
 
       case 'performance':
         // New Performance tab with KPIs
-        const conversionRate = customers.length > 0 ? (metrics.salesCount / customers.length) * 100 : 0;
+  const conversionRate = customers.length > 0 ? (salesCount / customers.length) * 100 : 0;
         const averageMargin = products.length > 0 ? 
           products.reduce((sum, p) => sum + ((p.price - p.cost) / p.price) * 100, 0) / products.length : 0;
 
@@ -1064,7 +1016,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
               />
               <MetricCard
                 title="Productividad"
-                value={`${(metrics.salesCount / 30).toFixed(1)} ventas/día`}
+                value={`${(salesCount / 30).toFixed(1)} ventas/día`}
                 change="+8.7"
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
                 color="text-indigo-600"
@@ -1077,7 +1029,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Ventas por Cliente</span>
-                    <span className="font-semibold">{(metrics.salesCount / customers.length || 0).toFixed(2)}</span>
+                    <span className="font-semibold">{(salesCount / customers.length || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Ingreso por Cliente</span>
@@ -1109,7 +1061,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
                   <div className="text-sm text-gray-500">Margen de Ganancia</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600">{(metrics.totalSales / metrics.salesCount || 0).toFixed(0)}</div>
+                  <div className="text-3xl font-bold text-blue-600">{(metrics.totalSales / salesCount || 0).toFixed(0)}</div>
                   <div className="text-sm text-gray-500">Valor Promedio por Venta</div>
                 </div>
                 <div className="text-center">
@@ -1141,6 +1093,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
             <div className="flex items-center space-x-4">
               <label className="text-sm font-medium text-gray-700">Período:</label>
               <select
+                aria-label="Seleccionar período del reporte"
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

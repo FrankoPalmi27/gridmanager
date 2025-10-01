@@ -53,16 +53,7 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
       active: true
     };
 
-    const newSuppliers = [
-      ...state.suppliers,
-      {
-        ...supplierData,
-        id: Date.now().toString(),
-        currentBalance: 0,
-        totalPurchases: 0,
-        active: true
-      }
-    ];
+    const newSuppliers = [...state.suppliers, newSupplier];
     saveToStorage(STORAGE_KEYS.SUPPLIERS, newSuppliers);
     return { suppliers: newSuppliers };
   }),

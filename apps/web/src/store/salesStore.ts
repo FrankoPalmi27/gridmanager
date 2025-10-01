@@ -301,46 +301,67 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
   // ============================================
 
   updateSale: (saleId: number, updatedData: UpdateSaleData) => {
+    const state = get();
+    const sale = state.sales.find(s => s.id === saleId);
+    if (!sale) {
+      return;
+    }
+
     const { addLinkedTransaction, removeLinkedTransactions } = useAccountsStore.getState();
+    const { getProductById, updateStockWithMovement } = useProductsStore.getState();
+    const { getCustomerByName, updateCustomerBalance } = useCustomersStore.getState();
 
-    set((state) => {
-      const newSales = state.sales.map(sale => {
-        if (sale.id !== saleId) return sale;
+    const currentProduct = sale.productId ? getProductById(sale.productId) : undefined;
+    const netQuantityChange = updatedData.quantity - sale.items;
 
-        const originalAmount = sale.amount;
-        const newAmount = updatedData.quantity * updatedData.price;
-        const amountDifference = newAmount - originalAmount;
+    if (sale.productId && netQuantityChange > 0) {
+      const stockValidation = state.validateStock(sale.productId, netQuantityChange);
+      if (!stockValidation.valid) {
+        throw new Error(stockValidation.message || 'Stock insuficiente para la actualización de la venta');
+      }
+    }
 
-        // Handle account balance updates if payment status changes
-        if (sale.paymentStatus === 'paid' && sale.accountId) {
-          removeLinkedTransactions('sale', sale.id.toString());
-        }
+    const originalAmount = sale.amount;
+    const newAmount = updatedData.quantity * updatedData.price;
+    const amountDifference = newAmount - originalAmount;
 
-        // Add new linked transaction if marked as paid
-        if (updatedData.paymentStatus === 'paid' && updatedData.accountId) {
-          addLinkedTransaction(
-            updatedData.accountId,
-            newAmount,
-            `Venta ${sale.number} - ${updatedData.client}`,
-            {
-              type: 'sale',
-              id: sale.id.toString(),
-              number: sale.number
-            }
-          );
-        }
+    const newPaymentStatus = updatedData.paymentStatus || sale.paymentStatus || 'pending';
+    const newAccountId = updatedData.accountId ?? sale.accountId;
 
-        // Update dashboard stats
-        const newStats = {
-          totalSales: state.dashboardStats.totalSales + amountDifference,
-          totalTransactions: state.dashboardStats.totalTransactions,
-          averagePerDay: Math.round((state.dashboardStats.totalSales + amountDifference) / 30),
-          monthlyGrowth: state.dashboardStats.monthlyGrowth
-        };
-        saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, newStats);
+  const wasPending = !sale.paymentStatus || sale.paymentStatus === 'pending' || sale.paymentStatus === 'partial';
+    const isPending = newPaymentStatus === 'pending' || newPaymentStatus === 'partial';
 
-        return {
-          ...sale,
+    const previousCustomer = getCustomerByName(sale.client.name);
+    const nextCustomer = getCustomerByName(updatedData.client);
+
+    // Reverse previous customer balance impact if applicable
+    if (previousCustomer && wasPending) {
+      updateCustomerBalance(previousCustomer.id, originalAmount);
+    }
+
+    // Remove previous linked transactions if necessary
+    if (sale.paymentStatus === 'paid' && sale.accountId) {
+      removeLinkedTransactions('sale', sale.id.toString());
+    }
+
+    let updatedSale: Sale | null = null;
+
+    set((storeState) => {
+      const newSales = storeState.sales.map(existingSale => {
+        if (existingSale.id !== saleId) return existingSale;
+
+        const updatedCobrado = newPaymentStatus === 'paid'
+          ? newAmount
+          : newPaymentStatus === 'partial'
+            ? Math.min(existingSale.cobrado || 0, newAmount)
+            : 0;
+
+        const updatedACobrar = newPaymentStatus === 'paid'
+          ? 0
+          : newAmount - updatedCobrado;
+
+        const refreshedSale: Sale = {
+          ...existingSale,
           client: {
             name: updatedData.client,
             email: `${updatedData.client.toLowerCase().replace(' ', '.')}@email.com`,
@@ -348,19 +369,69 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
           },
           amount: newAmount,
           items: updatedData.quantity,
-          status: (updatedData.paymentStatus === 'paid' ? 'completed' : 'pending') as 'completed' | 'pending' | 'cancelled',
-          salesChannel: updatedData.salesChannel || sale.salesChannel,
-          paymentStatus: updatedData.paymentStatus || sale.paymentStatus,
-          paymentMethod: updatedData.paymentMethod || sale.paymentMethod,
-          accountId: updatedData.accountId,
-          cobrado: updatedData.paymentStatus === 'paid' ? newAmount : (sale.cobrado || 0),
-          aCobrar: updatedData.paymentStatus === 'paid' ? 0 : newAmount - (sale.cobrado || 0)
+          status: newPaymentStatus === 'paid' ? 'completed' : 'pending',
+          salesChannel: updatedData.salesChannel || existingSale.salesChannel,
+          paymentStatus: newPaymentStatus,
+          paymentMethod: updatedData.paymentMethod || existingSale.paymentMethod,
+          accountId: newAccountId,
+          cobrado: updatedCobrado,
+          aCobrar: updatedACobrar,
+          productName: updatedData.product || existingSale.productName
         };
+
+        updatedSale = refreshedSale;
+        return refreshedSale;
       });
 
+      if (!updatedSale) {
+        return storeState;
+      }
+
+      const newStats = {
+        totalSales: storeState.dashboardStats.totalSales + amountDifference,
+        totalTransactions: storeState.dashboardStats.totalTransactions,
+        averagePerDay: Math.round((storeState.dashboardStats.totalSales + amountDifference) / 30),
+        monthlyGrowth: storeState.dashboardStats.monthlyGrowth
+      };
+
       saveToStorage(STORAGE_KEYS.SALES, newSales);
-      return { sales: newSales };
+      saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, newStats);
+
+      return {
+        sales: newSales,
+        dashboardStats: newStats
+      };
     });
+
+    // Apply new customer balance impact if sale remains pending or partial
+    if (nextCustomer && isPending) {
+      updateCustomerBalance(nextCustomer.id, -newAmount);
+    }
+
+    // Register new linked transaction when the sale is paid
+    if (newPaymentStatus === 'paid' && newAccountId) {
+      addLinkedTransaction(
+        newAccountId,
+        newAmount,
+        `Venta ${sale.number} - ${updatedData.client}`,
+        {
+          type: 'sale',
+          id: sale.id.toString(),
+          number: sale.number
+        }
+      );
+    }
+
+    // Sync inventory when the quantity changes
+    if (sale.productId && currentProduct && netQuantityChange !== 0) {
+      const targetStock = currentProduct.stock - netQuantityChange;
+      updateStockWithMovement(
+        sale.productId,
+        targetStock,
+        `Actualización venta ${sale.number} - Cliente: ${updatedData.client}`,
+        sale.number
+      );
+    }
   },
 
   // ============================================
@@ -431,6 +502,19 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
         dashboardStats: newStats
       };
     });
+
+    // Revert customer balance impact if sale was pendiente/parcial
+    try {
+      if (saleToDelete.paymentStatus === 'pending' || saleToDelete.paymentStatus === 'partial') {
+        const { getCustomerByName, updateCustomerBalance } = useCustomersStore.getState();
+        const customer = getCustomerByName(saleToDelete.client.name);
+        if (customer) {
+          updateCustomerBalance(customer.id, saleToDelete.amount);
+        }
+      }
+    } catch (error) {
+      console.error('Error revirtiendo balance de cliente al eliminar venta:', error);
+    }
   },
 
   // ============================================

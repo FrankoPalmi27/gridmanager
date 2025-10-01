@@ -8,6 +8,7 @@ import { Input } from '../components/ui/Input';
 import { TransferModal } from '../components/forms/TransferModal';
 import { formatCurrency, formatDate } from '../lib/formatters';
 import { useTableScroll } from '../hooks/useTableScroll';
+import BulkTransactionImport from '../components/BulkTransactionImport';
 
 // Account interface
 interface Account {
@@ -553,6 +554,8 @@ export function AccountsPage() {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
+  const [bulkImportType, setBulkImportType] = useState<'income' | 'expense'>('income');
   const [editingAccount, setEditingAccount] = useState<Account | undefined>();
   const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
 
@@ -883,7 +886,33 @@ export function AccountsPage() {
               <h2 className="text-xl font-semibold text-gray-900">Movimientos</h2>
               <p className="text-sm text-gray-500">Historial de transacciones</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
+              <Button
+                onClick={() => {
+                  setBulkImportType('income');
+                  setIsBulkImportModalOpen(true);
+                }}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Importar Ingresos CSV
+              </Button>
+              <Button
+                onClick={() => {
+                  setBulkImportType('expense');
+                  setIsBulkImportModalOpen(true);
+                }}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Importar Egresos CSV
+              </Button>
               <Button
                 onClick={() => setIsTransferModalOpen(true)}
                 variant="outline"
@@ -1061,6 +1090,37 @@ export function AccountsPage() {
           accounts={accounts}
           onTransferCompleted={handleTransferCompleted}
         />
+
+        {/* Bulk Import Modal */}
+        {isBulkImportModalOpen && (
+          <BulkTransactionImport
+            type={bulkImportType}
+            accounts={accounts}
+            onImportComplete={(importedTransactions) => {
+              // Add all imported transactions
+              setTransactions(prev => [...importedTransactions, ...prev]);
+
+              // Update account balances for all imported transactions
+              const balanceChanges = new Map<string, number>();
+              importedTransactions.forEach(transaction => {
+                const current = balanceChanges.get(transaction.accountId) || 0;
+                const change = transaction.type === 'income' ? transaction.amount : -transaction.amount;
+                balanceChanges.set(transaction.accountId, current + change);
+              });
+
+              setAccounts(prev => prev.map(acc => {
+                const change = balanceChanges.get(acc.id);
+                if (change !== undefined) {
+                  return { ...acc, balance: acc.balance + change };
+                }
+                return acc;
+              }));
+
+              setIsBulkImportModalOpen(false);
+            }}
+            onClose={() => setIsBulkImportModalOpen(false)}
+          />
+        )}
       </div>
     </div>
   );

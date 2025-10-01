@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input';
 import { formatCurrency, formatTaxId, formatPhoneNumber } from '../lib/formatters';
 import { useSuppliersStore } from '../store/suppliersStore';
 import { useTableScroll } from '../hooks/useTableScroll';
+import BulkSupplierImport from '../components/BulkSupplierImport';
 
 interface SupplierFormData {
   name: string;
@@ -188,6 +189,7 @@ export function SuppliersPage() {
             <h1 className="text-2xl font-bold text-gray-900">Proveedores</h1>
             <p className="text-gray-600">Gestiona tus proveedores y cuentas por pagar</p>
           </div>
+          <BulkSupplierImport onImportComplete={() => {}} />
           <Button
             onClick={handleNewSupplier}
             variant="primary"

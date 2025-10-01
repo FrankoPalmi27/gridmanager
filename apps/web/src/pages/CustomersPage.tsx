@@ -7,6 +7,7 @@ import { formatCurrency } from '@lib/formatters';
 import { useSalesStore } from '@store/salesStore';
 import { useCustomersStore, Customer } from '@store/customersStore';
 import { useTableScroll } from '@hooks/useTableScroll';
+import BulkCustomerImport from '@components/BulkCustomerImport';
 import {
   TeamOutlined,
   CheckCircleOutlined,
@@ -254,6 +255,7 @@ export function CustomersPage() {
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Clientes</h1>
             <p className="text-sm sm:text-base text-gray-600">Gestiona tu base de datos de clientes</p>
           </div>
+          <BulkCustomerImport onImportComplete={() => {}} />
           <Button
             onClick={handleNewCustomer}
             variant="primary"

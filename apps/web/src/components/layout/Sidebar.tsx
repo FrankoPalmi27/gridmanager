@@ -17,26 +17,35 @@ import { useAuthStore } from '@/store/authStore';
 interface SidebarProps {
   open: boolean;
   setOpen: (open: boolean) => void;
+  onNavigate?: (key: string) => void;
+  activeItem?: string;
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: HomeIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST', 'SELLER'] },
-  { name: 'Ingresos', href: '/sales', icon: ArrowTrendingUpIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST', 'SELLER'] },
-  { name: 'Egresos', href: '/purchases', icon: ArrowTrendingDownIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST'] },
-  { name: 'Contactos - Clientes', href: '/customers', icon: UsersIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST', 'SELLER'] },
-  { name: 'Contactos - Proveedores', href: '/suppliers', icon: UserGroupIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST'] },
-  { name: 'Productos', href: '/products', icon: CubeIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST', 'SELLER'] },
-  { name: 'Cuentas', href: '/accounts', icon: CreditCardIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST'] },
-  { name: 'Informes', href: '/reports', icon: DocumentChartBarIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST'] },
-  { name: 'Usuarios', href: '/users', icon: UserGroupIcon, roles: ['ADMIN', 'MANAGER'] },
+  { key: 'dashboard', name: 'Dashboard', href: '/dashboard', icon: HomeIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST', 'SELLER'] },
+  { key: 'sales', name: 'Ingresos', href: '/sales', icon: ArrowTrendingUpIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST', 'SELLER'] },
+  { key: 'purchases', name: 'Egresos', href: '/purchases', icon: ArrowTrendingDownIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST'] },
+  { key: 'customers', name: 'Contactos - Clientes', href: '/customers', icon: UsersIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST', 'SELLER'] },
+  { key: 'suppliers', name: 'Contactos - Proveedores', href: '/suppliers', icon: UserGroupIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST'] },
+  { key: 'products', name: 'Productos', href: '/products', icon: CubeIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST', 'SELLER'] },
+  { key: 'accounts', name: 'Cuentas', href: '/accounts', icon: CreditCardIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST'] },
+  { key: 'reports', name: 'Informes', href: '/reports', icon: DocumentChartBarIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST'] },
+  { key: 'users', name: 'Usuarios', href: '/users', icon: UserGroupIcon, roles: ['ADMIN', 'MANAGER'] },
 ];
 
-export function Sidebar({ open, setOpen }: SidebarProps) {
+export function Sidebar({ open, setOpen, onNavigate, activeItem }: SidebarProps) {
   const { user } = useAuthStore();
 
   const filteredNavigation = navigation.filter(item => 
     user?.role && item.roles.includes(user.role)
   );
+
+  const handleNavigate = (key: string) => {
+    if (onNavigate) {
+      onNavigate(key);
+      setOpen(false);
+    }
+  };
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -56,21 +65,37 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
       {/* Navigation with improved styling */}
       <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
         {filteredNavigation.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.href}
-            className={({ isActive }) =>
-              `group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
-                isActive
+          onNavigate ? (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => handleNavigate(item.key)}
+              className={`group flex w-full items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+                activeItem === item.key
                   ? 'bg-primary-50 text-primary-700 shadow-sm'
                   : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'
-              }`
-            }
-            onClick={() => setOpen(false)}
-          >
-            <item.icon className={`flex-shrink-0 w-5 h-5 mr-3 transition-transform duration-200 group-hover:scale-110`} />
-            <span className="truncate">{item.name}</span>
-          </NavLink>
+              }`}
+            >
+              <item.icon className="flex-shrink-0 w-5 h-5 mr-3 transition-transform duration-200 group-hover:scale-110" />
+              <span className="truncate">{item.name}</span>
+            </button>
+          ) : (
+            <NavLink
+              key={item.key ?? item.name}
+              to={item.href}
+              className={({ isActive }) =>
+                `group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+                  isActive
+                    ? 'bg-primary-50 text-primary-700 shadow-sm'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'
+                }`
+              }
+              onClick={() => setOpen(false)}
+            >
+              <item.icon className={`flex-shrink-0 w-5 h-5 mr-3 transition-transform duration-200 group-hover:scale-110`} />
+              <span className="truncate">{item.name}</span>
+            </NavLink>
+          )
         ))}
       </nav>
 

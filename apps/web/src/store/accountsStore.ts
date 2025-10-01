@@ -8,6 +8,7 @@ export interface Account {
   accountNumber: string;
   bankName: string;
   accountType: string;
+  paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other'; // Método de pago asociado
   balance: number;
   currency: string;
   active: boolean;

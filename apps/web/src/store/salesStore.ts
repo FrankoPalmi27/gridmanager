@@ -29,8 +29,8 @@ export interface Sale {
   // Sales channel and payment info
   salesChannel?: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
   paymentStatus?: 'paid' | 'pending' | 'partial';
-  paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other';
-  accountId?: string; // ID de la cuenta donde se registró el pago
+  // paymentMethod se obtiene ahora desde la cuenta asociada
+  accountId?: string; // ID de la cuenta donde se registró el pago (la cuenta define el método de pago)
   // Payment tracking
   cobrado: number; // Monto cobrado
   aCobrar: number; // Monto pendiente de cobro
@@ -62,8 +62,7 @@ interface AddSaleData {
   price: number;
   salesChannel?: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
   paymentStatus?: 'paid' | 'pending' | 'partial';
-  paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other';
-  accountId?: string;
+  accountId?: string; // La cuenta define el método de pago
 }
 
 interface UpdateSaleData {
@@ -73,8 +72,7 @@ interface UpdateSaleData {
   price: number;
   salesChannel?: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
   paymentStatus?: 'paid' | 'pending' | 'partial';
-  paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other';
-  accountId?: string;
+  accountId?: string; // La cuenta define el método de pago
 }
 
 interface SalesStore {
@@ -225,8 +223,7 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
       sparkline: [50, 80, 120, 150, totalAmount / 100],
       salesChannel: saleData.salesChannel || 'store',
       paymentStatus: saleData.paymentStatus || 'pending',
-      paymentMethod: saleData.paymentMethod || 'cash',
-      accountId: saleData.accountId,
+      accountId: saleData.accountId, // El método de pago se obtiene de la cuenta
       cobrado: saleData.paymentStatus === 'paid' ? totalAmount : 0,
       aCobrar: saleData.paymentStatus === 'paid' ? 0 : totalAmount,
       productId: saleData.productId,
@@ -372,8 +369,7 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
           status: newPaymentStatus === 'paid' ? 'completed' : 'pending',
           salesChannel: updatedData.salesChannel || existingSale.salesChannel,
           paymentStatus: newPaymentStatus,
-          paymentMethod: updatedData.paymentMethod || existingSale.paymentMethod,
-          accountId: newAccountId,
+          accountId: newAccountId, // El método de pago viene de la cuenta
           cobrado: updatedCobrado,
           aCobrar: updatedACobrar,
           productName: updatedData.product || existingSale.productName

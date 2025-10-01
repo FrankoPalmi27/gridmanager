@@ -27,8 +27,7 @@ interface SalesFormData {
   saleDate: string;
   salesChannel: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
   paymentStatus: 'paid' | 'pending' | 'partial';
-  paymentMethod: 'cash' | 'transfer' | 'card' | 'check' | 'other';
-  accountId: string;
+  accountId: string; // La cuenta define el método de pago
 }
 
 interface SalesFormErrors {
@@ -63,13 +62,7 @@ const PAYMENT_STATUS = [
   { value: 'partial', label: 'Pago Parcial' },
 ];
 
-const PAYMENT_METHODS = [
-  { value: 'cash', label: 'Efectivo' },
-  { value: 'transfer', label: 'Transferencia' },
-  { value: 'card', label: 'Tarjeta' },
-  { value: 'check', label: 'Cheque' },
-  { value: 'other', label: 'Otro' },
-];
+// PAYMENT_METHODS ya no es necesario, el método de pago viene de la cuenta
 
 
 export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess, editingSale }) => {
@@ -105,8 +98,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
     saleDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
     salesChannel: 'store',
     paymentStatus: 'paid',
-    paymentMethod: 'cash',
-    accountId: '2', // Caja Fuerte como default para efectivo
+    accountId: '', // Cuenta requerida si está pagado
   });
 
   // Populate form when editing a sale
@@ -126,8 +118,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
         saleDate: editingSale.date || new Date().toISOString().split('T')[0],
         salesChannel: editingSale.salesChannel || 'store',
         paymentStatus: editingSale.paymentStatus || 'pending',
-        paymentMethod: editingSale.paymentMethod || 'cash',
-        accountId: editingSale.accountId || '2'
+        accountId: editingSale.accountId || ''
       });
     } else if (!editingSale && isOpen) {
       // Reset form for new sale
@@ -146,8 +137,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
       saleDate: new Date().toISOString().split('T')[0],
       salesChannel: 'store',
       paymentStatus: 'paid',
-      paymentMethod: 'cash',
-      accountId: '2',
+      accountId: '',
     });
     setErrors({});
   };
@@ -619,30 +609,11 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
           </select>
         </div>
 
-        {/* Método de Pago */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Método de Pago
-          </label>
-          <select
-            value={formData.paymentMethod}
-            onChange={(e) => setFormData(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={loading}
-          >
-            {PAYMENT_METHODS.map((method) => (
-              <option key={method.value} value={method.value}>
-                {method.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Cuenta (solo si el pago está marcado como pagado) */}
+        {/* Cuenta / Método de Pago (solo si el pago está marcado como pagado) */}
         {formData.paymentStatus === 'paid' && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cuenta de Depósito
+              Cuenta / Método de Pago
               <span className="text-red-500 ml-1">*</span>
             </label>
             <select
@@ -659,15 +630,20 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
               disabled={loading}
             >
               <option value="">Seleccionar cuenta...</option>
-              {activeAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name} ({account.accountType}) - Balance: {account.balance.toLocaleString('es-AR', { style: 'currency', currency: account.currency })}
-                </option>
-              ))}
+              {activeAccounts.map((account) => {
+                const paymentMethodLabel = account.paymentMethod
+                  ? ` - ${account.paymentMethod === 'cash' ? 'Efectivo' : account.paymentMethod === 'transfer' ? 'Transferencia' : account.paymentMethod === 'card' ? 'Tarjeta' : account.paymentMethod === 'check' ? 'Cheque' : 'Otro'}`
+                  : '';
+                return (
+                  <option key={account.id} value={account.id}>
+                    {account.name}{paymentMethodLabel} - Balance: {account.balance.toLocaleString('es-AR', { style: 'currency', currency: account.currency })}
+                  </option>
+                );
+              })}
             </select>
             {activeAccounts.length === 0 && (
               <p className="text-sm text-gray-500 mt-1">
-                No hay cuentas activas disponibles. 
+                No hay cuentas activas disponibles.
                 <span className="text-blue-600 cursor-pointer hover:underline">Agregar cuentas</span>
               </p>
             )}
@@ -675,7 +651,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
               <p className="text-sm text-red-600 mt-1">{errors.accountId}</p>
             )}
             <p className="text-xs text-gray-500 mt-1">
-              El monto se agregará automáticamente al balance de esta cuenta
+              💡 El método de pago está asociado a cada cuenta. El monto se agregará automáticamente al balance.
             </p>
           </div>
         )}

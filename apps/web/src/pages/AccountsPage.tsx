@@ -16,6 +16,7 @@ interface Account {
   accountNumber: string;
   bankName: string;
   accountType: string;
+  paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other'; // Método de pago asociado
   balance: number;
   currency: string;
   active: boolean;
@@ -43,6 +44,16 @@ const accountTypes = [
   'Efectivo',
   'Tarjeta de Crédito',
   'Inversiones'
+];
+
+// Payment methods
+const paymentMethods = [
+  { value: '', label: 'Sin método específico' },
+  { value: 'cash', label: 'Efectivo' },
+  { value: 'transfer', label: 'Transferencia' },
+  { value: 'card', label: 'Tarjeta' },
+  { value: 'check', label: 'Cheque' },
+  { value: 'other', label: 'Otro' }
 ];
 
 // Transaction categories
@@ -91,6 +102,7 @@ function AccountModal({ isOpen, closeModal, account, onAccountSaved }: {
     accountNumber: account?.accountNumber || '',
     bankName: account?.bankName || '',
     accountType: account?.accountType || accountTypes[0],
+    paymentMethod: account?.paymentMethod || '' as 'cash' | 'transfer' | 'card' | 'check' | 'other' | '',
     balance: account?.balance || 0,
     currency: account?.currency || 'ARS',
     description: account?.description || '',
@@ -217,6 +229,27 @@ function AccountModal({ isOpen, closeModal, account, onAccountSaved }: {
                         </Transition>
                       </div>
                     </Listbox>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Método de Pago Asociado
+                      <span className="text-xs text-gray-500 ml-1">(Opcional)</span>
+                    </label>
+                    <select
+                      value={formData.paymentMethod}
+                      onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      {paymentMethods.map((method) => (
+                        <option key={method.value} value={method.value}>
+                          {method.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 Al asociar un método de pago, esta cuenta aparecerá en ventas con ese método
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">

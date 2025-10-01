@@ -52,41 +52,45 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-        <h2 className="text-xl font-bold text-gray-900">Grid Manager</h2>
+      {/* Header with gradient background */}
+      <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-r from-primary-600 to-primary-700 text-white">
+        <h2 className="text-xl font-bold tracking-tight">Grid Manager</h2>
         <button
           type="button"
-          className="text-gray-400 hover:text-gray-600 lg:hidden"
+          className="text-white/80 hover:text-white lg:hidden transition-colors p-1 rounded-md hover:bg-white/10"
           onClick={() => setOpen(false)}
+          aria-label="Cerrar menú"
         >
           <XMarkIcon className="h-6 w-6" />
         </button>
       </div>
 
-      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+      {/* Navigation with improved styling */}
+      <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
         {filteredNavigation.map((item) => (
           <NavLink
             key={item.name}
             to={item.href}
             className={({ isActive }) =>
-              `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+              `group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
                 isActive
-                  ? 'bg-primary-100 text-primary-700 border-r-4 border-primary-700'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                  ? 'bg-primary-50 text-primary-700 shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'
               }`
             }
             onClick={() => setOpen(false)}
           >
-            <item.icon className="flex-shrink-0 w-5 h-5 mr-3" />
-            {item.name}
+            <item.icon className={`flex-shrink-0 w-5 h-5 mr-3 transition-transform duration-200 group-hover:scale-110`} />
+            <span className="truncate">{item.name}</span>
           </NavLink>
         ))}
       </nav>
 
-      <div className="px-6 py-4 border-t border-gray-200">
-        <div className="text-xs text-gray-500">
-          <p>Versión 1.0.0</p>
-          <p className="mt-1">© 2024 Grid Manager</p>
+      {/* Footer with better styling */}
+      <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div className="text-xs text-gray-600">
+          <p className="font-medium">Versión 1.0.0</p>
+          <p className="mt-1 text-gray-500">© 2024 Grid Manager</p>
         </div>
       </div>
     </div>
@@ -97,41 +101,42 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
       {/* Mobile sidebar overlay - only shows when open is true and on mobile */}
       <Transition.Root show={open} as={Fragment}>
         <Dialog as="div" className="relative z-50 lg:hidden" onClose={setOpen}>
-          {/* Background overlay */}
+          {/* Background overlay with improved animation */}
           <Transition.Child
             as={Fragment}
-            enter="transition-opacity ease-linear duration-300"
+            enter="ease-out duration-300"
             enterFrom="opacity-0"
             enterTo="opacity-100"
-            leave="transition-opacity ease-linear duration-300"
+            leave="ease-in duration-200"
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-gray-900/80" />
+            <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm" />
           </Transition.Child>
 
-          {/* Sliding sidebar panel */}
+          {/* Sliding sidebar panel with improved animation */}
           <div className="fixed inset-0 flex">
             <Transition.Child
               as={Fragment}
-              enter="transition ease-in-out duration-300 transform"
+              enter="transform transition ease-out duration-300"
               enterFrom="-translate-x-full"
               enterTo="translate-x-0"
-              leave="transition ease-in-out duration-300 transform"
+              leave="transform transition ease-in duration-200"
               leaveFrom="translate-x-0"
               leaveTo="-translate-x-full"
             >
               <Dialog.Panel className="relative mr-16 flex w-full max-w-xs flex-1">
-                <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white shadow-xl">
+                <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white shadow-2xl rounded-r-2xl">
                   <SidebarContent />
                 </div>
-                
-                {/* Close button outside the sidebar */}
+
+                {/* Close button outside the sidebar - improved visibility */}
                 <div className="absolute top-0 right-0 -mr-12 pt-2">
                   <button
                     type="button"
-                    className="ml-1 flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                    className="ml-1 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white transition-colors duration-200"
                     onClick={() => setOpen(false)}
+                    aria-label="Cerrar menú"
                   >
                     <span className="sr-only">Close sidebar</span>
                     <XMarkIcon className="h-6 w-6 text-white" aria-hidden="true" />
@@ -143,10 +148,10 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
         </Dialog>
       </Transition.Root>
 
-      {/* Desktop sidebar - only show on large screens */}
+      {/* Desktop sidebar - only show on large screens with improved shadow */}
       {isLargeScreen && (
         <div className="fixed inset-y-0 z-30 flex w-72 flex-col">
-          <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-gray-200 shadow-sm">
+          <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-gray-200 shadow-lg">
             <SidebarContent />
           </div>
         </div>

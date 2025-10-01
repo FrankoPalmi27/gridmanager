@@ -14,27 +14,6 @@ export function Layout() {
 
   return (
     <div className="h-screen bg-gray-50">
-      {/* DEBUG BUTTON - SUPER VISIBLE */}
-      <button
-        onClick={() => setSidebarOpen(true)}
-        style={{
-          position: 'fixed',
-          top: '10px',
-          left: '10px',
-          zIndex: 999999,
-          width: '100px',
-          height: '100px',
-          backgroundColor: 'red',
-          border: '10px solid yellow',
-          borderRadius: '10px',
-          fontSize: '40px',
-          cursor: 'pointer',
-          boxShadow: '0 0 50px rgba(255,0,0,0.8)'
-        }}
-      >
-        ☰
-      </button>
-
       {/* Sidebar component */}
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
 

@@ -195,15 +195,14 @@ export function Header({ onMenuClick }: HeaderProps) {
       <div className="px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 sm:gap-6">
-            {/* Hamburger button - ALWAYS VISIBLE FOR TESTING */}
+            {/* Hamburger button - Only visible on mobile (< 1024px) */}
             <button
               type="button"
-              className="p-3 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all duration-200 flex items-center justify-center border-4 border-yellow-400 shadow-2xl"
+              className="lg:hidden p-2 text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors duration-200 flex items-center justify-center"
               onClick={onMenuClick}
               aria-label="Abrir menú"
-              style={{ minWidth: '60px', minHeight: '60px', zIndex: 99999, position: 'relative' }}
             >
-              <Bars3Icon className="h-8 w-8" />
+              <Bars3Icon className="h-6 w-6" />
             </button>
 
             <div className="flex-shrink-0">

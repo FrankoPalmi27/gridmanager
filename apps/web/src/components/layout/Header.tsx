@@ -194,18 +194,20 @@ export function Header({ onMenuClick }: HeaderProps) {
       {/* Main header */}
       <div className="px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center gap-3 sm:gap-6">
+            {/* Hamburger button - Only visible on mobile (< 1024px) */}
             <button
               type="button"
-              className="p-2 text-gray-500 hover:text-gray-600 hover:bg-gray-100 rounded-lg lg:hidden transition-colors duration-200 touch-target"
+              className="lg:hidden p-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 touch-target flex items-center justify-center"
               onClick={onMenuClick}
               aria-label="Abrir menú"
+              style={{ minWidth: '44px', minHeight: '44px' }}
             >
-              <Bars3Icon className="h-6 w-6" />
+              <Bars3Icon className="h-7 w-7" />
             </button>
-            
-            <div className="lg:block">
-              <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+
+            <div className="flex-shrink-0">
+              <h1 className="text-base sm:text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
                 Grid Manager
               </h1>
             </div>

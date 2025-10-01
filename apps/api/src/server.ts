@@ -46,6 +46,7 @@ export function createApp() {
         'http://localhost:5002',
         'http://localhost:5003',
         'https://obsidiangridmanager.netlify.app',
+        'https://gridmanager.netlify.app',
         'https://gridmanager-production.up.railway.app'
       ];
 

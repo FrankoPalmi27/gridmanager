@@ -190,20 +190,20 @@ export function Header({ onMenuClick }: HeaderProps) {
   ];
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
+    <header className="relative z-40 bg-white shadow-sm border-b border-gray-200">
       {/* Main header */}
       <div className="px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 sm:gap-6">
-            {/* Hamburger button - Only visible on mobile (< 1024px) */}
+            {/* Hamburger button - ALWAYS VISIBLE FOR TESTING */}
             <button
               type="button"
-              className="lg:hidden p-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 touch-target flex items-center justify-center"
+              className="p-3 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all duration-200 flex items-center justify-center border-4 border-yellow-400 shadow-2xl"
               onClick={onMenuClick}
               aria-label="Abrir menú"
-              style={{ minWidth: '44px', minHeight: '44px' }}
+              style={{ minWidth: '60px', minHeight: '60px', zIndex: 99999, position: 'relative' }}
             >
-              <Bars3Icon className="h-7 w-7" />
+              <Bars3Icon className="h-8 w-8" />
             </button>
 
             <div className="flex-shrink-0">

@@ -73,7 +73,8 @@
       "WebFetch(domain:gridmanager-production.up.railway.app)",
       "WebFetch(domain:obsidiangridmanager.netlify.app)",
       "WebFetch(domain:accounts.google.com)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

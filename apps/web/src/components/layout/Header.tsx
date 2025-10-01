@@ -197,8 +197,9 @@ export function Header({ onMenuClick }: HeaderProps) {
           <div className="flex items-center space-x-6">
             <button
               type="button"
-              className="text-gray-500 hover:text-gray-600 lg:hidden transition-colors duration-200 z-50 relative"
+              className="p-2 text-gray-500 hover:text-gray-600 hover:bg-gray-100 rounded-lg lg:hidden transition-colors duration-200 touch-target"
               onClick={onMenuClick}
+              aria-label="Abrir menú"
             >
               <Bars3Icon className="h-6 w-6" />
             </button>

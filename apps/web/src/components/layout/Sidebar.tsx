@@ -96,7 +96,7 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
     <>
       {/* Mobile sidebar overlay - only shows when open is true and on mobile */}
       <Transition.Root show={open} as={Fragment}>
-        <Dialog as="div" className="fixed inset-0 z-50 lg:hidden" onClose={setOpen}>
+        <Dialog as="div" className="relative z-50 lg:hidden" onClose={setOpen}>
           {/* Background overlay */}
           <Transition.Child
             as={Fragment}

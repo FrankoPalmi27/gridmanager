@@ -184,11 +184,8 @@ export function SalesPage() {
   const { sales, deleteSale, loadSales, isLoading } = useSalesStore();
   const { products } = useProductsStore();
 
-  // Load sales on mount
-  useEffect(() => {
-    loadSales();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Sales are loaded from localStorage on store initialization
+  // Only call loadSales manually if you need to refresh from API
   
   // Migrate existing sales to include new payment fields if missing
   const migratedSales = sales.map(sale => ({

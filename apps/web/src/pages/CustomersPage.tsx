@@ -34,11 +34,8 @@ export function CustomersPage() {
   const { customers, addCustomer, updateCustomer, deleteCustomer, stats, loadCustomers, isLoading } = useCustomersStore();
   const [loading, setLoading] = useState(false);
 
-  // Load customers on mount
-  useEffect(() => {
-    loadCustomers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Customers are loaded from localStorage on store initialization
+  // Only call loadCustomers manually if you need to refresh from API
   
   // Form state
   const [formData, setFormData] = useState({

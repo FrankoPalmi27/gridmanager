@@ -31,11 +31,8 @@ type SortOrder = 'asc' | 'desc';
 export function ProductsPage() {
   const { products, addProduct, stats, updateProduct, deleteProduct, categories, setCategories, resetToInitialProducts, stockMovements, getStockMovementsByProduct, addStockMovement, loadProducts, isLoading } = useProductsStore();
 
-  // Load products on mount
-  useEffect(() => {
-    loadProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Products are loaded from localStorage on store initialization
+  // Only call loadProducts manually if you need to refresh from API
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');

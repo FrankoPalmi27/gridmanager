@@ -537,12 +537,8 @@ export function AccountsPage() {
     // This is handled by the store now, keeping for compatibility
   };
 
-  // Load accounts and transactions on mount
-  useEffect(() => {
-    loadAccounts();
-    loadTransactions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Accounts and transactions are loaded from localStorage on store initialization
+  // Only call loadAccounts/loadTransactions manually if you need to refresh from API
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAccount, setSelectedAccount] = useState<string>('all');

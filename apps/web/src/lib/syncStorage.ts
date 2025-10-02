@@ -17,16 +17,24 @@ export interface SyncConfig<T> {
 
 /**
  * Load data with hybrid approach:
- * 1. Try to fetch from API
- * 2. If successful, update localStorage and return API data
- * 3. If fails (offline/error), return localStorage cache
+ * 1. Check if user is authenticated
+ * 2. If authenticated, try to fetch from API
+ * 3. If successful, update localStorage and return API data
+ * 4. If not authenticated or fails, return localStorage cache
  */
 export async function loadWithSync<T>(
   config: SyncConfig<T>,
   defaultValue: T[] = []
 ): Promise<T[]> {
+  // Check authentication first - skip API if using mock token
+  if (!isAuthenticated()) {
+    console.log(`ℹ️ Offline mode for ${config.storageKey}, using localStorage only`);
+    const cachedData = loadFromStorage(config.storageKey, defaultValue);
+    return cachedData;
+  }
+
   try {
-    // Try to fetch from API
+    // Try to fetch from API (only if authenticated)
     const response = await config.apiGet();
     const data = config.extractData
       ? config.extractData(response)
@@ -83,8 +91,17 @@ export async function createWithSync<T extends { id?: string }>(
     throw new Error('apiCreate not configured');
   }
 
+  // Check authentication - skip API if using mock token
+  if (!isAuthenticated()) {
+    console.log(`ℹ️ Offline mode for ${config.storageKey}, saving to localStorage only`);
+    const localItem = { ...item, id: item.id || Date.now().toString() };
+    const updatedData = [localItem, ...currentData];
+    saveToStorage(config.storageKey, updatedData);
+    return localItem as T;
+  }
+
   try {
-    // Try to create in API
+    // Try to create in API (only if authenticated)
     const response = await config.apiCreate(item);
     const createdItem = response.data.data || response.data;
 
@@ -120,8 +137,18 @@ export async function updateWithSync<T extends { id: string }>(
     throw new Error('apiUpdate not configured');
   }
 
+  // Check authentication - skip API if using mock token
+  if (!isAuthenticated()) {
+    console.log(`ℹ️ Offline mode for ${config.storageKey}, saving to localStorage only`);
+    const updatedData = currentData.map((item) =>
+      item.id === id ? { ...item, ...updates } : item
+    );
+    saveToStorage(config.storageKey, updatedData);
+    return;
+  }
+
   try {
-    // Try to update in API
+    // Try to update in API (only if authenticated)
     await config.apiUpdate(id, updates as T);
 
     // Update localStorage
@@ -156,8 +183,16 @@ export async function deleteWithSync<T extends { id: string }>(
     throw new Error('apiDelete not configured');
   }
 
+  // Check authentication - skip API if using mock token
+  if (!isAuthenticated()) {
+    console.log(`ℹ️ Offline mode for ${config.storageKey}, removing from localStorage only`);
+    const updatedData = currentData.filter((item) => item.id !== id);
+    saveToStorage(config.storageKey, updatedData);
+    return;
+  }
+
   try {
-    // Try to delete from API
+    // Try to delete from API (only if authenticated)
     await config.apiDelete(id);
 
     // Update localStorage

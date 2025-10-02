@@ -75,7 +75,8 @@
       "WebFetch(domain:accounts.google.com)",
       "Bash(git merge:*)",
       "Bash(findstr:*)",
-      "Bash(set PORT=3001)"
+      "Bash(set PORT=3001)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

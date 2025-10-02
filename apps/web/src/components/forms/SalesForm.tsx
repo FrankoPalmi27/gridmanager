@@ -3,18 +3,20 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { SearchableSelect } from '../ui/SearchableSelect';
-import { useSalesStore } from '../../store/salesStore';
+import { useSalesStore, type Sale } from '../../store/salesStore';
 import { useProductsStore } from '../../store/productsStore';
 import { useAccountsStore } from '../../store/accountsStore';
 import { useCustomersStore } from '../../store/customersStore';
 import { useSystemConfigStore } from '../../store/systemConfigStore';
 import { formatAmount } from '../../lib/formatters';
 
+type EditableSale = Sale & { discount?: number };
+
 interface SalesFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (sale: any) => void;
-  editingSale?: any; // Sale object to edit
+  onSuccess?: (sale: Sale) => void;
+  editingSale?: EditableSale; // Sale object to edit
 }
 
 interface SalesFormData {
@@ -304,7 +306,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
 
         try {
           // Create new sale
-          const newSale = addSale(formData);
+          const newSale = await addSale(formData);
 
           if (onSuccess) {
             onSuccess(newSale);
@@ -572,10 +574,11 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
 
         {/* Canal de Venta */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="sales-channel" className="block text-sm font-medium text-gray-700 mb-1">
             Canal de Venta
           </label>
           <select
+            id="sales-channel"
             value={formData.salesChannel}
             onChange={(e) => setFormData(prev => ({ ...prev, salesChannel: e.target.value as any }))}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -591,11 +594,12 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
 
         {/* Estado de Pago */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="payment-status" className="block text-sm font-medium text-gray-700 mb-1">
             Estado de Pago
             <span className="text-red-500 ml-1">*</span>
           </label>
           <select
+            id="payment-status"
             value={formData.paymentStatus}
             onChange={(e) => setFormData(prev => ({ ...prev, paymentStatus: e.target.value as any }))}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -612,11 +616,12 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
         {/* Cuenta / Método de Pago (solo si el pago está marcado como pagado) */}
         {formData.paymentStatus === 'paid' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="payment-account" className="block text-sm font-medium text-gray-700 mb-1">
               Cuenta / Método de Pago
               <span className="text-red-500 ml-1">*</span>
             </label>
             <select
+              id="payment-account"
               value={formData.accountId}
               onChange={(e) => {
                 setFormData(prev => ({ ...prev, accountId: e.target.value }));

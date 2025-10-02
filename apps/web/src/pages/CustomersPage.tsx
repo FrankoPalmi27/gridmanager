@@ -37,6 +37,7 @@ export function CustomersPage() {
   // Load customers on mount
   useEffect(() => {
     loadCustomers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   // Form state

@@ -34,6 +34,7 @@ export function ProductsPage() {
   // Load products on mount
   useEffect(() => {
     loadProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [searchTerm, setSearchTerm] = useState('');

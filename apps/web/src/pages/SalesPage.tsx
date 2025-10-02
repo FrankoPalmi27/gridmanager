@@ -187,6 +187,7 @@ export function SalesPage() {
   // Load sales on mount
   useEffect(() => {
     loadSales();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   // Migrate existing sales to include new payment fields if missing

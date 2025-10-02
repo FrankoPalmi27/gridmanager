@@ -541,6 +541,7 @@ export function AccountsPage() {
   useEffect(() => {
     loadAccounts();
     loadTransactions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   const [searchTerm, setSearchTerm] = useState('');

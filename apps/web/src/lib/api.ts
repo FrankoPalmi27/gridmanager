@@ -24,34 +24,36 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      
+
       const { tokens, updateTokens, clearAuth } = useAuthStore.getState();
-      
-      if (tokens?.refreshToken) {
+
+      if (tokens?.refreshToken && tokens.refreshToken !== 'mock-refresh-token') {
         try {
           const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
             refreshToken: tokens.refreshToken,
           });
-          
+
           const newTokens = response.data.data.tokens;
           updateTokens(newTokens);
-          
+
           originalRequest.headers.Authorization = `Bearer ${newTokens.accessToken}`;
           return api(originalRequest);
         } catch (refreshError) {
+          // Don't redirect automatically - let the app handle it
           clearAuth();
-          window.location.href = '/login';
+          console.error('Token refresh failed:', refreshError);
           return Promise.reject(refreshError);
         }
       } else {
-        clearAuth();
-        window.location.href = '/login';
+        // Don't redirect automatically for mock tokens or missing refresh token
+        console.warn('No valid refresh token available');
+        return Promise.reject(error);
       }
     }
-    
+
     return Promise.reject(error);
   }
 );

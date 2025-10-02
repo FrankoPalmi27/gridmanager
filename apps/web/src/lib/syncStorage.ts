@@ -178,6 +178,7 @@ export async function deleteWithSync<T extends { id: string }>(
 
 /**
  * Check if user is authenticated (has valid tokens)
+ * Excludes mock tokens to prevent API calls with invalid auth
  */
 export function isAuthenticated(): boolean {
   try {
@@ -185,7 +186,14 @@ export function isAuthenticated(): boolean {
     if (!authData) return false;
 
     const parsed = JSON.parse(authData);
-    return !!(parsed.state?.tokens?.accessToken);
+    const token = parsed.state?.tokens?.accessToken;
+
+    // Exclude mock tokens - they won't work with real backend
+    if (!token || token === 'mock-access-token') {
+      return false;
+    }
+
+    return true;
   } catch {
     return false;
   }
@@ -193,6 +201,7 @@ export function isAuthenticated(): boolean {
 
 /**
  * Get sync mode (online with auth, or offline)
+ * Returns 'offline' for mock tokens to use localStorage only
  */
 export function getSyncMode(): 'online' | 'offline' {
   return isAuthenticated() ? 'online' : 'offline';

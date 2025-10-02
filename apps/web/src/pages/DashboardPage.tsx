@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSalesStore } from '../store/salesStore';
 import { useProductsStore } from '../store/productsStore';
 import { useCustomersStore } from '../store/customersStore';
-import { useSuppliersStore } from '../store/suppliersStore';
 import { useMetrics } from '../hooks/useMetrics';
 import { SalesForm } from '../components/forms/SalesForm';
 import { ProductForm } from '../components/forms/ProductForm';
@@ -40,10 +39,14 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
 
   // ✅ SOLUCIÓN: Usar hook centralizado en lugar de estado local desincronizado
   const metrics = useMetrics(); // Sin período = datos globales
-  const { dashboardStats, sales } = useSalesStore();
+  const { sales } = useSalesStore();
   const { products } = useProductsStore();
   const { customers } = useCustomersStore();
-  const { suppliers } = useSuppliersStore();
+
+  // Defensive: asegurar que las colecciones sean arreglos para evitar errores en filtros/map
+  const safeSales = Array.isArray(sales) ? sales : [];
+  const safeProducts = Array.isArray(products) ? products : [];
+  const safeCustomers = Array.isArray(customers) ? customers : [];
 
   // Generate sales evolution data
   const salesEvolutionData = useMemo(() => {
@@ -59,7 +62,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
       const dayEnd = new Date(date);
       dayEnd.setHours(23, 59, 59, 999);
 
-      const daySales = sales.filter(sale => {
+      const daySales = safeSales.filter(sale => {
         const saleDate = new Date(sale.date);
         return saleDate >= dayStart && saleDate <= dayEnd;
       });
@@ -78,7 +81,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
 
   // ✅ Get low stock products usando métricas centralizadas
   const lowStockProducts = metrics.lowStockProducts;
-  const outOfStockProducts = products.filter(p => p.stock === 0 && p.status === 'active');
+  const outOfStockProducts = safeProducts.filter(p => p.stock === 0 && p.status === 'active');
 
   // Fetch exchange rate from Banco Nación
   useEffect(() => {
@@ -521,7 +524,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           </div>
           <div className="space-y-4">
             {/* ✅ MOSTRAR ACTIVIDAD REAL O ESTADO VACIO */}
-            {sales.length === 0 && products.length === 0 && customers.length === 0 ? (
+            {safeSales.length === 0 && safeProducts.length === 0 && safeCustomers.length === 0 ? (
               <div className="text-center py-8">
                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <span className="text-2xl">📊</span>
@@ -532,7 +535,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
             ) : (
               <>
                 {/* Mostrar ventas recientes */}
-                {sales.slice(0, 2).map((sale, index) => (
+                {safeSales.slice(0, 2).map((sale, index) => (
                   <div key={sale.id} className="flex items-center p-3 bg-green-50 rounded-lg">
                     <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
                     <div className="flex-1">

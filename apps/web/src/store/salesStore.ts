@@ -452,34 +452,51 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
     const { updateStockWithMovement, getProductById } = useProductsStore.getState();
     const { removeLinkedTransactions } = useAccountsStore.getState();
 
-    set((state) => {
-      const saleToDelete = state.sales.find(sale => sale.id === saleId);
-      if (!saleToDelete) {
-        return state;
-      }
+    // Primero obtenemos la venta a eliminar ANTES del set
+    const state = get();
+    const saleToDelete = state.sales.find(sale => sale.id === saleId);
 
-      // 🔥 REVERSIÓN AUTOMÁTICA DE INVENTARIO
-      if (saleToDelete.productId) {
-        try {
-          const currentProduct = getProductById(saleToDelete.productId);
-          if (currentProduct) {
-            updateStockWithMovement(
-              saleToDelete.productId,
-              currentProduct.stock + saleToDelete.items,
-              `Eliminación venta ${saleToDelete.number} - Cliente: ${saleToDelete.client.name}`,
-              `CANCEL-${saleToDelete.number}`
-            );
-          }
-        } catch (error) {
-          console.error('Error revirtiendo stock al eliminar venta:', error);
+    if (!saleToDelete) {
+      return;
+    }
+
+    // 🔥 REVERSIÓN AUTOMÁTICA DE INVENTARIO
+    if (saleToDelete.productId) {
+      try {
+        const currentProduct = getProductById(saleToDelete.productId);
+        if (currentProduct) {
+          updateStockWithMovement(
+            saleToDelete.productId,
+            currentProduct.stock + saleToDelete.items,
+            `Eliminación venta ${saleToDelete.number} - Cliente: ${saleToDelete.client.name}`,
+            `CANCEL-${saleToDelete.number}`
+          );
+        }
+      } catch (error) {
+        console.error('Error revirtiendo stock al eliminar venta:', error);
+      }
+    }
+
+    // Eliminar transacciones enlazadas ANTES de actualizar el state
+    if (saleToDelete.paymentStatus === 'paid' && saleToDelete.accountId) {
+      removeLinkedTransactions('sale', saleToDelete.id.toString());
+    }
+
+    // Revert customer balance impact if sale was pendiente/parcial
+    try {
+      if (saleToDelete.paymentStatus === 'pending' || saleToDelete.paymentStatus === 'partial') {
+        const { getCustomerByName, updateCustomerBalance } = useCustomersStore.getState();
+        const customer = getCustomerByName(saleToDelete.client.name);
+        if (customer) {
+          updateCustomerBalance(customer.id, saleToDelete.amount);
         }
       }
+    } catch (error) {
+      console.error('Error revirtiendo balance de cliente al eliminar venta:', error);
+    }
 
-      // Eliminar transacciones enlazadas
-      if (saleToDelete.paymentStatus === 'paid' && saleToDelete.accountId) {
-        removeLinkedTransactions('sale', saleToDelete.id.toString());
-      }
-
+    // Actualizar el state de ventas
+    set((state) => {
       // Actualizar stats
       const newStats = {
         totalSales: state.dashboardStats.totalSales - saleToDelete.amount,
@@ -498,19 +515,6 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
         dashboardStats: newStats
       };
     });
-
-    // Revert customer balance impact if sale was pendiente/parcial
-    try {
-      if (saleToDelete.paymentStatus === 'pending' || saleToDelete.paymentStatus === 'partial') {
-        const { getCustomerByName, updateCustomerBalance } = useCustomersStore.getState();
-        const customer = getCustomerByName(saleToDelete.client.name);
-        if (customer) {
-          updateCustomerBalance(customer.id, saleToDelete.amount);
-        }
-      }
-    } catch (error) {
-      console.error('Error revirtiendo balance de cliente al eliminar venta:', error);
-    }
   },
 
   // ============================================

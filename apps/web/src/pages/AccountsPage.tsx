@@ -697,11 +697,11 @@ export function AccountsPage() {
   const filteredTransactions = transactions.filter(transaction => {
     const account = accounts.find(acc => acc.id === transaction.accountId);
     const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transaction.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (transaction.category && transaction.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          (transaction.reference && transaction.reference.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+
     const matchesAccount = selectedAccount === 'all' || transaction.accountId === selectedAccount;
-    
+
     return matchesSearch && matchesAccount;
   });
 

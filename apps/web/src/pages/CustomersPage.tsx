@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@ui/Button';
 import { UserStatusBadge } from '@ui/StatusBadge';
 import { Modal } from '@ui/Modal';
@@ -31,8 +31,13 @@ export function CustomersPage() {
   const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
   
   // Use the centralized customers store
-  const { customers, addCustomer, updateCustomer, deleteCustomer, stats } = useCustomersStore();
+  const { customers, addCustomer, updateCustomer, deleteCustomer, stats, loadCustomers, isLoading } = useCustomersStore();
   const [loading, setLoading] = useState(false);
+
+  // Load customers on mount
+  useEffect(() => {
+    loadCustomers();
+  }, []);
   
   // Form state
   const [formData, setFormData] = useState({

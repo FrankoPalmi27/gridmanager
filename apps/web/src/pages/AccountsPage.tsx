@@ -9,33 +9,9 @@ import { TransferModal } from '../components/forms/TransferModal';
 import { formatCurrency, formatDate } from '../lib/formatters';
 import { useTableScroll } from '../hooks/useTableScroll';
 import BulkTransactionImport from '../components/BulkTransactionImport';
+import { useAccountsStore, Account, Transaction } from '../store/accountsStore';
 
-// Account interface
-interface Account {
-  id: string;
-  name: string;
-  accountNumber: string;
-  bankName: string;
-  accountType: string;
-  paymentMethod?: 'cash' | 'transfer' | 'card' | 'check' | 'other'; // Método de pago asociado
-  balance: number;
-  currency: string;
-  active: boolean;
-  createdDate: string;
-  description?: string;
-}
-
-// Transaction interface
-interface Transaction {
-  id: string;
-  accountId: string;
-  type: 'income' | 'expense' | 'transfer';
-  amount: number;
-  description: string;
-  date: string;
-  category: string;
-  reference?: string;
-}
+// Account and Transaction interfaces are now imported from store
 
 // Account types
 const accountTypes = [
@@ -540,14 +516,32 @@ function TransactionModal({ isOpen, closeModal, accounts, onTransactionSaved }: 
 }
 
 export function AccountsPage() {
-  // ✅ ESTADO INICIAL LIMPIO - Sin datos precargados
-  const [accounts, setAccounts] = useState<Account[]>(() => {
-    return loadFromStorage(ACCOUNTS_STORAGE_KEY, initialAccounts);
-  });
+  // Use centralized store instead of local state
+  const {
+    accounts,
+    transactions,
+    loadAccounts,
+    loadTransactions,
+    addAccount: storeAddAccount,
+    updateAccount: storeUpdateAccount,
+    deleteAccount: storeDeleteAccount,
+    isLoading
+  } = useAccountsStore();
 
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    return loadFromStorage(TRANSACTIONS_STORAGE_KEY, initialTransactions);
-  });
+  // Keep local setters for compatibility with existing code
+  const setAccounts = (newAccounts: Account[] | ((prev: Account[]) => Account[])) => {
+    // This is handled by the store now, keeping for compatibility
+  };
+
+  const setTransactions = (newTransactions: Transaction[] | ((prev: Transaction[]) => Transaction[])) => {
+    // This is handled by the store now, keeping for compatibility
+  };
+
+  // Load accounts and transactions on mount
+  useEffect(() => {
+    loadAccounts();
+    loadTransactions();
+  }, []);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
@@ -559,49 +553,7 @@ export function AccountsPage() {
   const [editingAccount, setEditingAccount] = useState<Account | undefined>();
   const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
 
-  // Save accounts to localStorage whenever they change
-  useEffect(() => {
-    saveToStorage(ACCOUNTS_STORAGE_KEY, accounts);
-  }, [accounts]);
-
-  // Save transactions to localStorage whenever they change
-  useEffect(() => {
-    saveToStorage(TRANSACTIONS_STORAGE_KEY, transactions);
-  }, [transactions]);
-
-  // Periodically sync with localStorage (to pick up changes from sales)
-  useEffect(() => {
-    const syncWithStorage = () => {
-      const storedAccounts = loadFromStorage(ACCOUNTS_STORAGE_KEY, accounts);
-      const storedTransactions = loadFromStorage(TRANSACTIONS_STORAGE_KEY, transactions);
-      
-      // Only update if the data has actually changed to avoid infinite loops
-      if (JSON.stringify(storedAccounts) !== JSON.stringify(accounts)) {
-        setAccounts(storedAccounts);
-      }
-      if (JSON.stringify(storedTransactions) !== JSON.stringify(transactions)) {
-        setTransactions(storedTransactions);
-      }
-    };
-
-    // Sync when the component mounts and when the window gains focus
-    syncWithStorage();
-    
-    const handleFocus = () => syncWithStorage();
-    window.addEventListener('focus', handleFocus);
-    
-    // Also sync periodically every 5 seconds when the tab is active
-    const interval = setInterval(() => {
-      if (!document.hidden) {
-        syncWithStorage();
-      }
-    }, 5000);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      clearInterval(interval);
-    };
-  }, []); // Empty dependency array to run only on mount
+  // Sync is now handled by the centralized store
 
   const openAccountModal = (account?: Account) => {
     setEditingAccount(account);

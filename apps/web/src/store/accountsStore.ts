@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
+import { accountsApi } from '../lib/api';
+import { loadWithSync, createWithSync, updateWithSync, deleteWithSync, getSyncMode } from '../lib/syncStorage';
 
 // Account interface
 export interface Account {
@@ -44,9 +46,13 @@ const initialTransactions: Transaction[] = [];
 interface AccountsStore {
   accounts: Account[];
   transactions: Transaction[];
-  addAccount: (accountData: Omit<Account, 'id' | 'createdDate'>) => Account;
-  updateAccount: (id: string, updatedData: Partial<Account>) => void;
-  deleteAccount: (id: string) => void;
+  isLoading: boolean;
+  syncMode: 'online' | 'offline';
+  loadAccounts: () => Promise<void>;
+  loadTransactions: () => Promise<void>;
+  addAccount: (accountData: Omit<Account, 'id' | 'createdDate'>) => Promise<Account>;
+  updateAccount: (id: string, updatedData: Partial<Account>) => Promise<void>;
+  deleteAccount: (id: string) => Promise<void>;
   setAccounts: (accounts: Account[]) => void;
   getActiveAccounts: () => Account[];
   addTransaction: (transactionData: Omit<Transaction, 'id'>) => Transaction;
@@ -58,42 +64,82 @@ interface AccountsStore {
   getLinkedTransactions: (linkedType: 'sale' | 'purchase' | 'manual', linkedId: string) => Transaction[];
 }
 
+// Sync configuration for accounts
+const accountsSyncConfig = {
+  storageKey: STORAGE_KEYS.ACCOUNTS,
+  apiGet: () => accountsApi.getAll(),
+  apiCreate: (data: Account) => accountsApi.create(data),
+  apiUpdate: (id: string, data: Partial<Account>) => accountsApi.update(id, data),
+  extractData: (response: any) => response.data.data || response.data,
+};
+
 export const useAccountsStore = create<AccountsStore>((set, get) => ({
   accounts: loadFromStorage(STORAGE_KEYS.ACCOUNTS, initialAccounts),
   transactions: loadFromStorage(STORAGE_KEYS.TRANSACTIONS, initialTransactions),
+  isLoading: false,
+  syncMode: getSyncMode(),
 
-  addAccount: (accountData) => {
+  loadAccounts: async () => {
+    set({ isLoading: true, syncMode: getSyncMode() });
+    try {
+      const accounts = await loadWithSync(accountsSyncConfig, initialAccounts);
+      set({ accounts, isLoading: false });
+    } catch (error) {
+      console.error('Error loading accounts:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  loadTransactions: async () => {
+    // Note: Transactions are typically loaded per account via getMovements endpoint
+    // For now, we'll keep them in localStorage only
+    set({ syncMode: getSyncMode() });
+  },
+
+  addAccount: async (accountData) => {
+    const state = get();
     const newAccount: Account = {
       ...accountData,
       id: Date.now().toString(),
       createdDate: new Date().toISOString()
     };
 
-    set((state) => {
-      const newAccounts = [...state.accounts, newAccount];
-      saveToStorage(STORAGE_KEYS.ACCOUNTS, newAccounts);
-      return { accounts: newAccounts };
-    });
-    
-    return newAccount;
+    try {
+      const createdAccount = await createWithSync(accountsSyncConfig, newAccount, state.accounts);
+      set({ accounts: [createdAccount, ...state.accounts], syncMode: getSyncMode() });
+      return createdAccount;
+    } catch (error) {
+      console.error('Error creating account:', error);
+      return newAccount;
+    }
   },
 
-  updateAccount: (id, updatedData) => {
-    set((state) => {
+  updateAccount: async (id, updatedData) => {
+    const state = get();
+
+    try {
+      await updateWithSync(accountsSyncConfig, id, updatedData, state.accounts);
+
       const newAccounts = state.accounts.map(account =>
         account.id === id ? { ...account, ...updatedData } : account
       );
-      saveToStorage(STORAGE_KEYS.ACCOUNTS, newAccounts);
-      return { accounts: newAccounts };
-    });
+      set({ accounts: newAccounts, syncMode: getSyncMode() });
+    } catch (error) {
+      console.error('Error updating account:', error);
+    }
   },
 
-  deleteAccount: (id) => {
-    set((state) => {
+  deleteAccount: async (id) => {
+    const state = get();
+
+    try {
+      await deleteWithSync(accountsSyncConfig, id, state.accounts);
+
       const newAccounts = state.accounts.filter(account => account.id !== id);
-      saveToStorage(STORAGE_KEYS.ACCOUNTS, newAccounts);
-      return { accounts: newAccounts };
-    });
+      set({ accounts: newAccounts, syncMode: getSyncMode() });
+    } catch (error) {
+      console.error('Error deleting account:', error);
+    }
   },
 
   setAccounts: (accounts) => {

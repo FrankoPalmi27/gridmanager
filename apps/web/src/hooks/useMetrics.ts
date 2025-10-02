@@ -17,6 +17,14 @@ export const useMetrics = (period?: string) => {
   const { accounts, transactions } = useAccountsStore();
   const { suppliers } = useSuppliersStore();
 
+  // Defensive: Ensure all data are arrays to prevent .reduce() errors
+  const safeSales = Array.isArray(sales) ? sales : [];
+  const safeCustomers = Array.isArray(customers) ? customers : [];
+  const safeProducts = Array.isArray(products) ? products : [];
+  const safeAccounts = Array.isArray(accounts) ? accounts : [];
+  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+  const safeSuppliers = Array.isArray(suppliers) ? suppliers : [];
+
   // Función para filtrar por período (opcional)
   const getDateRange = (period?: string) => {
     if (!period) return null; // Sin filtros = todos los datos
@@ -49,19 +57,19 @@ export const useMetrics = (period?: string) => {
 
     // Filtrar ventas por período si se especifica
     const filteredSales = dateRange
-      ? sales.filter(sale => {
+      ? safeSales.filter(sale => {
           const saleDate = new Date(sale.date);
           return saleDate >= dateRange.startDate && saleDate <= dateRange.endDate;
         })
-      : sales;
+      : safeSales;
 
     // Filtrar transacciones por período si se especifica
     const filteredTransactions = dateRange
-      ? transactions.filter(transaction => {
+      ? safeTransactions.filter(transaction => {
           const transactionDate = new Date(transaction.date);
           return transactionDate >= dateRange.startDate && transactionDate <= dateRange.endDate;
         })
-      : transactions;
+      : safeTransactions;
 
     // ✅ CÁLCULOS UNIFICADOS - Una sola fuente de verdad
     const totalSales = filteredSales.reduce((sum, sale) => sum + sale.amount, 0);
@@ -75,29 +83,29 @@ export const useMetrics = (period?: string) => {
     const avgOrderValue = totalTransactions > 0 ? totalSales / totalTransactions : 0;
 
     // Cálculo de deudas de clientes (ventas pendientes/parciales)
-    const clientDebts = sales
+    const clientDebts = safeSales
       .filter(sale => sale.paymentStatus === 'pending' || sale.paymentStatus === 'partial')
       .reduce((sum, sale) => sum + sale.amount, 0);
 
     // Total disponible (suma de balances de cuentas activas)
-    const totalAvailable = accounts
+    const totalAvailable = safeAccounts
       .filter(account => account.active)
       .reduce((sum, account) => sum + account.balance, 0);
 
     // Deudas a proveedores (balances negativos)
-    const supplierDebts = suppliers
+    const supplierDebts = safeSuppliers
       .filter(supplier => supplier.active && supplier.currentBalance < 0)
       .reduce((sum, supplier) => sum + Math.abs(supplier.currentBalance), 0);
 
     // Contadores generales
-    const accountsCount = accounts.filter(account => account.active).length;
-    const customersCount = customers.length;
-    const activeCustomers = customers.filter(c => c.status === 'active').length;
-    const activeProducts = products.filter(p => p.status === 'active').length;
-    const lowStockProducts = products.filter(p => p.stock <= p.minStock && p.status === 'active');
+    const accountsCount = safeAccounts.filter(account => account.active).length;
+    const customersCount = safeCustomers.length;
+    const activeCustomers = safeCustomers.filter(c => c.status === 'active').length;
+    const activeProducts = safeProducts.filter(p => p.status === 'active').length;
+    const lowStockProducts = safeProducts.filter(p => p.stock <= p.minStock && p.status === 'active');
 
     // Crecimiento de ventas (comparación con período anterior)
-    const previousPeriodSales = dateRange ? sales.filter(sale => {
+    const previousPeriodSales = dateRange ? safeSales.filter(sale => {
       const saleDate = new Date(sale.date);
       const prevStartDate = new Date(dateRange.startDate);
       const periodDiff = dateRange.endDate.getTime() - dateRange.startDate.getTime();
@@ -109,7 +117,7 @@ export const useMetrics = (period?: string) => {
     const salesGrowth = prevTotalSales > 0 ? ((totalSales - prevTotalSales) / prevTotalSales) * 100 : 0;
 
     // Crecimiento de ganancias
-    const previousPeriodExpenses = dateRange ? transactions.filter(t => {
+    const previousPeriodExpenses = dateRange ? safeTransactions.filter(t => {
       const transactionDate = new Date(t.date);
       const prevStartDate = new Date(dateRange.startDate);
       const periodDiff = dateRange.endDate.getTime() - dateRange.startDate.getTime();
@@ -135,7 +143,7 @@ export const useMetrics = (period?: string) => {
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + t.amount, 0);
 
-    const previousPeriodIncome = dateRange ? transactions.filter(t => {
+    const previousPeriodIncome = dateRange ? safeTransactions.filter(t => {
       const transactionDate = new Date(t.date);
       const prevStartDate = new Date(dateRange.startDate);
       const periodDiff = dateRange.endDate.getTime() - dateRange.startDate.getTime();

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@ui/Button';
 import { StatusBadge, StockStatusBadge } from '@ui/StatusBadge';
 import { Input } from '@ui/Input';
@@ -29,7 +29,13 @@ type SortField = 'name' | 'category' | 'brand' | 'price' | 'cost' | 'stock' | 's
 type SortOrder = 'asc' | 'desc';
 
 export function ProductsPage() {
-  const { products, addProduct, stats, updateProduct, deleteProduct, categories, setCategories, resetToInitialProducts, stockMovements, getStockMovementsByProduct, addStockMovement } = useProductsStore();
+  const { products, addProduct, stats, updateProduct, deleteProduct, categories, setCategories, resetToInitialProducts, stockMovements, getStockMovementsByProduct, addStockMovement, loadProducts, isLoading } = useProductsStore();
+
+  // Load products on mount
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);

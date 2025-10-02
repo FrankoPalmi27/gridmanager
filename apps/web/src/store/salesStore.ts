@@ -4,6 +4,8 @@ import { useAccountsStore } from './accountsStore';
 import { useProductsStore } from './productsStore';
 import { useSystemConfigStore } from './systemConfigStore';
 import { useCustomersStore } from './customersStore';
+import { salesApi } from '../lib/api';
+import { loadWithSync, createWithSync, getSyncMode } from '../lib/syncStorage';
 
 // ============================================
 // TYPES & INTERFACES
@@ -79,9 +81,12 @@ interface SalesStore {
   // State
   sales: Sale[];
   dashboardStats: DashboardStats;
+  isLoading: boolean;
+  syncMode: 'online' | 'offline';
 
   // Actions
-  addSale: (saleData: AddSaleData) => Sale;
+  loadSales: () => Promise<void>;
+  addSale: (saleData: AddSaleData) => Promise<Sale>;
   updateSale: (saleId: number, updatedData: UpdateSaleData) => void;
   updateSaleStatus: (saleId: number, newStatus: 'completed' | 'pending' | 'cancelled') => void;
   deleteSale: (saleId: number) => void;
@@ -114,6 +119,17 @@ const generateAvatar = (name: string): string => {
 };
 
 // ============================================
+// SYNC CONFIGURATION
+// ============================================
+
+const syncConfig = {
+  storageKey: STORAGE_KEYS.SALES,
+  apiGet: () => salesApi.getAll(),
+  apiCreate: (data: Sale) => salesApi.create(data),
+  extractData: (response: any) => response.data.data || response.data,
+};
+
+// ============================================
 // ZUSTAND STORE
 // ============================================
 
@@ -124,6 +140,23 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
 
   sales: loadFromStorage(STORAGE_KEYS.SALES, []),
   dashboardStats: loadFromStorage(STORAGE_KEYS.DASHBOARD_STATS, initialDashboardStats),
+  isLoading: false,
+  syncMode: getSyncMode(),
+
+  // ============================================
+  // LOAD SALES
+  // ============================================
+
+  loadSales: async () => {
+    set({ isLoading: true, syncMode: getSyncMode() });
+    try {
+      const sales = await loadWithSync(syncConfig, []);
+      set({ sales, isLoading: false });
+    } catch (error) {
+      console.error('Error loading sales:', error);
+      set({ isLoading: false });
+    }
+  },
 
   // ============================================
   // STOCK VALIDATION
@@ -180,7 +213,7 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
   // ADD SALE
   // ============================================
 
-  addSale: (saleData: AddSaleData) => {
+  addSale: async (saleData: AddSaleData) => {
     const { validateStock } = get();
     const { updateStockWithMovement } = useProductsStore.getState();
     const { addLinkedTransaction } = useAccountsStore.getState();
@@ -242,8 +275,29 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
       throw new Error(`Error actualizando inventario: ${error}`);
     }
 
-    // Actualizar state con nueva venta y stats
-    set((state) => {
+    // Intentar sincronizar con API
+    try {
+      const createdSale = await createWithSync(syncConfig, newSale, state.sales);
+
+      // Actualizar state con respuesta del servidor
+      const newStats = {
+        totalSales: state.dashboardStats.totalSales + createdSale.amount,
+        totalTransactions: state.dashboardStats.totalTransactions + 1,
+        averagePerDay: Math.round((state.dashboardStats.totalSales + createdSale.amount) / 30),
+        monthlyGrowth: state.dashboardStats.monthlyGrowth + 0.1
+      };
+
+      saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, newStats);
+
+      set({
+        sales: [createdSale, ...state.sales],
+        dashboardStats: newStats,
+        syncMode: getSyncMode()
+      });
+    } catch (error) {
+      // Fallback: guardar solo en localStorage
+      console.error('Error syncing sale:', error);
+
       const newSales = [newSale, ...state.sales];
       const newStats = {
         totalSales: state.dashboardStats.totalSales + newSale.amount,
@@ -255,11 +309,12 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
       saveToStorage(STORAGE_KEYS.SALES, newSales);
       saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, newStats);
 
-      return {
+      set({
         sales: newSales,
-        dashboardStats: newStats
-      };
-    });
+        dashboardStats: newStats,
+        syncMode: getSyncMode()
+      });
+    }
 
     // 🔥 INTEGRACIÓN: Actualizar balance del cliente (cuenta corriente)
     try {

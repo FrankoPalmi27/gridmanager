@@ -1,4 +1,4 @@
-import React, { useState, Fragment } from 'react';
+import React, { useState, Fragment, useEffect } from 'react';
 import {
   PlusOutlined,
   SearchOutlined,
@@ -181,8 +181,13 @@ export function SalesPage() {
   const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
   
   // Get real sales data from context
-  const { sales, deleteSale } = useSalesStore();
+  const { sales, deleteSale, loadSales, isLoading } = useSalesStore();
   const { products } = useProductsStore();
+
+  // Load sales on mount
+  useEffect(() => {
+    loadSales();
+  }, []);
   
   // Migrate existing sales to include new payment fields if missing
   const migratedSales = sales.map(sale => ({

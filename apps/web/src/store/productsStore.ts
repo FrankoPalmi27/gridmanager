@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
+import { productsApi } from '../lib/api';
+import { loadWithSync, getSyncMode } from '../lib/syncStorage';
 
 // Tipo para los productos
 export interface Product {
@@ -90,6 +92,9 @@ interface ProductsStore {
   products: Product[];
   categories: Category[];
   stockMovements: StockMovement[];
+  isLoading: boolean;
+  syncMode: 'online' | 'offline';
+  loadProducts: () => Promise<void>;
   addProduct: (productData: {
     name: string;
     category: string;
@@ -139,10 +144,30 @@ interface ProductsStore {
   generateStockAlert: (product: Product) => StockAlert | null;
 }
 
+// Sync configuration
+const syncConfig = {
+  storageKey: STORAGE_KEYS.PRODUCTS,
+  apiGet: () => productsApi.getAll(),
+  extractData: (response: any) => response.data.data || response.data,
+};
+
 export const useProductsStore = create<ProductsStore>((set, get) => ({
   products: loadFromStorage(STORAGE_KEYS.PRODUCTS, initialProducts),
   categories: loadFromStorage(STORAGE_KEYS.CATEGORIES, []),
   stockMovements: loadFromStorage(STORAGE_KEYS.STOCK_MOVEMENTS, []),
+  isLoading: false,
+  syncMode: getSyncMode(),
+
+  loadProducts: async () => {
+    set({ isLoading: true, syncMode: getSyncMode() });
+    try {
+      const products = await loadWithSync(syncConfig, initialProducts);
+      set({ products, isLoading: false });
+    } catch (error) {
+      console.error('Error loading products:', error);
+      set({ isLoading: false });
+    }
+  },
 
   addProduct: (productData) => {
     // Calculate margin if not provided

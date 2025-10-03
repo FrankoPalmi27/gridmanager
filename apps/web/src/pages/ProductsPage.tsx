@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@ui/Button';
 import { StatusBadge, StockStatusBadge } from '@ui/StatusBadge';
 import { Input } from '@ui/Input';
@@ -29,10 +29,23 @@ type SortField = 'name' | 'category' | 'brand' | 'price' | 'cost' | 'stock' | 's
 type SortOrder = 'asc' | 'desc';
 
 export function ProductsPage() {
-  const { products, addProduct, stats, updateProduct, deleteProduct, categories, setCategories, resetToInitialProducts, stockMovements, getStockMovementsByProduct, addStockMovement, loadProducts, isLoading } = useProductsStore();
+  const { products, stats, updateProduct, deleteProduct, categories, setCategories, getStockMovementsByProduct, addStockMovement, loadProducts, isLoading } = useProductsStore();
 
-  // Products are loaded from localStorage on store initialization
-  // Only call loadProducts manually if you need to refresh from API
+  const hasRequestedInitialLoad = useRef(false);
+
+  useEffect(() => {
+    if (hasRequestedInitialLoad.current || isLoading) {
+      return;
+    }
+
+    if (products.length > 0) {
+      hasRequestedInitialLoad.current = true;
+      return;
+    }
+
+    hasRequestedInitialLoad.current = true;
+    void loadProducts();
+  }, [isLoading, loadProducts, products.length]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -44,7 +57,7 @@ export function ProductsPage() {
   const [activeTab, setActiveTab] = useState('productos');
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [stockMovementsModal, setStockMovementsModal] = useState<{ isOpen: boolean; product: Product | null }>({ isOpen: false, product: null });
-  const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
+  const { tableScrollRef } = useTableScroll();
 
   const allCategories = ['all', ...stats.categories];
 
@@ -346,6 +359,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            aria-label="Filtrar por categoría"
           >
             {allCategories.map(category => (
               <option key={category} value={category}>
@@ -365,25 +379,17 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
           <div className="hidden lg:block relative">
             <div
               ref={tableScrollRef}
-              className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
-              style={{
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#D1D5DB #F3F4F6',
-                maxWidth: '100%',
-                width: '100%',
-                maxHeight: '600px'
-              }}
+              className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400 max-w-full w-full max-h-[600px]"
             >
-            <table className="divide-y divide-gray-200" style={{ minWidth: '1400px', width: 'max-content' }}>
+            <table className="divide-y divide-gray-200 min-w-[1400px] w-max">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '120px', minWidth: '120px' }}>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] w-[120px]">
                     SKU
                   </th>
                   <th 
-                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none min-w-[200px] w-[200px]"
                     onClick={() => handleSort('name')}
-                    style={{ width: '200px', minWidth: '200px' }}
                   >
                     <div className="flex items-center gap-1">
                       <span>Producto</span>
@@ -392,13 +398,12 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                       )}
                     </div>
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '180px', minWidth: '180px' }}>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[180px] w-[180px]">
                     Descripción
                   </th>
                   <th 
-                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none min-w-[140px] w-[140px]"
                     onClick={() => handleSort('category')}
-                    style={{ width: '140px', minWidth: '140px' }}
                   >
                     <div className="flex items-center gap-1">
                       <span>Categoría</span>
@@ -408,9 +413,8 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                     </div>
                   </th>
                   <th 
-                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none min-w-[120px] w-[120px]"
                     onClick={() => handleSort('brand')}
-                    style={{ width: '120px', minWidth: '120px' }}
                   >
                     <div className="flex items-center gap-1">
                       <span>Marca</span>
@@ -419,13 +423,12 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                       )}
                     </div>
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '150px', minWidth: '150px' }}>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px] w-[150px]">
                     Proveedor
                   </th>
                   <th
-                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none min-w-[140px] w-[140px]"
                     onClick={() => handleSort('cost')}
-                    style={{ width: '140px', minWidth: '140px' }}
                   >
                     <div className="flex items-center gap-1">
                       <span>Costo Mercadería</span>
@@ -435,9 +438,8 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                     </div>
                   </th>
                   <th
-                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none min-w-[140px] w-[140px]"
                     onClick={() => handleSort('price')}
-                    style={{ width: '140px', minWidth: '140px' }}
                   >
                     <div className="flex items-center gap-1">
                       <span>Precio Vta</span>
@@ -446,13 +448,12 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                       )}
                     </div>
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '100px', minWidth: '100px' }}>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] w-[100px]">
                     Margen %
                   </th>
                   <th 
-                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none min-w-[120px] w-[120px]"
                     onClick={() => handleSort('stock')}
-                    style={{ width: '120px', minWidth: '120px' }}
                   >
                     <div className="flex items-center gap-1">
                       <span>Stock</span>
@@ -462,9 +463,8 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                     </div>
                   </th>
                   <th 
-                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none min-w-[100px] w-[100px]"
                     onClick={() => handleSort('status')}
-                    style={{ width: '100px', minWidth: '100px' }}
                   >
                     <div className="flex items-center gap-1">
                       <span>Estado</span>
@@ -473,7 +473,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                       )}
                     </div>
                   </th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '200px', minWidth: '200px' }}>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px] w-[200px]">
                     Acciones
                   </th>
                 </tr>
@@ -791,7 +791,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
             </div>
 
             {/* Stock Movements Table */}
-            <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: '400px' }}>
+            <div className="overflow-x-auto overflow-y-auto max-h-[400px]">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -1088,7 +1088,7 @@ function InventoryValuationView({ products }: InventoryValuationViewProps) {
               </div>
 
               {/* Products in Category */}
-              <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: '300px' }}>
+              <div className="overflow-x-auto overflow-y-auto max-h-[300px]">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50 sticky top-0">
                     <tr>

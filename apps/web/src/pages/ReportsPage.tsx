@@ -95,10 +95,9 @@ const PieChart = ({ data, title }: {
         <div className="flex-1 space-y-2">
           {paths.map((pathData, index) => (
             <div key={index} className="flex items-center space-x-3">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: pathData.color }}
-              />
+              <svg className="w-3 h-3" viewBox="0 0 12 12" aria-hidden="true">
+                <circle cx="6" cy="6" r="6" fill={pathData.color} />
+              </svg>
               <div className="flex-1 flex justify-between items-center">
                 <span className="text-sm text-gray-700">{pathData.item.label}</span>
                 <div className="text-right">
@@ -146,8 +145,8 @@ const AreaChart = ({ data, title, color = 'var(--primary-500)' }: {
         <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
           <defs>
             <linearGradient id={`gradient-${title}`} x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" style={{ stopColor: color, stopOpacity: 0.3 }} />
-              <stop offset="100%" style={{ stopColor: color, stopOpacity: 0.05 }} />
+              <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+              <stop offset="100%" stopColor={color} stopOpacity="0.05" />
             </linearGradient>
           </defs>
           <path
@@ -187,37 +186,87 @@ const AreaChart = ({ data, title, color = 'var(--primary-500)' }: {
   );
 };
 
+const BAR_COLOR_MAP: Record<string, string> = {
+  'bg-blue-600': 'var(--primary-500)',
+  'bg-green-600': 'var(--success-500)',
+  'bg-purple-600': 'var(--secondary-500)',
+  'bg-indigo-600': 'var(--info-500)',
+  'bg-emerald-600': 'var(--success-600)',
+};
+
+const resolveBarColor = (color: string) => BAR_COLOR_MAP[color] ?? color;
+
 // Enhanced Bar Chart with better styling
-const BarChart = ({ data, title, color = 'bg-blue-600' }: { 
+const BarChart = ({ data, title, color = 'var(--primary-500)' }: {
   data: { label: string; value: number }[];
   title: string;
   color?: string;
 }) => {
+  if (!data.length) return null;
+
   const maxValue = Math.max(...data.map(d => d.value));
-  
+  const safeMax = maxValue > 0 ? maxValue : 1;
+  const fillColor = resolveBarColor(color);
+
   return (
     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
       <div className="space-y-3">
-        {data.map((item, index) => (
-          <div key={index} className="flex items-center space-x-3">
-            <div className="w-24 text-xs text-gray-600 truncate font-medium">{item.label}</div>
-            <div className="flex-1 bg-gray-200 rounded-full h-6 relative overflow-hidden">
-              <div
-                className={`h-6 rounded-full ${color} transition-all duration-700 ease-out relative`}
-                style={{ width: `${(item.value / maxValue) * 100}%` }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/20" />
+        {data.map((item, index) => {
+          const rawWidth = (item.value / safeMax) * 100;
+          const barWidth = Math.max(0, Math.min(100, Number.isFinite(rawWidth) ? rawWidth : 0));
+
+          return (
+            <div key={index} className="flex items-center space-x-3">
+              <div className="w-24 text-xs text-gray-600 truncate font-medium">{item.label}</div>
+              <div className="flex-1 relative h-6">
+                <svg className="w-full h-full" viewBox="0 0 100 12" preserveAspectRatio="none">
+                  <rect x="0" y="2" width="100" height="8" fill="#E5E7EB" rx="4" />
+                  <rect x="0" y="2" width={barWidth} height="8" fill={fillColor} rx="4" />
+                </svg>
+                <span className="absolute right-3 top-0 text-xs font-semibold text-gray-700 leading-6">
+                  {typeof item.value === 'number' && item.value > 1000
+                    ? formatCurrency(item.value)
+                    : item.value}
+                </span>
               </div>
-              <span className="absolute right-3 top-0 text-xs font-semibold text-gray-700 leading-6">
-                {typeof item.value === 'number' && item.value > 1000 
-                  ? formatCurrency(item.value)
-                  : item.value}
-              </span>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+    </div>
+  );
+};
+
+const TrendSparkline = ({ data, colorClass = 'text-blue-500' }: {
+  data: number[];
+  colorClass?: string;
+}) => {
+  if (!data.length) return null;
+
+  const maxValue = Math.max(...data) || 1;
+  const barWidth = 100 / data.length;
+
+  return (
+    <div className={`mt-4 h-8 ${colorClass}`}>
+      <svg className="w-full h-full" viewBox="0 0 100 40" preserveAspectRatio="none">
+        {data.map((value, index) => {
+          const normalizedHeight = (value / maxValue) * 36;
+          const x = index * barWidth;
+          return (
+            <rect
+              key={index}
+              x={x}
+              y={38 - normalizedHeight}
+              width={barWidth - 1}
+              height={normalizedHeight}
+              rx={1.5}
+              ry={1.5}
+              fill="currentColor"
+            />
+          );
+        })}
+      </svg>
     </div>
   );
 };
@@ -255,17 +304,7 @@ const MetricCard = ({ title, value, change, icon, color = 'text-blue-600', trend
         <span className={`text-xl ${color}`}>{icon}</span>
       </div>
     </div>
-    {trend && trend.length > 0 && (
-      <div className="h-8 flex items-end space-x-1">
-        {trend.map((value, index) => (
-          <div
-            key={index}
-            className={`flex-1 bg-gray-200 rounded-t`}
-            style={{ height: `${(value / Math.max(...trend)) * 100}%` }}
-          />
-        ))}
-      </div>
-    )}
+    {trend && trend.length > 0 && <TrendSparkline data={trend} colorClass={color ?? 'text-blue-500'} />}
   </div>
 );
 
@@ -309,7 +348,7 @@ const ReportTable = ({ title, headers, data, sortable = true }: {
       <div className="p-6 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
       </div>
-      <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: '500px' }}>
+  <div className="overflow-x-auto overflow-y-auto max-h-[500px]">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -456,17 +495,27 @@ export function ReportsPage() {
     switch (activeTab) {
       case 'sales':
         csvContent = 'Fecha,Cliente,Vendedor,Items,Monto,Canal,Estado Pago,Método Pago\n';
-  csvContent += filteredSales.map(sale => 
-          `${sale.date},${sale.client.name},${sale.seller?.name || 'N/A'},${sale.items},${sale.amount},${sale.salesChannel || 'store'},${sale.paymentStatus || 'pending'},${sale.paymentMethod || 'cash'}`
-        ).join('\n');
+        csvContent += filteredSales
+          .map(sale => {
+            const saleRecord = sale as unknown as Record<string, unknown> & {
+              paymentStatus?: string;
+              paymentMethod?: string;
+            };
+            const paymentStatus = typeof saleRecord.paymentStatus === 'string' ? saleRecord.paymentStatus : 'pending';
+            const paymentMethod = typeof saleRecord.paymentMethod === 'string' ? saleRecord.paymentMethod : 'cash';
+            return `${sale.date},${sale.client.name},${sale.seller?.name || 'N/A'},${sale.items},${sale.amount},${sale.salesChannel || 'store'},${paymentStatus},${paymentMethod}`;
+          })
+          .join('\n');
         filename = `ventas_${selectedPeriod}_${new Date().toISOString().split('T')[0]}.csv`;
         break;
       
       case 'financial':
         csvContent = 'Fecha,Tipo,Descripción,Monto,Categoría,Referencia\n';
-  csvContent += filteredTransactions.map(transaction => 
-          `${transaction.date},${transaction.type},${transaction.description},${transaction.amount},${transaction.category || 'N/A'},${transaction.reference || 'N/A'}`
-        ).join('\n');
+        csvContent += filteredTransactions
+          .map(transaction =>
+            `${transaction.date},${transaction.type},${transaction.description},${transaction.amount},${transaction.category || 'N/A'},${transaction.reference || 'N/A'}`
+          )
+          .join('\n');
         filename = `financiero_${selectedPeriod}_${new Date().toISOString().split('T')[0]}.csv`;
         break;
         
@@ -535,6 +584,8 @@ export function ReportsPage() {
             th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
             th { background-color: #f5f5f5; }
             .summary { background-color: #f9f9f9; padding: 15px; border-radius: 8px; }
+            .print-button { margin: 20px 0; padding: 10px 20px; background-color: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+            .print-button:hover { background-color: #1d4ed8; }
             @media print { 
               body { margin: 0; }
               .no-print { display: none; }
@@ -569,7 +620,7 @@ export function ReportsPage() {
             ${formatCurrency(reportData.metrics.profit)}.</p>
           </div>
 
-          <button class="no-print" onclick="window.print()" style="margin: 20px 0; padding: 10px 20px;">
+          <button class="no-print print-button" onclick="window.print()">
             Imprimir / Guardar como PDF
           </button>
         </body>
@@ -609,7 +660,6 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
       case 'overview':
         return (
           <div className="space-y-8">
-            {/* Enhanced Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <MetricCard
                 title="Ventas Totales"
@@ -642,46 +692,31 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
               />
             </div>
 
-            {/* Enhanced Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <AreaChart 
-                data={chartData.salesByDay} 
-                title="Tendencia de Ventas (30 días)" 
-                color="#10B981"
-              />
-              <PieChart 
-                data={chartData.salesByChannel} 
-                title="Ventas por Canal"
-              />
+              <AreaChart data={chartData.salesByDay} title="Tendencia de Ventas (30 días)" color="#10B981" />
+              <PieChart data={chartData.salesByChannel} title="Ventas por Canal" />
             </div>
 
-            {/* Additional Overview Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <BarChart 
-                data={chartData.topProducts} 
-                title="Productos Más Vendidos" 
-                color="bg-blue-600" 
-              />
-              <BarChart 
-                data={chartData.accountBalances.slice(0, 5)} 
-                title="Balances por Cuenta" 
-                color="bg-green-600" 
-              />
+              <BarChart data={chartData.topProducts} title="Productos Más Vendidos" color="var(--primary-500)" />
+              <BarChart data={chartData.accountBalances.slice(0, 5)} title="Balances por Cuenta" color="var(--success-500)" />
             </div>
           </div>
         );
 
-      case 'sales':
-  const salesByPerson = filteredSales.reduce((acc: any[], sale) => {
-          const seller = sale.seller?.name || 'Sin asignar';
-          const existing = acc.find(item => item.label === seller);
-          if (existing) {
-            existing.value += sale.amount;
-          } else {
-            acc.push({ label: seller, value: sale.amount });
-          }
-          return acc;
-        }, []).sort((a, b) => b.value - a.value);
+      case 'sales': {
+        const salesByPerson = filteredSales
+          .reduce((acc: { label: string; value: number }[], sale) => {
+            const seller = sale.seller?.name || 'Sin asignar';
+            const existing = acc.find(item => item.label === seller);
+            if (existing) {
+              existing.value += sale.amount;
+            } else {
+              acc.push({ label: seller, value: sale.amount });
+            }
+            return acc;
+          }, [])
+          .sort((a, b) => b.value - a.value);
 
         return (
           <div className="space-y-8">
@@ -704,7 +739,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <BarChart data={salesByPerson} title="Ventas por Vendedor" color="bg-blue-600" />
+              <BarChart data={salesByPerson} title="Ventas por Vendedor" color="var(--primary-500)" />
               <PieChart data={chartData.salesByChannel} title="Distribución por Canal" />
             </div>
 
@@ -723,11 +758,12 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
             />
           </div>
         );
+      }
 
-      case 'financial':
+      case 'financial': {
         const expensesByCategory = filteredTransactions
           .filter(t => t.type === 'expense')
-          .reduce((acc: any[], transaction) => {
+          .reduce((acc: { label: string; value: number }[], transaction) => {
             const category = transaction.category || 'Sin categoría';
             const existing = acc.find(item => item.label === category);
             if (existing) {
@@ -791,10 +827,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
                 </div>
               </div>
 
-              <PieChart 
-                data={expensesByCategory} 
-                title="Gastos por Categoría"
-              />
+              <PieChart data={expensesByCategory} title="Gastos por Categoría" />
             </div>
 
             <ReportTable
@@ -810,14 +843,15 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
             />
           </div>
         );
+      }
 
-      case 'customers':
-        const customersByBalance = customers.map(c => ({
-          label: c.name,
-          value: c.balance
-        })).sort((a, b) => b.value - a.value).slice(0, 10);
+      case 'customers': {
+        const customersByBalance = customers
+          .map(c => ({ label: c.name, value: c.balance }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 10);
 
-        const customersByCreationMonth = customers.reduce((acc: any[], customer) => {
+        const customersByCreationMonth = customers.reduce((acc: { label: string; value: number }[], customer) => {
           const month = new Date(customer.createdAt).toLocaleString('es', { month: 'short', year: 'numeric' });
           const existing = acc.find(item => item.label === month);
           if (existing) {
@@ -856,23 +890,12 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <BarChart 
-                data={customersByBalance} 
-                title="Top 10 Clientes por Balance"
-                color="bg-purple-600"
-              />
-              <PieChart 
-                data={chartData.customersByStatus} 
-                title="Estado de Clientes"
-              />
+              <BarChart data={customersByBalance} title="Top 10 Clientes por Balance" color="var(--secondary-500)" />
+              <PieChart data={chartData.customersByStatus} title="Estado de Clientes" />
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              <BarChart 
-                data={customersByCreationMonth} 
-                title="Nuevos Clientes por Mes"
-                color="bg-indigo-600"
-              />
+              <BarChart data={customersByCreationMonth} title="Nuevos Clientes por Mes" color="var(--info-500)" />
             </div>
 
             <ReportTable
@@ -889,10 +912,11 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
             />
           </div>
         );
+      }
 
-      case 'inventory':
+      case 'inventory': {
         const lowStockProducts = products.filter(p => p.stock <= p.minStock && p.status === 'active');
-        const productsByCategory = products.reduce((acc: any[], product) => {
+        const productsByCategory = products.reduce((acc: { label: string; value: number }[], product) => {
           const existing = acc.find(item => item.label === product.category);
           if (existing) {
             existing.value += 1;
@@ -928,22 +952,15 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
               />
               <MetricCard
                 title="Valor Inventario"
-                value={products.reduce((sum, p) => sum + (p.cost * p.stock), 0)}
+                value={products.reduce((sum, p) => sum + p.cost * p.stock, 0)}
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
                 color="text-green-600"
               />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <BarChart 
-                data={topProductsByValue}
-                title="Top 10 Productos por Valor en Stock"
-                color="bg-green-600"
-              />
-              <PieChart 
-                data={productsByCategory}
-                title="Distribución por Categoría"
-              />
+              <BarChart data={topProductsByValue} title="Top 10 Productos por Valor en Stock" color="var(--success-500)" />
+              <PieChart data={productsByCategory} title="Distribución por Categoría" />
             </div>
 
             {lowStockProducts.length > 0 && (
@@ -978,12 +995,13 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
             />
           </div>
         );
+      }
 
-      case 'performance':
-        // New Performance tab with KPIs
-  const conversionRate = customers.length > 0 ? (salesCount / customers.length) * 100 : 0;
-        const averageMargin = products.length > 0 ? 
-          products.reduce((sum, p) => sum + ((p.price - p.cost) / p.price) * 100, 0) / products.length : 0;
+      case 'performance': {
+        const conversionRate = customers.length > 0 ? (salesCount / customers.length) * 100 : 0;
+        const averageMargin = products.length > 0
+          ? products.reduce((sum, p) => sum + ((p.price - p.cost) / p.price) * 100, 0) / products.length
+          : 0;
 
         return (
           <div className="space-y-8">
@@ -1037,11 +1055,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
                 </div>
               </div>
 
-              <AreaChart
-                data={chartData.salesByDay.slice(-14)}
-                title="Tendencia de Rendimiento (14 días)"
-                color="#8B5CF6"
-              />
+              <AreaChart data={chartData.salesByDay.slice(-14)} title="Tendencia de Rendimiento (14 días)" color="#8B5CF6" />
             </div>
 
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -1063,6 +1077,7 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
             </div>
           </div>
         );
+      }
 
       default:
         return null;

@@ -75,11 +75,10 @@ function App() {
     } else {
       // Check URL for special routes
       const pathname = window.location.pathname;
-      const search = window.location.search;
-      const hash = window.location.hash;
+  const search = window.location.search;
 
       // More aggressive detection
-      if (pathname.includes('/auth/callback') || search.includes('accessToken')) {
+  if (pathname.includes('/auth/callback') || search.includes('accessToken')) {
         setCurrentPage('auth-callback');
       } else if (pathname.includes('/complete-registration') || search.includes('googleId')) {
         setCurrentPage('complete-registration');

@@ -35,7 +35,7 @@ interface RegistrationResponse {
   error?: string;
 }
 
-export function TenantRegisterPage() {
+export function TenantRegisterPage({ onNavigate }: { onNavigate?: (page: string) => void } = {}) {
   const { setAuth } = useAuthStore();
 
   const [formData, setFormData] = useState<RegistrationData>({
@@ -175,6 +175,20 @@ export function TenantRegisterPage() {
   if (registrationResult?.success) {
     const { tenant, user, tempPassword, loginUrl } = registrationResult.data!;
 
+    const handleGoToDashboard = () => {
+      if (onNavigate) {
+        onNavigate('dashboard');
+        return;
+      }
+
+      if (loginUrl) {
+        window.location.href = loginUrl;
+        return;
+      }
+
+      window.location.href = '/dashboard';
+    };
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
@@ -198,7 +212,7 @@ export function TenantRegisterPage() {
               <div>
                 <span className="text-gray-600">URL de acceso:</span>
                 <div className="font-mono bg-white p-2 rounded border">
-                  /empresa/{tenant.slug}
+                  {loginUrl || `/empresa/${tenant.slug}`}
                 </div>
               </div>
               <div>
@@ -226,7 +240,7 @@ export function TenantRegisterPage() {
 
           <div className="space-y-3">
             <Button
-              onClick={() => window.location.href = '/dashboard'}
+              onClick={handleGoToDashboard}
               className="w-full"
             >
               Acceder a mi Dashboard

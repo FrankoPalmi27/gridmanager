@@ -1,7 +1,6 @@
 import { create } from 'zustand';
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
 import { productsApi } from '../lib/api';
-import { loadWithSync, getSyncMode } from '../lib/syncStorage';
+import { loadWithSync, getSyncMode, SyncConfig, updateWithSync } from '../lib/syncStorage';
 
 // Tipo para los productos
 export interface Product {
@@ -145,23 +144,24 @@ interface ProductsStore {
 }
 
 // Sync configuration
-const syncConfig = {
-  storageKey: STORAGE_KEYS.PRODUCTS,
+const syncConfig: SyncConfig<Product> = {
+  storageKey: 'products',
   apiGet: () => productsApi.getAll(),
+  apiUpdate: (id: string, data: Partial<Product>) => productsApi.update(id, data),
   extractData: (response: any) => response.data.data || response.data,
 };
 
 export const useProductsStore = create<ProductsStore>((set, get) => ({
-  products: loadFromStorage(STORAGE_KEYS.PRODUCTS, initialProducts),
-  categories: loadFromStorage(STORAGE_KEYS.CATEGORIES, []),
-  stockMovements: loadFromStorage(STORAGE_KEYS.STOCK_MOVEMENTS, []),
+  products: initialProducts,
+  categories: [],
+  stockMovements: [],
   isLoading: false,
   syncMode: getSyncMode(),
 
   loadProducts: async () => {
     set({ isLoading: true, syncMode: getSyncMode() });
     try {
-      const products = await loadWithSync(syncConfig, initialProducts);
+      const products = await loadWithSync<Product>(syncConfig, initialProducts);
       set({ products, isLoading: false });
     } catch (error) {
       console.error('Error loading products:', error);
@@ -196,11 +196,9 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
       createdAt: new Date().toISOString()
     };
 
-    set((state) => {
-      const newProducts = [newProduct, ...state.products];
-      saveToStorage(STORAGE_KEYS.PRODUCTS, newProducts);
-      return { products: newProducts };
-    });
+    set((state) => ({
+      products: [newProduct, ...state.products]
+    }));
     
     return newProduct;
   },
@@ -229,11 +227,9 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
       currentTimestamp += 1; // Ensure unique IDs
     });
 
-    set((state) => {
-      const updatedProducts = [...newProducts, ...state.products];
-      saveToStorage(STORAGE_KEYS.PRODUCTS, updatedProducts);
-      return { products: updatedProducts };
-    });
+    set((state) => ({
+      products: [...newProducts, ...state.products]
+    }));
     
     return newProducts;
   },
@@ -243,7 +239,6 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
       const newProducts = state.products.map(product =>
         product.id === id ? { ...product, ...updatedData } : product
       );
-      saveToStorage(STORAGE_KEYS.PRODUCTS, newProducts);
       return { products: newProducts };
     });
   },
@@ -251,7 +246,6 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
   deleteProduct: (id) => {
     set((state) => {
       const newProducts = state.products.filter(product => product.id !== id);
-      saveToStorage(STORAGE_KEYS.PRODUCTS, newProducts);
       return { products: newProducts };
     });
   },
@@ -261,24 +255,20 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
       const newProducts = state.products.map(product =>
         product.id === id ? { ...product, stock: newStock } : product
       );
-      saveToStorage(STORAGE_KEYS.PRODUCTS, newProducts);
       return { products: newProducts };
     });
   },
 
   setProducts: (products) => {
     set({ products });
-    saveToStorage(STORAGE_KEYS.PRODUCTS, products);
   },
 
   setCategories: (categories) => {
     set({ categories });
-    saveToStorage(STORAGE_KEYS.CATEGORIES, categories);
   },
 
   resetToInitialProducts: () => {
     set({ products: initialProducts });
-    saveToStorage(STORAGE_KEYS.PRODUCTS, initialProducts);
   },
 
   // Stock movements functions
@@ -291,7 +281,6 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
 
     set((state) => {
       const newMovements = [newMovement, ...state.stockMovements];
-      saveToStorage(STORAGE_KEYS.STOCK_MOVEMENTS, newMovements);
       return { stockMovements: newMovements };
     });
   },
@@ -332,15 +321,14 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
 
       const newMovements = [newMovement, ...state.stockMovements];
 
-      // Save to storage
-      saveToStorage(STORAGE_KEYS.PRODUCTS, updatedProducts);
-      saveToStorage(STORAGE_KEYS.STOCK_MOVEMENTS, newMovements);
-
       return {
         products: updatedProducts,
         stockMovements: newMovements
       };
     });
+
+    updateWithSync<Product>(syncConfig, productId, { stock: newStock }, get().products)
+      .catch((error) => console.error('Error syncing stock update:', error));
   },
 
   // Stock alert functions implementation

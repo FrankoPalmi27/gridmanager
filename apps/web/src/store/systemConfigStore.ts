@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
 
 // Configuraciones del sistema
 export interface SystemConfig {
@@ -35,13 +34,11 @@ interface SystemConfigStore {
 }
 
 export const useSystemConfigStore = create<SystemConfigStore>((set, get) => ({
-  config: loadFromStorage(STORAGE_KEYS.SYSTEM_CONFIG, defaultSystemConfig),
+  config: defaultSystemConfig,
 
   updateConfig: (updates) => {
     set((state) => {
       const newConfig = { ...state.config, ...updates };
-      saveToStorage(STORAGE_KEYS.SYSTEM_CONFIG, newConfig);
-
       // Log para auditoría
       if (state.config.enableAuditLog) {
         console.log('System config updated:', {
@@ -58,7 +55,6 @@ export const useSystemConfigStore = create<SystemConfigStore>((set, get) => ({
 
   resetConfig: () => {
     set({ config: defaultSystemConfig });
-    saveToStorage(STORAGE_KEYS.SYSTEM_CONFIG, defaultSystemConfig);
     console.log('System config reset to defaults');
   },
 

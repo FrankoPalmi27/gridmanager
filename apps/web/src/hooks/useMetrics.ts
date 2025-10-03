@@ -17,14 +17,6 @@ export const useMetrics = (period?: string) => {
   const { accounts, transactions } = useAccountsStore();
   const { suppliers } = useSuppliersStore();
 
-  // Defensive: Ensure all data are arrays to prevent .reduce() errors
-  const safeSales = Array.isArray(sales) ? sales : [];
-  const safeCustomers = Array.isArray(customers) ? customers : [];
-  const safeProducts = Array.isArray(products) ? products : [];
-  const safeAccounts = Array.isArray(accounts) ? accounts : [];
-  const safeTransactions = Array.isArray(transactions) ? transactions : [];
-  const safeSuppliers = Array.isArray(suppliers) ? suppliers : [];
-
   // Función para filtrar por período (opcional)
   const getDateRange = (period?: string) => {
     if (!period) return null; // Sin filtros = todos los datos
@@ -53,6 +45,13 @@ export const useMetrics = (period?: string) => {
   };
 
   return useMemo(() => {
+    const safeSales = Array.isArray(sales) ? sales : [];
+    const safeCustomers = Array.isArray(customers) ? customers : [];
+    const safeProducts = Array.isArray(products) ? products : [];
+    const safeAccounts = Array.isArray(accounts) ? accounts : [];
+    const safeTransactions = Array.isArray(transactions) ? transactions : [];
+    const safeSuppliers = Array.isArray(suppliers) ? suppliers : [];
+
     const dateRange = getDateRange(period);
 
     // Filtrar ventas por período si se especifica

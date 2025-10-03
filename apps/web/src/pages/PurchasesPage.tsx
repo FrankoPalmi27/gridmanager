@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { PurchaseStatusBadge } from '../components/ui/StatusBadge';
 import { Input } from '../components/ui/Input';
 import { formatCurrency, formatDate as formatDateUtil } from '../lib/formatters';
-import { usePurchasesStore, Purchase } from '../store/purchasesStore';
+import { usePurchasesStore } from '../store/purchasesStore';
 import { useSuppliersStore } from '../store/suppliersStore';
 import { useProductsStore } from '../store/productsStore';
 import { useAccountsStore } from '../store/accountsStore';

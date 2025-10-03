@@ -175,4 +175,4 @@ export const StockStatusBadge: React.FC<{ currentStock: number; minStock: number
   );
 };
 
-export { StatusBadge, statusBadgeVariants };
+export { StatusBadge };

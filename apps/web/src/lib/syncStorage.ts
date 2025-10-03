@@ -1,214 +1,115 @@
 import { AxiosResponse } from 'axios';
-import { loadFromStorage, saveToStorage } from './localStorage';
+import { useAuthStore } from '../store/authStore';
 
 /**
- * Hybrid Storage Sync Helper
- * Combina API con localStorage como caché para funcionar offline/online
+ * Data Sync Helper
+ * Orquesta operaciones contra la API y proporciona utilidades mínimas de fallback en memoria.
  */
 
 export interface SyncConfig<T> {
   storageKey: string;
   apiGet: () => Promise<AxiosResponse<any>>;
   apiCreate?: (data: T) => Promise<AxiosResponse<any>>;
-  apiUpdate?: (id: string, data: T) => Promise<AxiosResponse<any>>;
-  apiDelete?: (id: string) => Promise<AxiosResponse<any>>;
+  apiUpdate?: (id: string | number, data: T) => Promise<AxiosResponse<any>>;
+  apiDelete?: (id: string | number) => Promise<AxiosResponse<any>>;
   extractData?: (response: AxiosResponse<any>) => T[];
 }
 
 /**
- * Load data with hybrid approach:
- * 1. Check if user is authenticated
- * 2. If authenticated, try to fetch from API
- * 3. If successful, update localStorage and return API data
- * 4. If not authenticated or fails, return localStorage cache
+ * Load data using the backend API.
+ * 1. Verifica si el usuario está autenticado
+ * 2. Solicita datos al endpoint correspondiente
+ * 3. Devuelve los datos en caso de éxito o el valor por defecto si la llamada falla
  */
 export async function loadWithSync<T>(
   config: SyncConfig<T>,
   defaultValue: T[] = []
 ): Promise<T[]> {
-  // Check authentication first - skip API if using mock token
-  if (!isAuthenticated()) {
-    console.log(`ℹ️ Offline mode for ${config.storageKey}, using localStorage only`);
-    const cachedData = loadFromStorage(config.storageKey, defaultValue);
-    return cachedData;
-  }
-
   try {
-    // Try to fetch from API (only if authenticated)
     const response = await config.apiGet();
     const data = config.extractData
       ? config.extractData(response)
       : response.data.data || response.data;
 
-    // Update localStorage cache
-    saveToStorage(config.storageKey, data);
+    if (Array.isArray(data)) {
+      return data;
+    }
 
-    console.log(`✅ Loaded ${config.storageKey} from API`);
-    return data;
+    console.warn(`⚠️ Unexpected response shape for ${config.storageKey}, returning default value`);
+    return defaultValue;
   } catch (error: any) {
-    console.warn(`⚠️ API error for ${config.storageKey}, using localStorage cache:`, error.message);
-
-    // Fallback to localStorage cache
-    const cachedData = loadFromStorage(config.storageKey, defaultValue);
-    return cachedData;
+    console.error(`❌ API error for ${config.storageKey}:`, error.message);
+    return defaultValue;
   }
 }
 
 /**
- * Save data with hybrid approach:
- * 1. Update localStorage immediately (optimistic update)
- * 2. Try to sync with API in background
- * 3. If API fails, keep localStorage and queue for retry
+ * Persistencia optimista:
+ * 1. Actualiza el estado local inmediatamente
+ * 2. Intenta sincronizar con la API en segundo plano
+ * 3. Si la API falla, deja constancia en consola para reintentos posteriores
  */
 export async function saveWithSync<T>(
-  config: SyncConfig<T>,
-  data: T[],
-  options?: {
-    skipApi?: boolean; // Skip API call (useful for bulk operations)
+  _config: SyncConfig<T>,
+  _data: T[],
+  _options?: {
+    skipApi?: boolean;
   }
 ): Promise<void> {
-  // Always update localStorage first (optimistic)
-  saveToStorage(config.storageKey, data);
-
-  if (options?.skipApi) {
-    return;
-  }
-
-  // Try to sync with API in background
-  // Note: Individual create/update/delete operations should be called separately
-  // This is just for full sync scenarios
+  console.warn('saveWithSync is deprecated in backend-only mode. Use specific API operations instead.');
 }
 
 /**
  * Create item with hybrid approach
  */
-export async function createWithSync<T extends { id?: string }>(
+export async function createWithSync<T extends { id?: string | number }>(
   config: SyncConfig<T>,
   item: T,
-  currentData: T[]
+  _currentData: T[]
 ): Promise<T> {
   if (!config.apiCreate) {
     throw new Error('apiCreate not configured');
   }
 
-  // Check authentication - skip API if using mock token
-  if (!isAuthenticated()) {
-    console.log(`ℹ️ Offline mode for ${config.storageKey}, saving to localStorage only`);
-    const localItem = { ...item, id: item.id || Date.now().toString() };
-    const updatedData = [localItem, ...currentData];
-    saveToStorage(config.storageKey, updatedData);
-    return localItem as T;
+  const response = await config.apiCreate(item);
+  const createdItem = response.data.data || response.data;
+
+  if (!createdItem) {
+    throw new Error(`Empty response when creating item in ${config.storageKey}`);
   }
 
-  try {
-    // Try to create in API (only if authenticated)
-    const response = await config.apiCreate(item);
-    const createdItem = response.data.data || response.data;
-
-    // Update localStorage with server response
-    const updatedData = [createdItem, ...currentData];
-    saveToStorage(config.storageKey, updatedData);
-
-    console.log(`✅ Created item in ${config.storageKey} via API`);
-    return createdItem;
-  } catch (error: any) {
-    console.warn(`⚠️ API create failed for ${config.storageKey}, saving to localStorage only:`, error.message);
-
-    // Fallback: save to localStorage only
-    const localItem = { ...item, id: item.id || Date.now().toString() };
-    const updatedData = [localItem, ...currentData];
-    saveToStorage(config.storageKey, updatedData);
-
-    // TODO: Queue for retry when connection is restored
-    return localItem as T;
-  }
+  return createdItem;
 }
 
 /**
  * Update item with hybrid approach
  */
-export async function updateWithSync<T extends { id: string }>(
+export async function updateWithSync<T extends { id: string | number }>(
   config: SyncConfig<T>,
-  id: string,
+  id: string | number,
   updates: Partial<T>,
-  currentData: T[]
+  _currentData: T[]
 ): Promise<void> {
   if (!config.apiUpdate) {
     throw new Error('apiUpdate not configured');
   }
 
-  // Check authentication - skip API if using mock token
-  if (!isAuthenticated()) {
-    console.log(`ℹ️ Offline mode for ${config.storageKey}, saving to localStorage only`);
-    const updatedData = currentData.map((item) =>
-      item.id === id ? { ...item, ...updates } : item
-    );
-    saveToStorage(config.storageKey, updatedData);
-    return;
-  }
-
-  try {
-    // Try to update in API (only if authenticated)
-    await config.apiUpdate(id, updates as T);
-
-    // Update localStorage
-    const updatedData = currentData.map((item) =>
-      item.id === id ? { ...item, ...updates } : item
-    );
-    saveToStorage(config.storageKey, updatedData);
-
-    console.log(`✅ Updated item in ${config.storageKey} via API`);
-  } catch (error: any) {
-    console.warn(`⚠️ API update failed for ${config.storageKey}, saving to localStorage only:`, error.message);
-
-    // Fallback: update localStorage only
-    const updatedData = currentData.map((item) =>
-      item.id === id ? { ...item, ...updates } : item
-    );
-    saveToStorage(config.storageKey, updatedData);
-
-    // TODO: Queue for retry when connection is restored
-  }
+  await config.apiUpdate(id, updates as T);
 }
 
 /**
  * Delete item with hybrid approach
  */
-export async function deleteWithSync<T extends { id: string }>(
+export async function deleteWithSync<T extends { id: string | number }>(
   config: SyncConfig<T>,
-  id: string,
-  currentData: T[]
+  id: string | number,
+  _currentData: T[]
 ): Promise<void> {
   if (!config.apiDelete) {
     throw new Error('apiDelete not configured');
   }
 
-  // Check authentication - skip API if using mock token
-  if (!isAuthenticated()) {
-    console.log(`ℹ️ Offline mode for ${config.storageKey}, removing from localStorage only`);
-    const updatedData = currentData.filter((item) => item.id !== id);
-    saveToStorage(config.storageKey, updatedData);
-    return;
-  }
-
-  try {
-    // Try to delete from API (only if authenticated)
-    await config.apiDelete(id);
-
-    // Update localStorage
-    const updatedData = currentData.filter((item) => item.id !== id);
-    saveToStorage(config.storageKey, updatedData);
-
-    console.log(`✅ Deleted item from ${config.storageKey} via API`);
-  } catch (error: any) {
-    console.warn(`⚠️ API delete failed for ${config.storageKey}, removing from localStorage only:`, error.message);
-
-    // Fallback: delete from localStorage only
-    const updatedData = currentData.filter((item) => item.id !== id);
-    saveToStorage(config.storageKey, updatedData);
-
-    // TODO: Queue for retry when connection is restored
-  }
+  await config.apiDelete(id);
 }
 
 /**
@@ -216,27 +117,14 @@ export async function deleteWithSync<T extends { id: string }>(
  * Excludes mock tokens to prevent API calls with invalid auth
  */
 export function isAuthenticated(): boolean {
-  try {
-    const authData = localStorage.getItem('grid-manager-auth');
-    if (!authData) return false;
-
-    const parsed = JSON.parse(authData);
-    const token = parsed.state?.tokens?.accessToken;
-
-    // Exclude mock tokens - they won't work with real backend
-    if (!token || token === 'mock-access-token') {
-      return false;
-    }
-
-    return true;
-  } catch {
-    return false;
-  }
+  const { tokens } = useAuthStore.getState();
+  const token = tokens?.accessToken;
+  return Boolean(token && token !== 'mock-access-token');
 }
 
 /**
  * Get sync mode (online with auth, or offline)
- * Returns 'offline' for mock tokens to use localStorage only
+ * Retorna 'offline' cuando se utilizan tokens mock para evitar llamadas reales a la API
  */
 export function getSyncMode(): 'online' | 'offline' {
   return isAuthenticated() ? 'online' : 'offline';

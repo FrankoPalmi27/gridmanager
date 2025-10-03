@@ -1,30 +1,17 @@
-import React, { useState, Fragment, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   PlusOutlined,
   SearchOutlined,
-  FilterOutlined,
-  MoreOutlined,
-  UserOutlined,
-  CalendarOutlined,
   DollarOutlined,
-  CopyOutlined,
-  InboxOutlined,
-  ShareAltOutlined,
   ClockCircleOutlined,
-  CloseOutlined,
-  CheckOutlined,
-  EditOutlined,
-  DeleteOutlined,
   FileTextOutlined,
   BarChartOutlined,
   CaretUpOutlined
 } from '@ant-design/icons';
 import { Button } from '@ui/Button';
-import { SaleStatusBadge } from '@ui/StatusBadge';
 import { SalesForm } from '@forms/SalesForm';
 import { formatCurrency } from '@lib/formatters';
 import { useSalesStore } from '@store/salesStore';
-import { useProductsStore } from '@store/productsStore';
 import { useTableScroll } from '@hooks/useTableScroll';
 
 // ✅ DATOS LIMPIOS - Sin datos precargados de demostración
@@ -35,107 +22,6 @@ const filters = [
   { id: 'completed', label: 'Completadas' },
   { id: 'cancelled', label: 'Canceladas' },
 ];
-
-// Mini sparkline component
-function MiniSparkline({ data }: { data: number[] }) {
-  const max = Math.max(...data);
-  const points = data.map((value, index) => {
-    const x = (index / (data.length - 1)) * 60;
-    const y = 20 - (value / max) * 15;
-    return `${x},${y}`;
-  }).join(' ');
-
-  return (
-    <svg className="w-16 h-6 text-primary-500" viewBox="0 0 60 20">
-      <polyline
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        points={points}
-      />
-    </svg>
-  );
-}
-
-
-// Quick actions dropdown
-function QuickActions({ sale, onEdit }: { sale: any; onEdit: (sale: any) => void }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const { updateSaleStatus, deleteSale } = useSalesStore();
-
-  const handleDeleteSale = () => {
-    if (window.confirm(`¿Estás seguro de que deseas eliminar la venta ${sale.number}? Esta acción no se puede deshacer.`)) {
-      deleteSale(sale.id);
-    }
-  };
-
-  const getStatusActions = () => {
-    const baseActions = [
-      { icon: EditOutlined, label: 'Editar', action: () => onEdit(sale) },
-      { icon: CopyOutlined, label: 'Duplicar', action: () => {} /* TODO: Implement duplicate functionality */ },
-      { icon: ShareAltOutlined, label: 'Compartir', action: () => {} /* TODO: Implement share functionality */ },
-      { icon: DeleteOutlined, label: 'Eliminar', action: handleDeleteSale, className: 'text-red-600 hover:text-red-700' },
-    ];
-
-    // Add status-specific actions
-    if (sale.status === 'completed') {
-      baseActions.push(
-        { icon: ClockCircleOutlined, label: 'Marcar Pendiente', action: () => updateSaleStatus(sale.id, 'pending') },
-        { icon: CloseOutlined, label: 'Cancelar', action: () => updateSaleStatus(sale.id, 'cancelled') }
-      );
-    } else if (sale.status === 'pending') {
-      baseActions.push(
-        { icon: CheckOutlined, label: 'Completar', action: () => updateSaleStatus(sale.id, 'completed') },
-        { icon: CloseOutlined, label: 'Cancelar', action: () => updateSaleStatus(sale.id, 'cancelled') }
-      );
-    } else if (sale.status === 'cancelled') {
-      baseActions.push(
-        { icon: CheckOutlined, label: 'Completar', action: () => updateSaleStatus(sale.id, 'completed') },
-        { icon: ClockCircleOutlined, label: 'Marcar Pendiente', action: () => updateSaleStatus(sale.id, 'pending') }
-      );
-    }
-
-    return baseActions;
-  };
-
-  const actions = getStatusActions();
-
-  return (
-    <div className="relative">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setIsOpen(!isOpen)}
-        className="opacity-0 group-hover:opacity-100"
-      >
-        <MoreOutlined className="h-5 w-5" />
-      </Button>
-      
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-10 animate-scale-up">
-          <div className="py-2">
-            {actions.map((action) => (
-              <Button
-                key={action.label}
-                variant="ghost"
-                onClick={() => {
-                  action.action();
-                  setIsOpen(false);
-                }}
-                className={`justify-start gap-2 w-full px-4 py-2 text-sm h-auto ${
-                  action.className || ''
-                }`}
-              >
-                <action.icon className="h-4 w-4" />
-                {action.label}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 
 type SortField = 'number' | 'client' | 'date' | 'amount' | 'status';
@@ -173,19 +59,30 @@ function StatusDropdown({ sale }: { sale: any }) {
 export function SalesPage() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<any>(null);
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
-  const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
+  const { tableScrollRef } = useTableScroll();
   
   // Get real sales data from context
   const { sales, deleteSale, loadSales, isLoading } = useSalesStore();
-  const { products } = useProductsStore();
 
-  // Sales are loaded from localStorage on store initialization
-  // Only call loadSales manually if you need to refresh from API
+  const hasRequestedInitialLoad = useRef(false);
+
+  useEffect(() => {
+    if (hasRequestedInitialLoad.current || isLoading) {
+      return;
+    }
+
+    if (sales.length > 0) {
+      hasRequestedInitialLoad.current = true;
+      return;
+    }
+
+    hasRequestedInitialLoad.current = true;
+    void loadSales();
+  }, [isLoading, loadSales, sales.length]);
   
   // Migrate existing sales to include new payment fields if missing
   const migratedSales = sales.map(sale => ({
@@ -722,22 +619,14 @@ export function SalesPage() {
           <div className="hidden lg:block relative">
             <div
               ref={tableScrollRef}
-              className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
-              style={{
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#D1D5DB #F3F4F6',
-                maxWidth: '100%',
-                width: '100%',
-                maxHeight: '600px'
-              }}
+              className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400 max-w-full w-full max-h-[600px]"
             >
-              <table className="divide-y divide-gray-200" style={{ minWidth: '1500px', width: 'max-content' }}>
+              <table className="divide-y divide-gray-200 min-w-[1500px] w-max">
             <thead className="bg-gray-50">
               <tr>
                 <th 
-                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none min-w-[180px] w-[180px]"
                   onClick={() => handleSort('number')}
-                  style={{ width: '180px', minWidth: '180px' }}
                 >
                   <div className="flex items-center gap-1">
                     <span>Venta</span>
@@ -747,9 +636,8 @@ export function SalesPage() {
                   </div>
                 </th>
                 <th 
-                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none min-w-[200px] w-[200px]"
                   onClick={() => handleSort('client')}
-                  style={{ width: '200px', minWidth: '200px' }}
                 >
                   <div className="flex items-center gap-1">
                     <span>Cliente</span>
@@ -759,9 +647,8 @@ export function SalesPage() {
                   </div>
                 </th>
                 <th 
-                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none min-w-[150px] w-[150px]"
                   onClick={() => handleSort('date')}
-                  style={{ width: '150px', minWidth: '150px' }}
                 >
                   <div className="flex items-center gap-1">
                     <span>Fecha</span>
@@ -770,13 +657,12 @@ export function SalesPage() {
                     )}
                   </div>
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '150px', minWidth: '150px' }}>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px] w-[150px]">
                   Items
                 </th>
                 <th 
-                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none min-w-[150px] w-[150px]"
                   onClick={() => handleSort('amount')}
-                  style={{ width: '150px', minWidth: '150px' }}
                 >
                   <div className="flex items-center gap-1">
                     <span>Total</span>
@@ -785,16 +671,15 @@ export function SalesPage() {
                     )}
                   </div>
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '120px', minWidth: '120px' }}>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] w-[120px]">
                   Cobrado
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '120px', minWidth: '120px' }}>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] w-[120px]">
                   A Cobrar
                 </th>
                 <th 
-                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none min-w-[130px] w-[130px]"
                   onClick={() => handleSort('status')}
-                  style={{ width: '130px', minWidth: '130px' }}
                 >
                   <div className="flex items-center gap-1">
                     <span>Estado</span>
@@ -803,7 +688,7 @@ export function SalesPage() {
                     )}
                   </div>
                 </th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '280px', minWidth: '280px' }}>
+                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[280px] w-[280px]">
                   Acciones
                 </th>
               </tr>
@@ -811,7 +696,7 @@ export function SalesPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredAndSortedSales.map((sale) => (
                 <tr key={sale.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '180px', minWidth: '180px' }}>
+                  <td className="px-4 py-4 whitespace-nowrap min-w-[180px] w-[180px]">
                     <div className="flex items-center">
                       <Button
                         variant="ghost"
@@ -827,7 +712,7 @@ export function SalesPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '200px', minWidth: '200px' }}>
+                  <td className="px-4 py-4 whitespace-nowrap min-w-[200px] w-[200px]">
                     <div className="flex items-center">
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">{sale.client.name}</div>
@@ -835,7 +720,7 @@ export function SalesPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '150px', minWidth: '150px' }}>
+                  <td className="px-4 py-4 whitespace-nowrap min-w-[150px] w-[150px]">
                     <div className="text-sm text-gray-900">
                       {new Date(sale.date).toLocaleDateString('es-AR')}
                     </div>
@@ -845,7 +730,7 @@ export function SalesPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '160px', minWidth: '160px' }}>
+                  <td className="px-4 py-4 whitespace-nowrap min-w-[160px] w-[160px]">
                     <div className="text-sm text-gray-900">{sale.items} productos</div>
                     {sale.salesChannel && (
                       <div className="text-sm text-gray-500 capitalize">
@@ -856,7 +741,7 @@ export function SalesPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '140px', minWidth: '140px' }}>
+                  <td className="px-4 py-4 whitespace-nowrap min-w-[140px] w-[140px]">
                     <div className="text-sm font-medium text-gray-900">
                       {formatCurrency(sale.amount)}
                     </div>
@@ -869,20 +754,20 @@ export function SalesPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '120px', minWidth: '120px' }}>
+                  <td className="px-4 py-4 whitespace-nowrap min-w-[120px] w-[120px]">
                     <div className="text-sm font-medium text-green-600">
                       {formatCurrency(sale.cobrado || 0)}
                     </div>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '120px', minWidth: '120px' }}>
+                  <td className="px-4 py-4 whitespace-nowrap min-w-[120px] w-[120px]">
                     <div className="text-sm font-medium text-orange-600">
                       {formatCurrency(sale.aCobrar || 0)}
                     </div>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap" style={{ width: '130px', minWidth: '130px' }}>
+                  <td className="px-4 py-4 whitespace-nowrap min-w-[130px] w-[130px]">
                     <StatusDropdown sale={sale} />
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium" style={{ width: '270px', minWidth: '270px' }}>
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium min-w-[270px] w-[270px]">
                     <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-900 mr-2"
                       onClick={() => handleEditSale(sale)}
                     >

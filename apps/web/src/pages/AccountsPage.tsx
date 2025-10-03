@@ -1,8 +1,7 @@
-import React, { useState, Fragment, useEffect } from 'react';
+import React, { useState, Fragment } from 'react';
 import { Dialog, Transition, Listbox } from '@headlessui/react';
-import { ChevronUpDownIcon, CheckIcon } from '@heroicons/react/20/solid';
+import { ChevronUpDownIcon } from '@heroicons/react/20/solid';
 import { Button } from '../components/ui/Button';
-import { Modal } from '../components/ui/Modal';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { Input } from '../components/ui/Input';
 import { TransferModal } from '../components/forms/TransferModal';
@@ -39,33 +38,6 @@ const transactionCategories = {
   expense: ['Proveedores', 'Gastos Operativos', 'Impuestos', 'Servicios', 'Otros Gastos'],
   transfer: ['Transferencia Entre Cuentas']
 };
-
-// LocalStorage keys (same as in salesStore.ts)
-const ACCOUNTS_STORAGE_KEY = 'gridmanager_accounts';
-const TRANSACTIONS_STORAGE_KEY = 'gridmanager_transactions';
-
-// LocalStorage utilities
-const loadFromStorage = <T,>(key: string, defaultValue: T): T => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.error(`Error loading ${key} from localStorage:`, error);
-    return defaultValue;
-  }
-};
-
-const saveToStorage = <T,>(key: string, value: T): void => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Error saving ${key} to localStorage:`, error);
-  }
-};
-
-// ✅ ESTADO INICIAL LIMPIO - Sin datos precargados
-const initialAccounts: Account[] = [];
-const initialTransactions: Transaction[] = [];
 
 // Account Modal Component
 function AccountModal({ isOpen, closeModal, account, onAccountSaved }: {
@@ -132,10 +104,11 @@ function AccountModal({ isOpen, closeModal, account, onAccountSaved }: {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="account-name" className="block text-sm font-medium text-gray-700 mb-1">
                       Nombre de la Cuenta
                     </label>
                     <input
+                      id="account-name"
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -145,10 +118,11 @@ function AccountModal({ isOpen, closeModal, account, onAccountSaved }: {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="account-number" className="block text-sm font-medium text-gray-700 mb-1">
                       Número de Cuenta
                     </label>
                     <input
+                      id="account-number"
                       type="text"
                       value={formData.accountNumber}
                       onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
@@ -158,10 +132,11 @@ function AccountModal({ isOpen, closeModal, account, onAccountSaved }: {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="account-bank" className="block text-sm font-medium text-gray-700 mb-1">
                       Banco/Institución
                     </label>
                     <input
+                      id="account-bank"
                       type="text"
                       value={formData.bankName}
                       onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
@@ -209,11 +184,12 @@ function AccountModal({ isOpen, closeModal, account, onAccountSaved }: {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="account-payment-method" className="block text-sm font-medium text-gray-700 mb-1">
                       Método de Pago Asociado
                       <span className="text-xs text-gray-500 ml-1">(Opcional)</span>
                     </label>
                     <select
+                      id="account-payment-method"
                       value={formData.paymentMethod}
                       onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value as any })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -231,10 +207,11 @@ function AccountModal({ isOpen, closeModal, account, onAccountSaved }: {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="account-balance" className="block text-sm font-medium text-gray-700 mb-1">
                         Saldo Inicial
                       </label>
                       <input
+                        id="account-balance"
                         type="number"
                         value={formData.balance}
                         onChange={(e) => setFormData({ ...formData, balance: parseFloat(e.target.value) || 0 })}
@@ -244,10 +221,11 @@ function AccountModal({ isOpen, closeModal, account, onAccountSaved }: {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="account-currency" className="block text-sm font-medium text-gray-700 mb-1">
                         Moneda
                       </label>
                       <select
+                        id="account-currency"
                         value={formData.currency}
                         onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -260,10 +238,11 @@ function AccountModal({ isOpen, closeModal, account, onAccountSaved }: {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="account-description" className="block text-sm font-medium text-gray-700 mb-1">
                       Descripción
                     </label>
                     <textarea
+                      id="account-description"
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -383,10 +362,11 @@ function TransactionModal({ isOpen, closeModal, accounts, onTransactionSaved }: 
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="transaction-account" className="block text-sm font-medium text-gray-700 mb-1">
                       Cuenta
                     </label>
                     <select
+                      id="transaction-account"
                       value={formData.accountId}
                       onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -401,10 +381,11 @@ function TransactionModal({ isOpen, closeModal, accounts, onTransactionSaved }: 
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="transaction-type" className="block text-sm font-medium text-gray-700 mb-1">
                       Tipo de Transacción
                     </label>
                     <select
+                      id="transaction-type"
                       value={formData.type}
                       onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense' | 'transfer', category: '' })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -416,10 +397,11 @@ function TransactionModal({ isOpen, closeModal, accounts, onTransactionSaved }: 
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="transaction-category" className="block text-sm font-medium text-gray-700 mb-1">
                       Categoría
                     </label>
                     <select
+                      id="transaction-category"
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -436,10 +418,11 @@ function TransactionModal({ isOpen, closeModal, accounts, onTransactionSaved }: 
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="transaction-amount" className="block text-sm font-medium text-gray-700 mb-1">
                         Monto ({selectedAccount?.currency || 'ARS'})
                       </label>
                       <input
+                        id="transaction-amount"
                         type="number"
                         value={formData.amount}
                         onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
@@ -451,10 +434,11 @@ function TransactionModal({ isOpen, closeModal, accounts, onTransactionSaved }: 
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="transaction-date" className="block text-sm font-medium text-gray-700 mb-1">
                         Fecha
                       </label>
                       <input
+                        id="transaction-date"
                         type="date"
                         value={formData.date}
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
@@ -465,10 +449,11 @@ function TransactionModal({ isOpen, closeModal, accounts, onTransactionSaved }: 
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="transaction-description" className="block text-sm font-medium text-gray-700 mb-1">
                       Descripción
                     </label>
                     <textarea
+                      id="transaction-description"
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -478,10 +463,11 @@ function TransactionModal({ isOpen, closeModal, accounts, onTransactionSaved }: 
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="transaction-reference" className="block text-sm font-medium text-gray-700 mb-1">
                       Referencia (opcional)
                     </label>
                     <input
+                      id="transaction-reference"
                       type="text"
                       value={formData.reference}
                       onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
@@ -519,21 +505,15 @@ export function AccountsPage() {
   // Use centralized store instead of local state
   const {
     accounts,
-    transactions,
-    loadAccounts,
-    loadTransactions,
-    addAccount: storeAddAccount,
-    updateAccount: storeUpdateAccount,
-    deleteAccount: storeDeleteAccount,
-    isLoading
+    transactions
   } = useAccountsStore();
 
   // Keep local setters for compatibility with existing code
-  const setAccounts = (newAccounts: Account[] | ((prev: Account[]) => Account[])) => {
+  const setAccounts = (_newAccounts: Account[] | ((prev: Account[]) => Account[])) => {
     // This is handled by the store now, keeping for compatibility
   };
 
-  const setTransactions = (newTransactions: Transaction[] | ((prev: Transaction[]) => Transaction[])) => {
+  const setTransactions = (_newTransactions: Transaction[] | ((prev: Transaction[]) => Transaction[])) => {
     // This is handled by the store now, keeping for compatibility
   };
 
@@ -548,7 +528,7 @@ export function AccountsPage() {
   const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
   const [bulkImportType, setBulkImportType] = useState<'income' | 'expense'>('income');
   const [editingAccount, setEditingAccount] = useState<Account | undefined>();
-  const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
+  const { tableScrollRef } = useTableScroll();
 
   // Sync is now handled by the centralized store
 
@@ -644,7 +624,6 @@ export function AccountsPage() {
   };
 
   const filteredTransactions = transactions.filter(transaction => {
-    const account = accounts.find(acc => acc.id === transaction.accountId);
     const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (transaction.category && transaction.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          (transaction.reference && transaction.reference.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -898,7 +877,11 @@ export function AccountsPage() {
               />
             </div>
             
+            <label htmlFor="account-filter" className="sr-only">
+              Filtrar por cuenta
+            </label>
             <select
+              id="account-filter"
               value={selectedAccount}
               onChange={(e) => setSelectedAccount(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -917,88 +900,81 @@ export function AccountsPage() {
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Movimientos</h3>
             </div>
-            
+
             <div className="relative">
               <div
                 ref={tableScrollRef}
-                className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
-                style={{
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: '#D1D5DB #F3F4F6',
-                  maxWidth: '100%',
-                  width: '100%',
-                  maxHeight: '600px'
-                }}
+                className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400 w-full max-w-full max-h-[600px]"
               >
-                <table className="divide-y divide-gray-200" style={{ minWidth: '1400px', width: 'max-content' }}>
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ width: '150px', minWidth: '150px' }}>
-                      Fecha
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ width: '200px', minWidth: '200px' }}>
-                      Cuenta
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ width: '300px', minWidth: '300px' }}>
-                      Descripción
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ width: '150px', minWidth: '150px' }}>
-                      Categoría
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ width: '130px', minWidth: '130px' }}>
-                      Tipo
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ width: '150px', minWidth: '150px' }}>
-                      Monto
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide" style={{ width: '150px', minWidth: '150px' }}>
-                      Referencia
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredTransactions.map((transaction) => {
-                    const account = accounts.find(acc => acc.id === transaction.accountId);
-                    return (
-                      <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900" style={{ width: '150px', minWidth: '150px' }}>
-                          {formatDate(new Date(transaction.date))}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap" style={{ width: '200px', minWidth: '200px' }}>
-                          <div className="text-sm font-medium text-gray-900">{account?.name}</div>
-                          <div className="text-sm text-gray-500">{account?.bankName}</div>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-gray-900 max-w-xs truncate" style={{ width: '300px', minWidth: '300px' }}>
-                          {transaction.description}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900" style={{ width: '150px', minWidth: '150px' }}>
-                          {transaction.category}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap" style={{ width: '130px', minWidth: '130px' }}>
-                          <StatusBadge 
-                            variant={
-                              transaction.type === 'income' ? 'success' :
-                              transaction.type === 'expense' ? 'danger' : 'info'
-                            }
-                            dot
-                          >
-                            {transaction.type === 'income' ? 'Ingreso' : 
-                             transaction.type === 'expense' ? 'Egreso' : 'Transferencia'}
-                          </StatusBadge>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm font-medium" style={{ width: '150px', minWidth: '150px' }}>
-                          <span className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}>
-                            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500" style={{ width: '150px', minWidth: '150px' }}>
-                          {transaction.reference || '-'}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                <table className="divide-y divide-gray-200 min-w-[1400px] w-max">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide min-w-[150px] w-[150px]">
+                        Fecha
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide min-w-[200px] w-[200px]">
+                        Cuenta
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide min-w-[300px] w-[300px]">
+                        Descripción
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide min-w-[150px] w-[150px]">
+                        Categoría
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide min-w-[130px] w-[130px]">
+                        Tipo
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide min-w-[150px] w-[150px]">
+                        Monto
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide min-w-[150px] w-[150px]">
+                        Referencia
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredTransactions.map((transaction) => {
+                      const account = accounts.find(acc => acc.id === transaction.accountId);
+                      return (
+                        <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 min-w-[150px] w-[150px]">
+                            {formatDate(new Date(transaction.date))}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap min-w-[200px] w-[200px]">
+                            <div className="text-sm font-medium text-gray-900">{account?.name}</div>
+                            <div className="text-sm text-gray-500">{account?.bankName}</div>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-900 truncate max-w-xs min-w-[300px] w-[300px]">
+                            {transaction.description}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 min-w-[150px] w-[150px]">
+                            {transaction.category}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap min-w-[130px] w-[130px]">
+                            <StatusBadge
+                              variant={
+                                transaction.type === 'income' ? 'success' :
+                                transaction.type === 'expense' ? 'danger' : 'info'
+                              }
+                              dot
+                            >
+                              {transaction.type === 'income' ? 'Ingreso' :
+                               transaction.type === 'expense' ? 'Egreso' : 'Transferencia'}
+                            </StatusBadge>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm font-medium min-w-[150px] w-[150px]">
+                            <span className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}>
+                              {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 min-w-[150px] w-[150px]">
+                            {transaction.reference || '-'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
 

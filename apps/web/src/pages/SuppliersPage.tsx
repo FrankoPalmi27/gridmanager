@@ -27,7 +27,7 @@ export function SuppliersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
-  const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
+  const { tableScrollRef } = useTableScroll();
 
   // Form state
   const [formData, setFormData] = useState<SupplierFormData>({
@@ -157,13 +157,13 @@ export function SuppliersPage() {
     setIsModalOpen(true);
   };
 
-  const handlePaySupplier = (supplier: any) => {
+  const handlePaySupplier = (_supplier: any) => {
     // TODO: Implement supplier payment functionality  
     // This could open a payment modal
     alert('Funcionalidad de pago en desarrollo');
   };
 
-  const handleViewSupplier = (supplier: any) => {
+  const handleViewSupplier = (_supplier: any) => {
     // TODO: Implement supplier view functionality
     // This could show supplier details in a modal
     alert('Vista detallada en desarrollo');
@@ -292,42 +292,35 @@ export function SuppliersPage() {
           <div className="relative">
             <div
               ref={tableScrollRef}
-              className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
-              style={{
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#D1D5DB #F3F4F6',
-                maxWidth: '100%',
-                width: '100%',
-                maxHeight: '600px'
-              }}
+              className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400 w-full max-w-full max-h-[600px]"
             >
-              <table className="divide-y divide-gray-200" style={{ minWidth: '1300px', width: 'max-content' }}>
-              <thead className="bg-gray-50">
+              <table className="divide-y divide-gray-200 min-w-[1300px] w-max">
+                <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '250px', minWidth: '250px' }}>
-                    Proveedor
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '200px', minWidth: '200px' }}>
-                    Contacto
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '180px', minWidth: '180px' }}>
-                    Balance
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '150px', minWidth: '150px' }}>
-                    Compras Totales
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '120px', minWidth: '120px' }}>
-                    Estado
-                  </th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '250px', minWidth: '250px' }}>
-                    Acciones
-                  </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[250px] w-[250px]">
+                      Proveedor
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px] w-[200px]">
+                      Contacto
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[180px] w-[180px]">
+                      Balance
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px] w-[150px]">
+                      Compras Totales
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] w-[120px]">
+                      Estado
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[250px] w-[250px]">
+                      Acciones
+                    </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredSuppliers.map((supplier) => (
                   <tr key={supplier.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '250px', minWidth: '250px' }}>
+                    <td className="px-4 py-4 whitespace-nowrap min-w-[250px] w-[250px]">
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                           <span className="text-sm font-medium text-gray-600">
@@ -340,11 +333,11 @@ export function SuppliersPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '200px', minWidth: '200px' }}>
+                    <td className="px-4 py-4 whitespace-nowrap min-w-[200px] w-[200px]">
                       <div className="text-sm text-gray-900">{supplier.email || 'No email'}</div>
                       <div className="text-sm text-gray-500">{formatPhoneNumber(supplier.phone || '')}</div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '180px', minWidth: '180px' }}>
+                    <td className="px-4 py-4 whitespace-nowrap min-w-[180px] w-[180px]">
                       <div className={`text-sm font-medium ${
                         supplier.currentBalance === 0 
                           ? 'text-gray-900'
@@ -356,17 +349,17 @@ export function SuppliersPage() {
                       </div>
                       <div className="text-sm text-gray-500">{supplier.paymentTerms} días</div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '150px', minWidth: '150px' }}>
+                    <td className="px-4 py-4 whitespace-nowrap min-w-[150px] w-[150px]">
                       <div className="text-sm font-medium text-gray-900">
                         {formatCurrency(supplier.totalPurchases)}
                       </div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '120px', minWidth: '120px' }}>
+                    <td className="px-4 py-4 whitespace-nowrap min-w-[120px] w-[120px]">
                       <StatusBadge variant={supplier.active ? 'active' : 'inactive'} dot>
                         {supplier.active ? 'Activo' : 'Inactivo'}
                       </StatusBadge>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium" style={{ width: '250px', minWidth: '250px' }}>
+                    <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium min-w-[250px] w-[250px]">
                       <Button 
                         variant="ghost" 
                         size="sm" 

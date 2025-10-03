@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Download, AlertTriangle, Check, X } from 'lucide-react';
-import { useAccountsStore, Transaction } from '../store/accountsStore';
+import { Upload, Download, Check, X } from 'lucide-react';
+import { useAccountsStore } from '../store/accountsStore';
 
 interface TransactionData {
   accountId: string;
@@ -53,7 +53,7 @@ const BulkTransactionImport: React.FC<BulkTransactionImportProps> = ({ type, onI
     document.body.removeChild(link);
   };
 
-  const validateTransactionData = (data: any, row: number): { isValid: boolean; errors: string[] } => {
+  const validateTransactionData = (data: any): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
     if (!data.accountId?.trim()) errors.push('ID de cuenta es requerido');
@@ -137,7 +137,7 @@ const BulkTransactionImport: React.FC<BulkTransactionImportProps> = ({ type, onI
           parsedData.forEach((row, index) => {
             const rowNumber = index + 2;
 
-            const validation = validateTransactionData(row, rowNumber);
+            const validation = validateTransactionData(row);
             if (!validation.isValid) {
               result.errors.push({
                 row: rowNumber,

@@ -1,11 +1,10 @@
 import { create } from 'zustand';
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
 import { useAccountsStore } from './accountsStore';
 import { useProductsStore } from './productsStore';
 import { useSystemConfigStore } from './systemConfigStore';
 import { useCustomersStore } from './customersStore';
 import { salesApi } from '../lib/api';
-import { loadWithSync, createWithSync, getSyncMode } from '../lib/syncStorage';
+import { loadWithSync, createWithSync, getSyncMode, SyncConfig } from '../lib/syncStorage';
 
 // ============================================
 // TYPES & INTERFACES
@@ -122,8 +121,8 @@ const generateAvatar = (name: string): string => {
 // SYNC CONFIGURATION
 // ============================================
 
-const syncConfig = {
-  storageKey: STORAGE_KEYS.SALES,
+const syncConfig: SyncConfig<Sale> = {
+  storageKey: 'sales',
   apiGet: () => salesApi.getAll(),
   apiCreate: (data: Sale) => salesApi.create(data),
   extractData: (response: any) => response.data.data || response.data,
@@ -138,8 +137,8 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
   // INITIAL STATE
   // ============================================
 
-  sales: loadFromStorage(STORAGE_KEYS.SALES, []),
-  dashboardStats: loadFromStorage(STORAGE_KEYS.DASHBOARD_STATS, initialDashboardStats),
+  sales: [],
+  dashboardStats: initialDashboardStats,
   isLoading: false,
   syncMode: getSyncMode(),
 
@@ -150,7 +149,7 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
   loadSales: async () => {
     set({ isLoading: true, syncMode: getSyncMode() });
     try {
-      const sales = await loadWithSync(syncConfig, []);
+  const sales = await loadWithSync<Sale>(syncConfig, []);
       set({ sales, isLoading: false });
     } catch (error) {
       console.error('Error loading sales:', error);
@@ -287,15 +286,12 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
         monthlyGrowth: state.dashboardStats.monthlyGrowth + 0.1
       };
 
-      saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, newStats);
-
       set({
         sales: [createdSale, ...state.sales],
         dashboardStats: newStats,
         syncMode: getSyncMode()
       });
     } catch (error) {
-      // Fallback: guardar solo en localStorage
       console.error('Error syncing sale:', error);
 
       const newSales = [newSale, ...state.sales];
@@ -305,9 +301,6 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
         averagePerDay: Math.round((state.dashboardStats.totalSales + newSale.amount) / 30),
         monthlyGrowth: state.dashboardStats.monthlyGrowth + 0.1
       };
-
-      saveToStorage(STORAGE_KEYS.SALES, newSales);
-      saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, newStats);
 
       set({
         sales: newSales,
@@ -445,9 +438,6 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
         monthlyGrowth: storeState.dashboardStats.monthlyGrowth
       };
 
-      saveToStorage(STORAGE_KEYS.SALES, newSales);
-      saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, newStats);
-
       return {
         sales: newSales,
         dashboardStats: newStats
@@ -494,7 +484,6 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
       const newSales = state.sales.map(sale =>
         sale.id === saleId ? { ...sale, status: newStatus } : sale
       );
-      saveToStorage(STORAGE_KEYS.SALES, newSales);
       return { sales: newSales };
     });
   },
@@ -562,9 +551,6 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
 
       const newSales = state.sales.filter(sale => sale.id !== saleId);
 
-      saveToStorage(STORAGE_KEYS.SALES, newSales);
-      saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, newStats);
-
       return {
         sales: newSales,
         dashboardStats: newStats
@@ -579,7 +565,6 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
   updateDashboardStats: (newStats: Partial<DashboardStats>) => {
     set((state) => {
       const updatedStats = { ...state.dashboardStats, ...newStats };
-      saveToStorage(STORAGE_KEYS.DASHBOARD_STATS, updatedStats);
       return { dashboardStats: updatedStats };
     });
   },
@@ -590,6 +575,5 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
 
   setSales: (sales: Sale[]) => {
     set({ sales });
-    saveToStorage(STORAGE_KEYS.SALES, sales);
   },
 }));

@@ -1,7 +1,6 @@
 import { create } from 'zustand';
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
 import { customersApi } from '../lib/api';
-import { loadWithSync, createWithSync, updateWithSync, deleteWithSync, getSyncMode } from '../lib/syncStorage';
+import { loadWithSync, createWithSync, updateWithSync, deleteWithSync, getSyncMode, SyncConfig } from '../lib/syncStorage';
 
 // Customer interface
 export interface Customer {
@@ -16,8 +15,6 @@ export interface Customer {
   address?: string;
   notes?: string;
 }
-
-// LocalStorage utilities are now centralized in lib/localStorage.ts
 
 // No initial customers - users start with empty customer list
 const initialCustomers: Customer[] = [];
@@ -45,8 +42,8 @@ interface CustomersStore {
 }
 
 // Sync configuration
-const syncConfig = {
-  storageKey: STORAGE_KEYS.CUSTOMERS,
+const syncConfig: SyncConfig<Customer> = {
+  storageKey: 'customers',
   apiGet: () => customersApi.getAll(),
   apiCreate: (data: Customer) => customersApi.create(data),
   apiUpdate: (id: string, data: Partial<Customer>) => customersApi.update(id, data),
@@ -54,7 +51,7 @@ const syncConfig = {
 };
 
 export const useCustomersStore = create<CustomersStore>((set, get) => ({
-  customers: loadFromStorage(STORAGE_KEYS.CUSTOMERS, initialCustomers),
+  customers: initialCustomers,
   isLoading: false,
   syncMode: getSyncMode(),
 
@@ -62,7 +59,7 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
   loadCustomers: async () => {
     set({ isLoading: true, syncMode: getSyncMode() });
     try {
-      const customers = await loadWithSync(syncConfig, initialCustomers);
+      const customers = await loadWithSync<Customer>(syncConfig, initialCustomers);
       set({ customers, isLoading: false });
     } catch (error) {
       console.error('Error loading customers:', error);
@@ -82,7 +79,7 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
 
     try {
       // Try to create with API sync
-      const createdCustomer = await createWithSync(syncConfig, newCustomer, state.customers);
+      const createdCustomer = await createWithSync<Customer>(syncConfig, newCustomer, state.customers);
       set({ customers: [createdCustomer, ...state.customers], syncMode: getSyncMode() });
       return createdCustomer;
     } catch (error) {
@@ -97,7 +94,7 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
 
     try {
       // Try to update with API sync
-      await updateWithSync(syncConfig, id, updatedData, state.customers);
+      await updateWithSync<Customer>(syncConfig, id, updatedData, state.customers);
 
       // Update local state
       const newCustomers = state.customers.map(customer =>
@@ -115,7 +112,7 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
 
     try {
       // Try to delete with API sync
-      await deleteWithSync(syncConfig, id, state.customers);
+      await deleteWithSync<Customer>(syncConfig, id, state.customers);
 
       // Update local state
       const newCustomers = state.customers.filter(customer => customer.id !== id);
@@ -127,27 +124,48 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
   },
 
   updateCustomerBalance: (id, amount) => {
-    set((state) => {
-      const newCustomers = state.customers.map(customer =>
+    const state = get();
+    const target = state.customers.find(customer => customer.id === id);
+
+    if (!target) {
+      return;
+    }
+
+    const updatedBalance = target.balance + amount;
+
+    set((current) => {
+      const newCustomers = current.customers.map(customer =>
         customer.id === id
-          ? { ...customer, balance: customer.balance + amount }
+          ? { ...customer, balance: updatedBalance }
           : customer
       );
-      saveToStorage(STORAGE_KEYS.CUSTOMERS, newCustomers);
+
       return { customers: newCustomers };
     });
+
+    updateWithSync<Customer>(syncConfig, id, { balance: updatedBalance }, state.customers)
+      .catch((error) => console.error('Error syncing customer balance:', error));
   },
 
   resetCustomer: (id) => {
-    set((state) => {
-      const newCustomers = state.customers.map(customer =>
+    const state = get();
+    const target = state.customers.find(customer => customer.id === id);
+
+    if (!target) {
+      return;
+    }
+
+    set((current) => {
+      const newCustomers = current.customers.map(customer =>
         customer.id === id
           ? { ...customer, balance: 0 }
           : customer
       );
-      saveToStorage(STORAGE_KEYS.CUSTOMERS, newCustomers);
       return { customers: newCustomers };
     });
+
+    updateWithSync<Customer>(syncConfig, id, { balance: 0 }, state.customers)
+      .catch((error) => console.error('Error resetting customer balance:', error));
   },
 
   getCustomerById: (id) => {
@@ -161,7 +179,6 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
   },
 
   resetStore: () => {
-    saveToStorage(STORAGE_KEYS.CUSTOMERS, []);
     set({ customers: [] });
   },
 

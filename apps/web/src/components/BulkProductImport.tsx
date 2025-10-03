@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Download, AlertTriangle, Check, X, FileText } from 'lucide-react';
-import { useProductsStore, Product } from '../store/productsStore';
+import { Upload, Download, AlertTriangle, Check, X } from 'lucide-react';
+import { useProductsStore } from '../store/productsStore';
 
 interface ProductData {
   name: string;
@@ -48,7 +48,7 @@ const BulkProductImport: React.FC<BulkProductImportProps> = ({ onImportComplete 
     document.body.removeChild(link);
   };
 
-  const validateProductData = (data: any, row: number): { isValid: boolean; errors: string[] } => {
+  const validateProductData = (data: any): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
     
     if (!data.name?.trim()) errors.push('Nombre es requerido');
@@ -129,7 +129,7 @@ const BulkProductImport: React.FC<BulkProductImportProps> = ({ onImportComplete 
           parsedData.forEach((row, index) => {
             const rowNumber = index + 2; // +2 because index starts at 0 and we skip header
             
-            const validation = validateProductData(row, rowNumber);
+            const validation = validateProductData(row);
             if (!validation.isValid) {
               result.errors.push({
                 row: rowNumber,

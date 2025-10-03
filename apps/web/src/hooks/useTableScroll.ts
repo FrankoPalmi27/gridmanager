@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 
 /**
  * Custom hook for horizontal table scroll functionality

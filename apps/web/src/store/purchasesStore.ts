@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
 import { useProductsStore } from './productsStore';
 import { useSuppliersStore } from './suppliersStore';
 import { useAccountsStore } from './accountsStore';
@@ -81,8 +80,8 @@ interface PurchasesStore {
 }
 
 export const usePurchasesStore = create<PurchasesStore>((set, get) => ({
-  purchases: loadFromStorage(STORAGE_KEYS.PURCHASES, []),
-  dashboardStats: loadFromStorage(STORAGE_KEYS.PURCHASE_STATS, initialPurchaseStats),
+  purchases: [],
+  dashboardStats: initialPurchaseStats,
 
   addPurchase: (purchaseData) => {
     // Get supplier information
@@ -147,7 +146,6 @@ export const usePurchasesStore = create<PurchasesStore>((set, get) => ({
     // Add purchase to store
     set((state) => {
       const newPurchases = [newPurchase, ...state.purchases];
-      saveToStorage(STORAGE_KEYS.PURCHASES, newPurchases);
       return { purchases: newPurchases };
     });
 
@@ -160,7 +158,6 @@ export const usePurchasesStore = create<PurchasesStore>((set, get) => ({
         pendingOrders: state.dashboardStats.pendingOrders + 1,
         monthlySpending: state.dashboardStats.monthlySpending + total
       };
-      saveToStorage(STORAGE_KEYS.PURCHASE_STATS, newStats);
       return { dashboardStats: newStats };
     });
 
@@ -198,7 +195,6 @@ export const usePurchasesStore = create<PurchasesStore>((set, get) => ({
       const newPurchases = state.purchases.map(purchase =>
         purchase.id === id ? { ...purchase, ...updatedData } : purchase
       );
-      saveToStorage(STORAGE_KEYS.PURCHASES, newPurchases);
       return { purchases: newPurchases };
     });
   },
@@ -235,14 +231,12 @@ export const usePurchasesStore = create<PurchasesStore>((set, get) => ({
           : state.dashboardStats.pendingOrders,
         monthlySpending: state.dashboardStats.monthlySpending - purchaseToDelete.total
       };
-      saveToStorage(STORAGE_KEYS.PURCHASE_STATS, newStats);
       return { dashboardStats: newStats };
     });
 
     // Remove purchase
     set((state) => {
       const newPurchases = state.purchases.filter(purchase => purchase.id !== id);
-      saveToStorage(STORAGE_KEYS.PURCHASES, newPurchases);
       return { purchases: newPurchases };
     });
   },
@@ -266,7 +260,6 @@ export const usePurchasesStore = create<PurchasesStore>((set, get) => ({
         ...state.dashboardStats,
         pendingOrders: state.dashboardStats.pendingOrders - 1
       };
-      saveToStorage(STORAGE_KEYS.PURCHASE_STATS, newStats);
       return { dashboardStats: newStats };
     });
   },
@@ -375,7 +368,6 @@ export const usePurchasesStore = create<PurchasesStore>((set, get) => ({
   updateDashboardStats: (newStats) => {
     set((state) => {
       const updatedStats = { ...state.dashboardStats, ...newStats };
-      saveToStorage(STORAGE_KEYS.PURCHASE_STATS, updatedStats);
       return { dashboardStats: updatedStats };
     });
   }

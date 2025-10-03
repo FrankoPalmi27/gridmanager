@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -76,6 +76,12 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<SalesFormErrors>({});
 
+  const safeProducts = useMemo(() => (Array.isArray(products) ? products : []), [products]);
+  const safeCustomers = useMemo(() => (Array.isArray(customers) ? customers : []), [customers]);
+  const safeAccounts = useMemo(() => (Array.isArray(accounts) ? accounts : []), [accounts]);
+  const activeAccountsRaw = getActiveAccounts();
+  const activeAccounts = Array.isArray(activeAccountsRaw) ? activeAccountsRaw : safeAccounts;
+
   // ✅ NUEVO ESTADO PARA VALIDACIÓN DE STOCK MEJORADA
   const [stockValidation, setStockValidation] = useState<StockValidationState>({
     isChecking: false,
@@ -86,9 +92,8 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
   });
   
   // Get active products, accounts, and customers
-  const activeProducts = products.filter(p => p.status === 'active');
-  const activeAccounts = getActiveAccounts();
-  const activeCustomers = customers.filter(c => c.status === 'active');
+  const activeProducts = useMemo(() => safeProducts.filter(p => p.status === 'active'), [safeProducts]);
+  const activeCustomers = useMemo(() => safeCustomers.filter(c => c.status === 'active'), [safeCustomers]);
   
   const [formData, setFormData] = useState<SalesFormData>({
     client: '',
@@ -102,6 +107,22 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
     paymentStatus: 'paid',
     accountId: '', // Cuenta requerida si está pagado
   });
+
+  const handleReset = useCallback(() => {
+    setFormData({
+      client: '',
+      product: '',
+      productId: '', // Reset productId también
+      quantity: 1,
+      price: 0,
+      discount: 0,
+      saleDate: new Date().toISOString().split('T')[0],
+      salesChannel: 'store',
+      paymentStatus: 'paid',
+      accountId: '',
+    });
+    setErrors({});
+  }, []);
 
   // Populate form when editing a sale
   useEffect(() => {
@@ -126,23 +147,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
       // Reset form for new sale
       handleReset();
     }
-  }, [editingSale, isOpen]);
-
-  const handleReset = () => {
-    setFormData({
-      client: '',
-      product: '',
-      productId: '', // Reset productId también
-      quantity: 1,
-      price: 0,
-      discount: 0,
-      saleDate: new Date().toISOString().split('T')[0],
-      salesChannel: 'store',
-      paymentStatus: 'paid',
-      accountId: '',
-    });
-    setErrors({});
-  };
+  }, [editingSale, isOpen, activeProducts, handleReset]);
 
   const handleClose = () => {
     handleReset();

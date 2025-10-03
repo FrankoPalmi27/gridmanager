@@ -34,7 +34,7 @@ interface LoginResponse {
 }
 
 export function TenantLoginPage({ onNavigate }: { onNavigate: (page: string) => void }) {
-  const { setAuth } = useAuthStore();
+  const { setAuth, setTenant } = useAuthStore();
   const [form, setForm] = useState<LoginForm>({
     email: '',
     password: '',
@@ -49,7 +49,8 @@ export function TenantLoginPage({ onNavigate }: { onNavigate: (page: string) => 
     setError('');
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tenant/login`, {
+  const apiBaseUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001/api';
+  const response = await fetch(`${apiBaseUrl}/tenant/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,11 +62,9 @@ export function TenantLoginPage({ onNavigate }: { onNavigate: (page: string) => 
 
       if (data.success && data.data) {
         // Use the auth store to set authentication state
-        const { setAuth } = useAuthStore.getState();
-        setAuth(data.data.user, data.data.tokens);
-
-        // Store tenant data
-        localStorage.setItem('gridmanager_tenant', JSON.stringify(data.data.tenant));
+  const { setAuth, setTenant } = useAuthStore.getState();
+  setAuth(data.data.user, data.data.tokens);
+  setTenant(data.data.tenant);
 
         // Navigate to dashboard using the onNavigate function
         onNavigate('dashboard');
@@ -102,7 +101,8 @@ export function TenantLoginPage({ onNavigate }: { onNavigate: (page: string) => 
       refreshToken: 'mock-refresh-token'
     };
 
-    setAuth(mockUser, mockTokens);
+  setAuth(mockUser, mockTokens);
+  setTenant(null);
     onNavigate('dashboard');
   };
 

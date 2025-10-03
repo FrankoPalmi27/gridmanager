@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Download, AlertTriangle, Check, X, FileText } from 'lucide-react';
-import { useCustomersStore, Customer } from '../store/customersStore';
+import { Upload, Download, AlertTriangle, Check, X } from 'lucide-react';
+import { useCustomersStore } from '../store/customersStore';
 
 interface CustomerData {
   name: string;
@@ -46,7 +46,7 @@ const BulkCustomerImport: React.FC<BulkCustomerImportProps> = ({ onImportComplet
     document.body.removeChild(link);
   };
 
-  const validateCustomerData = (data: any, row: number): { isValid: boolean; errors: string[] } => {
+  const validateCustomerData = (data: any): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
     if (!data.name?.trim()) errors.push('Nombre es requerido');
@@ -121,7 +121,7 @@ const BulkCustomerImport: React.FC<BulkCustomerImportProps> = ({ onImportComplet
           parsedData.forEach((row, index) => {
             const rowNumber = index + 2;
 
-            const validation = validateCustomerData(row, rowNumber);
+            const validation = validateCustomerData(row);
             if (!validation.isValid) {
               result.errors.push({
                 row: rowNumber,

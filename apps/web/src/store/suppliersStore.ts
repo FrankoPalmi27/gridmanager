@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
+import { suppliersApi } from '../lib/api';
+import { loadWithSync, createWithSync, updateWithSync, getSyncMode, SyncConfig } from '../lib/syncStorage';
 
 export interface Supplier {
   id: string;
@@ -23,6 +24,9 @@ const initialSuppliers: Supplier[] = [];
 
 interface SuppliersState {
   suppliers: Supplier[];
+  isLoading: boolean;
+  syncMode: 'online' | 'offline';
+  loadSuppliers: () => Promise<void>;
   getSuppliers: () => Supplier[];
   addSupplier: (supplier: Omit<Supplier, 'id'>) => void;
   updateSupplier: (id: string, supplier: Partial<Supplier>) => void;
@@ -38,8 +42,29 @@ interface SuppliersState {
   };
 }
 
+const syncConfig: SyncConfig<Supplier> = {
+  storageKey: 'suppliers',
+  apiGet: () => suppliersApi.getAll(),
+  apiCreate: (data: Supplier) => suppliersApi.create(data),
+  apiUpdate: (id: string, data: Partial<Supplier>) => suppliersApi.update(id, data),
+  extractData: (response: any) => response.data.data || response.data,
+};
+
 export const useSuppliersStore = create<SuppliersState>((set, get) => ({
-  suppliers: loadFromStorage(STORAGE_KEYS.SUPPLIERS, initialSuppliers),
+  suppliers: initialSuppliers,
+  isLoading: false,
+  syncMode: getSyncMode(),
+
+  loadSuppliers: async () => {
+    set({ isLoading: true, syncMode: getSyncMode() });
+    try {
+      const suppliers = await loadWithSync<Supplier>(syncConfig, initialSuppliers);
+      set({ suppliers, isLoading: false });
+    } catch (error) {
+      console.error('Error loading suppliers:', error);
+      set({ isLoading: false });
+    }
+  },
 
   getSuppliers: () => get().suppliers,
 
@@ -53,7 +78,21 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
     };
 
     const newSuppliers = [...state.suppliers, newSupplier];
-    saveToStorage(STORAGE_KEYS.SUPPLIERS, newSuppliers);
+
+    // Attempt to sync with backend
+    createWithSync(syncConfig, newSupplier, state.suppliers)
+      .then((createdSupplier) => {
+        set((currentState) => ({
+          suppliers: currentState.suppliers.map(supplier =>
+            supplier.id === newSupplier.id ? createdSupplier : supplier
+          ),
+          syncMode: getSyncMode(),
+        }));
+      })
+      .catch((error) => {
+        console.error('Error syncing supplier creation:', error);
+      });
+
     return { suppliers: newSuppliers };
   }),
 
@@ -63,13 +102,20 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
         ? { ...supplier, ...supplierData }
         : supplier
     );
-    saveToStorage(STORAGE_KEYS.SUPPLIERS, newSuppliers);
+
+    updateWithSync(syncConfig, id, supplierData, state.suppliers)
+      .catch((error) => console.error('Error syncing supplier update:', error));
+
     return { suppliers: newSuppliers };
   }),
 
   deleteSupplier: (id) => set((state) => {
     const newSuppliers = state.suppliers.filter(supplier => supplier.id !== id);
-    saveToStorage(STORAGE_KEYS.SUPPLIERS, newSuppliers);
+
+    // Soft delete via update if API available
+    updateWithSync(syncConfig, id, { active: false }, state.suppliers)
+      .catch((error) => console.error('Error syncing supplier deletion:', error));
+
     return { suppliers: newSuppliers };
   }),
 
@@ -88,7 +134,16 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
           }
         : supplier
     );
-    saveToStorage(STORAGE_KEYS.SUPPLIERS, newSuppliers);
+
+    const updatedSupplier = newSuppliers.find(supplier => supplier.id === id);
+    if (updatedSupplier) {
+      updateWithSync(syncConfig, id, {
+        currentBalance: updatedSupplier.currentBalance,
+        totalPurchases: updatedSupplier.totalPurchases,
+        lastPurchaseDate: updatedSupplier.lastPurchaseDate,
+      }, state.suppliers).catch((error) => console.error('Error syncing supplier balance:', error));
+    }
+
     return { suppliers: newSuppliers };
   }),
 

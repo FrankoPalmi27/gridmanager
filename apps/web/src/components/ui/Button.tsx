@@ -36,14 +36,13 @@ const buttonVariants = cva(
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
-  asChild?: boolean;
   loading?: boolean;
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, loading = false, icon, iconPosition = 'left', children, disabled, ...props }, ref) => {
+  ({ className, variant, size, loading = false, icon, iconPosition = 'left', children, disabled, ...props }, ref) => {
     const isDisabled = disabled || loading;
 
     return (
@@ -72,4 +71,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = 'Button';
 
-export { Button, buttonVariants };
+export { Button };

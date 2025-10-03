@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@ui/Button';
 import { UserStatusBadge } from '@ui/StatusBadge';
 import { Modal } from '@ui/Modal';
@@ -28,14 +28,27 @@ export function CustomersPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
-  const { tableScrollRef, scrollLeft, scrollRight } = useTableScroll();
+  const { tableScrollRef } = useTableScroll();
   
   // Use the centralized customers store
   const { customers, addCustomer, updateCustomer, deleteCustomer, stats, loadCustomers, isLoading } = useCustomersStore();
   const [loading, setLoading] = useState(false);
 
-  // Customers are loaded from localStorage on store initialization
-  // Only call loadCustomers manually if you need to refresh from API
+  const hasRequestedInitialLoad = useRef(false);
+
+  useEffect(() => {
+    if (hasRequestedInitialLoad.current || isLoading) {
+      return;
+    }
+
+    if (customers.length > 0) {
+      hasRequestedInitialLoad.current = true;
+      return;
+    }
+
+    hasRequestedInitialLoad.current = true;
+    void loadCustomers();
+  }, [customers.length, isLoading, loadCustomers]);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -346,53 +359,46 @@ export function CustomersPage() {
           <div className="hidden lg:block relative">
             <div
               ref={tableScrollRef}
-              className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
-              style={{
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#D1D5DB #F3F4F6',
-                maxWidth: '100%',
-                width: '100%',
-                maxHeight: '600px'
-              }}
+              className="overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400 max-w-full w-full max-h-[600px]"
             >
-              <table className="divide-y divide-gray-200" style={{ minWidth: '1200px', width: 'max-content' }}>
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '200px', minWidth: '200px' }}>
-                    Cliente
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '250px', minWidth: '250px' }}>
-                    Mail
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '150px', minWidth: '150px' }}>
-                    Celular
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '150px', minWidth: '150px' }}>
-                    Balance
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '120px', minWidth: '120px' }}>
-                    Estado
-                  </th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '200px', minWidth: '200px' }}>
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
+              <table className="divide-y divide-gray-200 min-w-[1200px] w-max">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px] w-[200px]">
+                      Cliente
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[250px] w-[250px]">
+                      Mail
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px] w-[150px]">
+                      Celular
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px] w-[150px]">
+                      Balance
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] w-[120px]">
+                      Estado
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px] w-[200px]">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredCustomers.length > 0 ? filteredCustomers.map((customer) => (
                   <tr key={customer.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '200px', minWidth: '200px' }}>
+                    <td className="px-4 py-4 whitespace-nowrap min-w-[200px] w-[200px]">
                       <div className="text-sm font-medium text-gray-900">
                         {customer.name}
                       </div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '250px', minWidth: '250px' }}>
+                    <td className="px-4 py-4 whitespace-nowrap min-w-[250px] w-[250px]">
                       <div className="text-sm text-gray-900">{customer.email}</div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '150px', minWidth: '150px' }}>
+                    <td className="px-4 py-4 whitespace-nowrap min-w-[150px] w-[150px]">
                       <div className="text-sm text-gray-900">{customer.celular || customer.phone}</div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '150px', minWidth: '150px' }}>
+                    <td className="px-4 py-4 whitespace-nowrap min-w-[150px] w-[150px]">
                       <div className={`text-sm font-medium ${
                         customer.balance > 0 
                           ? 'text-green-600' 
@@ -403,10 +409,10 @@ export function CustomersPage() {
                         {formatCurrency(customer.balance)}
                       </div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap" style={{ width: '120px', minWidth: '120px' }}>
+                    <td className="px-4 py-4 whitespace-nowrap min-w-[120px] w-[120px]">
                       <UserStatusBadge status={customer.status} />
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium" style={{ width: '200px', minWidth: '200px' }}>
+                    <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium min-w-[200px] w-[200px]">
                       <Button 
                         variant="ghost" 
                         size="sm" 
@@ -630,10 +636,11 @@ export function CustomersPage() {
           />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="customer-status" className="block text-sm font-medium text-gray-700 mb-1">
               Estado
             </label>
             <select
+              id="customer-status"
               value={formData.status}
               onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

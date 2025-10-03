@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Download, AlertTriangle, Check, X } from 'lucide-react';
-import { useSuppliersStore, Supplier } from '../store/suppliersStore';
+import { useSuppliersStore } from '../store/suppliersStore';
 
 interface SupplierData {
   name: string;
@@ -48,7 +48,7 @@ const BulkSupplierImport: React.FC<BulkSupplierImportProps> = ({ onImportComplet
     document.body.removeChild(link);
   };
 
-  const validateSupplierData = (data: any, row: number): { isValid: boolean; errors: string[] } => {
+  const validateSupplierData = (data: any): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
     // Solo nombre comercial es obligatorio
@@ -124,7 +124,7 @@ const BulkSupplierImport: React.FC<BulkSupplierImportProps> = ({ onImportComplet
           parsedData.forEach((row, index) => {
             const rowNumber = index + 2;
 
-            const validation = validateSupplierData(row, rowNumber);
+            const validation = validateSupplierData(row);
             if (!validation.isValid) {
               result.errors.push({
                 row: rowNumber,

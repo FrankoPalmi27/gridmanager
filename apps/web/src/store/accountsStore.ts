@@ -1,7 +1,6 @@
 import { create } from 'zustand';
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../lib/localStorage';
 import { accountsApi } from '../lib/api';
-import { loadWithSync, createWithSync, updateWithSync, deleteWithSync, getSyncMode } from '../lib/syncStorage';
+import { loadWithSync, createWithSync, updateWithSync, deleteWithSync, getSyncMode, SyncConfig } from '../lib/syncStorage';
 
 // Account interface
 export interface Account {
@@ -65,8 +64,8 @@ interface AccountsStore {
 }
 
 // Sync configuration for accounts
-const accountsSyncConfig = {
-  storageKey: STORAGE_KEYS.ACCOUNTS,
+const accountsSyncConfig: SyncConfig<Account> = {
+  storageKey: 'accounts',
   apiGet: () => accountsApi.getAll(),
   apiCreate: (data: Account) => accountsApi.create(data),
   apiUpdate: (id: string, data: Partial<Account>) => accountsApi.update(id, data),
@@ -74,15 +73,15 @@ const accountsSyncConfig = {
 };
 
 export const useAccountsStore = create<AccountsStore>((set, get) => ({
-  accounts: loadFromStorage(STORAGE_KEYS.ACCOUNTS, initialAccounts),
-  transactions: loadFromStorage(STORAGE_KEYS.TRANSACTIONS, initialTransactions),
+  accounts: initialAccounts,
+  transactions: initialTransactions,
   isLoading: false,
   syncMode: getSyncMode(),
 
   loadAccounts: async () => {
     set({ isLoading: true, syncMode: getSyncMode() });
     try {
-      const accounts = await loadWithSync(accountsSyncConfig, initialAccounts);
+  const accounts = await loadWithSync<Account>(accountsSyncConfig, initialAccounts);
       set({ accounts, isLoading: false });
     } catch (error) {
       console.error('Error loading accounts:', error);
@@ -92,7 +91,7 @@ export const useAccountsStore = create<AccountsStore>((set, get) => ({
 
   loadTransactions: async () => {
     // Note: Transactions are typically loaded per account via getMovements endpoint
-    // For now, we'll keep them in localStorage only
+  // Note: transactions are managed in-memory until backend endpoints are implemented
     set({ syncMode: getSyncMode() });
   },
 
@@ -105,7 +104,7 @@ export const useAccountsStore = create<AccountsStore>((set, get) => ({
     };
 
     try {
-      const createdAccount = await createWithSync(accountsSyncConfig, newAccount, state.accounts);
+  const createdAccount = await createWithSync<Account>(accountsSyncConfig, newAccount, state.accounts);
       set({ accounts: [createdAccount, ...state.accounts], syncMode: getSyncMode() });
       return createdAccount;
     } catch (error) {
@@ -144,7 +143,6 @@ export const useAccountsStore = create<AccountsStore>((set, get) => ({
 
   setAccounts: (accounts) => {
     set({ accounts });
-    saveToStorage(STORAGE_KEYS.ACCOUNTS, accounts);
   },
 
   getActiveAccounts: () => {
@@ -158,11 +156,9 @@ export const useAccountsStore = create<AccountsStore>((set, get) => ({
       id: Date.now().toString()
     };
 
-    set((state) => {
-      const newTransactions = [newTransaction, ...state.transactions];
-      saveToStorage(STORAGE_KEYS.TRANSACTIONS, newTransactions);
-      return { transactions: newTransactions };
-    });
+    set((state) => ({
+      transactions: [newTransaction, ...state.transactions],
+    }));
     
     return newTransaction;
   },
@@ -193,15 +189,13 @@ export const useAccountsStore = create<AccountsStore>((set, get) => ({
 
     set((state) => {
       const newTransactions = [newTransaction, ...state.transactions];
-      saveToStorage(STORAGE_KEYS.TRANSACTIONS, newTransactions);
-      
+
       // Actualizar balance de la cuenta
       const newAccounts = state.accounts.map(account => 
         account.id === accountId 
           ? { ...account, balance: account.balance + amount }
           : account
       );
-      saveToStorage(STORAGE_KEYS.ACCOUNTS, newAccounts);
 
       return { 
         transactions: newTransactions,
@@ -241,9 +235,6 @@ export const useAccountsStore = create<AccountsStore>((set, get) => ({
           ? { ...account, balance: account.balance + balanceChanges[account.id] }
           : account
       );
-
-      saveToStorage(STORAGE_KEYS.TRANSACTIONS, newTransactions);
-      saveToStorage(STORAGE_KEYS.ACCOUNTS, newAccounts);
 
       return { 
         transactions: newTransactions,

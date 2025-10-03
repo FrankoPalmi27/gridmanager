@@ -8,7 +8,7 @@ import { ProductForm } from '../components/forms/ProductForm';
 import { CustomerModal } from '../components/forms/CustomerModal';
 import { Button } from '../components/ui/Button';
 import { formatCurrency } from '../lib/formatters';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   DollarOutlined,
   TeamOutlined,
@@ -44,9 +44,9 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
   const { customers } = useCustomersStore();
 
   // Defensive: asegurar que las colecciones sean arreglos para evitar errores en filtros/map
-  const safeSales = Array.isArray(sales) ? sales : [];
-  const safeProducts = Array.isArray(products) ? products : [];
-  const safeCustomers = Array.isArray(customers) ? customers : [];
+  const safeSales = useMemo(() => (Array.isArray(sales) ? sales : []), [sales]);
+  const safeProducts = useMemo(() => (Array.isArray(products) ? products : []), [products]);
+  const safeCustomers = useMemo(() => (Array.isArray(customers) ? customers : []), [customers]);
 
   // Generate sales evolution data
   const salesEvolutionData = useMemo(() => {
@@ -77,7 +77,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
         ventas: daySales.length
       };
     });
-  }, [sales]);
+  }, [safeSales]);
 
   // ✅ Get low stock products usando métricas centralizadas
   const lowStockProducts = metrics.lowStockProducts;
@@ -257,7 +257,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
 
         {/* Enhanced Stats Cards - Responsive Fixed Layout */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 mb-6 sm:mb-8">
-          {enhancedStats.map((stat, index) => {
+          {enhancedStats.map((stat) => {
             // Determine click handler and styling based on card name
             let clickHandler, cursorStyle;
 
@@ -535,7 +535,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
             ) : (
               <>
                 {/* Mostrar ventas recientes */}
-                {safeSales.slice(0, 2).map((sale, index) => (
+                {safeSales.slice(0, 2).map((sale) => (
                   <div key={sale.id} className="flex items-center p-3 bg-green-50 rounded-lg">
                     <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
                     <div className="flex-1">

@@ -2,7 +2,6 @@ import React, { Fragment, useState } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import { 
   Bars3Icon, 
-  UserCircleIcon, 
   MagnifyingGlassIcon,
   BellIcon,
   SunIcon,
@@ -57,7 +56,47 @@ function GlobalSearch() {
         </kbd>
       </button>
       
-      {/* TODO: Add search modal/dropdown */}
+      {isOpen && (
+        <div className="absolute z-50 mt-2 w-full sm:w-80 bg-white shadow-xl rounded-lg border border-gray-200">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              setIsOpen(false);
+            }}
+            className="p-4 space-y-3"
+          >
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Buscar en Grid Manager
+            </label>
+            <input
+              type="text"
+              autoFocus
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              placeholder="Clientes, productos, reportes..."
+            />
+            <div className="flex items-center justify-end gap-2 text-xs text-gray-500">
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setIsOpen(false);
+                }}
+                className="px-2 py-1 rounded-md border border-gray-200 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-3 py-1.5 rounded-md bg-primary-600 text-white hover:bg-primary-700 transition-colors text-xs font-semibold"
+              >
+                Buscar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

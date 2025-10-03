@@ -37,6 +37,7 @@ router.get('/', authenticate, allRoles, async (req: AuthenticatedRequest, res, n
     const { skip, take, page, limit, search, sortBy, sortOrder } = getPaginationParams(filters);
 
     const where = {
+      tenantId: req.user!.tenantId,
       ...(filters.active !== undefined ? { active: filters.active } : {}),
       ...(search ? {
         OR: [
@@ -79,8 +80,11 @@ router.get('/:id', authenticate, allRoles, validateParams(IdParamSchema), async 
   try {
     const { id } = req.params;
 
-    const supplier = await prisma.supplier.findUnique({
-      where: { id },
+    const supplier = await prisma.supplier.findFirst({
+      where: {
+        id,
+        tenantId: req.user!.tenantId,
+      },
     });
 
     if (!supplier) {
@@ -104,7 +108,10 @@ router.get('/:id', authenticate, allRoles, validateParams(IdParamSchema), async 
 router.post('/', authenticate, allRoles, validate(CreateSupplierSchema), async (req: AuthenticatedRequest, res, next) => {
   try {
     const supplier = await prisma.supplier.create({
-      data: req.body,
+      data: {
+        ...req.body,
+        tenantId: req.user!.tenantId,
+      },
     });
 
     await prisma.auditLog.create({
@@ -135,8 +142,11 @@ router.put('/:id', authenticate, allRoles, validateParams(IdParamSchema), valida
   try {
     const { id } = req.params;
 
-    const existingSupplier = await prisma.supplier.findUnique({
-      where: { id },
+    const existingSupplier = await prisma.supplier.findFirst({
+      where: {
+        id,
+        tenantId: req.user!.tenantId,
+      },
     });
 
     if (!existingSupplier) {
@@ -177,8 +187,11 @@ router.get('/:id/account', authenticate, allRoles, validateParams(IdParamSchema)
   try {
     const { id } = req.params;
 
-    const supplier = await prisma.supplier.findUnique({
-      where: { id },
+    const supplier = await prisma.supplier.findFirst({
+      where: {
+        id,
+        tenantId: req.user!.tenantId,
+      },
       select: { name: true, currentBalance: true },
     });
 

@@ -9,6 +9,7 @@ export interface AuthenticatedRequest extends Request {
     email: string;
     name: string;
     role: UserRole;
+    tenantId: string;
     branchId?: string;
   };
 }
@@ -39,6 +40,7 @@ export const authenticate = async (
         name: true,
         role: true,
         status: true,
+        tenantId: true,
         branchId: true,
       },
     });
@@ -56,6 +58,7 @@ export const authenticate = async (
       email: user.email,
       name: user.name,
       role: user.role as UserRole,
+      tenantId: user.tenantId,
       ...(user.branchId && { branchId: user.branchId }),
     };
 

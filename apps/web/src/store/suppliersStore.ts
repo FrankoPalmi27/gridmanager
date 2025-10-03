@@ -47,7 +47,11 @@ const syncConfig: SyncConfig<Supplier> = {
   apiGet: () => suppliersApi.getAll(),
   apiCreate: (data: Supplier) => suppliersApi.create(data),
   apiUpdate: (id: string, data: Partial<Supplier>) => suppliersApi.update(id, data),
-  extractData: (response: any) => response.data.data || response.data,
+  extractData: (response: any) => {
+    const data = response.data.data || response.data;
+    // Handle paginated response
+    return data.items || data;
+  },
 };
 
 export const useSuppliersStore = create<SuppliersState>((set, get) => ({

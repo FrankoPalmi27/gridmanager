@@ -69,7 +69,11 @@ const accountsSyncConfig: SyncConfig<Account> = {
   apiGet: () => accountsApi.getAll(),
   apiCreate: (data: Account) => accountsApi.create(data),
   apiUpdate: (id: string, data: Partial<Account>) => accountsApi.update(id, data),
-  extractData: (response: any) => response.data.data || response.data,
+  extractData: (response: any) => {
+    const data = response.data.data || response.data;
+    // Handle paginated response
+    return data.items || data;
+  },
 };
 
 export const useAccountsStore = create<AccountsStore>((set, get) => ({

@@ -148,7 +148,11 @@ const syncConfig: SyncConfig<Product> = {
   storageKey: 'products',
   apiGet: () => productsApi.getAll(),
   apiUpdate: (id: string, data: Partial<Product>) => productsApi.update(id, data),
-  extractData: (response: any) => response.data.data || response.data,
+  extractData: (response: any) => {
+    const data = response.data.data || response.data;
+    // Handle paginated response
+    return data.items || data;
+  },
 };
 
 export const useProductsStore = create<ProductsStore>((set, get) => ({

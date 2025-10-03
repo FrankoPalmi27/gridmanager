@@ -47,7 +47,11 @@ const syncConfig: SyncConfig<Customer> = {
   apiGet: () => customersApi.getAll(),
   apiCreate: (data: Customer) => customersApi.create(data),
   apiUpdate: (id: string, data: Partial<Customer>) => customersApi.update(id, data),
-  extractData: (response: any) => response.data.data || response.data,
+  extractData: (response: any) => {
+    const data = response.data.data || response.data;
+    // Handle paginated response
+    return data.items || data;
+  },
 };
 
 export const useCustomersStore = create<CustomersStore>((set, get) => ({

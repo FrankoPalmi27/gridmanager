@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { StatusBadge } from '../components/ui/StatusBadge';
@@ -22,12 +22,29 @@ interface SupplierFormData {
 }
 
 export function SuppliersPage() {
-  const { suppliers, addSupplier, updateSupplier } = useSuppliersStore();
+  const { suppliers, addSupplier, updateSupplier, loadSuppliers, isLoading } = useSuppliersStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const { tableScrollRef } = useTableScroll();
+  const hasRequestedInitialLoad = useRef(false);
+
+  // Load suppliers on mount
+  useEffect(() => {
+    if (hasRequestedInitialLoad.current || isLoading) {
+      return;
+    }
+
+    if (suppliers.length > 0) {
+      console.log('✅ Suppliers already loaded from store:', suppliers.length);
+      return;
+    }
+
+    console.log('📥 Loading suppliers from API...');
+    hasRequestedInitialLoad.current = true;
+    loadSuppliers();
+  }, [suppliers.length, loadSuppliers, isLoading]);
 
   // Form state
   const [formData, setFormData] = useState<SupplierFormData>({
@@ -120,10 +137,10 @@ export function SuppliersPage() {
       };
 
       if (editingSupplier) {
-        updateSupplier(editingSupplier.id, supplierData);
+        await updateSupplier(editingSupplier.id, supplierData);
         alert('¡Proveedor actualizado exitosamente!');
       } else {
-        addSupplier(supplierData);
+        await addSupplier(supplierData);
         alert('¡Proveedor creado exitosamente!');
       }
 

@@ -28,8 +28,8 @@ interface SuppliersState {
   syncMode: 'online' | 'offline';
   loadSuppliers: () => Promise<void>;
   getSuppliers: () => Supplier[];
-  addSupplier: (supplier: Omit<Supplier, 'id'>) => void;
-  updateSupplier: (id: string, supplier: Partial<Supplier>) => void;
+  addSupplier: (supplier: Omit<Supplier, 'id'>) => Promise<Supplier>;
+  updateSupplier: (id: string, supplier: Partial<Supplier>) => Promise<void>;
   deleteSupplier: (id: string) => void;
   getActiveSuppliers: () => Supplier[];
   getSupplierById: (id: string) => Supplier | undefined;
@@ -68,7 +68,8 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
 
   getSuppliers: () => get().suppliers,
 
-  addSupplier: (supplierData) => set((state) => {
+  addSupplier: async (supplierData) => {
+    const state = get();
     const newSupplier: Supplier = {
       ...supplierData,
       id: Date.now().toString(),
@@ -77,37 +78,37 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
       active: true
     };
 
-    const newSuppliers = [...state.suppliers, newSupplier];
+    try {
+      // Create with API sync and wait for response
+      const createdSupplier = await createWithSync<Supplier>(syncConfig, newSupplier, state.suppliers);
+      set({ suppliers: [createdSupplier, ...state.suppliers], syncMode: getSyncMode() });
+      return createdSupplier;
+    } catch (error) {
+      console.error('Error creating supplier:', error);
+      throw error;
+    }
+  },
 
-    // Attempt to sync with backend
-    createWithSync(syncConfig, newSupplier, state.suppliers)
-      .then((createdSupplier) => {
-        set((currentState) => ({
-          suppliers: currentState.suppliers.map(supplier =>
-            supplier.id === newSupplier.id ? createdSupplier : supplier
-          ),
-          syncMode: getSyncMode(),
-        }));
-      })
-      .catch((error) => {
-        console.error('Error syncing supplier creation:', error);
-      });
+  updateSupplier: async (id, supplierData) => {
+    const state = get();
 
-    return { suppliers: newSuppliers };
-  }),
+    try {
+      // Update with API sync first
+      await updateWithSync<Supplier>(syncConfig, id, supplierData, state.suppliers);
 
-  updateSupplier: (id, supplierData) => set((state) => {
-    const newSuppliers = state.suppliers.map(supplier =>
-      supplier.id === id
-        ? { ...supplier, ...supplierData }
-        : supplier
-    );
+      // Update local state after successful API call
+      const newSuppliers = state.suppliers.map(supplier =>
+        supplier.id === id
+          ? { ...supplier, ...supplierData }
+          : supplier
+      );
 
-    updateWithSync(syncConfig, id, supplierData, state.suppliers)
-      .catch((error) => console.error('Error syncing supplier update:', error));
-
-    return { suppliers: newSuppliers };
-  }),
+      set({ suppliers: newSuppliers, syncMode: getSyncMode() });
+    } catch (error) {
+      console.error('Error updating supplier:', error);
+      throw error;
+    }
+  },
 
   deleteSupplier: (id) => set((state) => {
     const newSuppliers = state.suppliers.filter(supplier => supplier.id !== id);

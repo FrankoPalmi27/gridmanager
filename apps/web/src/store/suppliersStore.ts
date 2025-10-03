@@ -45,7 +45,7 @@ interface SuppliersState {
 const syncConfig: SyncConfig<Supplier> = {
   storageKey: 'suppliers',
   apiGet: () => suppliersApi.getAll(),
-  apiCreate: (data: Supplier) => suppliersApi.create(data),
+  apiCreate: (data: any) => suppliersApi.create(data),
   apiUpdate: (id: string, data: Partial<Supplier>) => suppliersApi.update(id, data),
   extractData: (response: any) => {
     const data = response.data.data || response.data;
@@ -74,9 +74,9 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
 
   addSupplier: async (supplierData) => {
     const state = get();
-    const newSupplier: Supplier = {
+    // Don't include ID - backend will generate it
+    const dataToSend = {
       ...supplierData,
-      id: Date.now().toString(),
       currentBalance: 0,
       totalPurchases: 0,
       active: true
@@ -84,7 +84,7 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
 
     try {
       // Create with API sync and wait for response
-      const createdSupplier = await createWithSync<Supplier>(syncConfig, newSupplier, state.suppliers);
+      const createdSupplier = await createWithSync<Supplier>(syncConfig, dataToSend, state.suppliers);
       set({ suppliers: [createdSupplier, ...state.suppliers], syncMode: getSyncMode() });
       return createdSupplier;
     } catch (error) {

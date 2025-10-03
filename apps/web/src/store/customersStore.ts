@@ -45,7 +45,7 @@ interface CustomersStore {
 const syncConfig: SyncConfig<Customer> = {
   storageKey: 'customers',
   apiGet: () => customersApi.getAll(),
-  apiCreate: (data: Customer) => customersApi.create(data),
+  apiCreate: (data: any) => customersApi.create(data),
   apiUpdate: (id: string, data: Partial<Customer>) => customersApi.update(id, data),
   extractData: (response: any) => {
     const data = response.data.data || response.data;
@@ -73,9 +73,9 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
 
   addCustomer: async (customerData) => {
     const state = get();
-    const newCustomer: Customer = {
+    // Don't include ID - backend will generate it
+    const dataToSend = {
       ...customerData,
-      id: Date.now().toString(),
       createdAt: new Date().toISOString(),
       balance: customerData.balance || 0,
       status: customerData.status || 'active'
@@ -83,13 +83,13 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
 
     try {
       // Try to create with API sync
-      const createdCustomer = await createWithSync<Customer>(syncConfig, newCustomer, state.customers);
+      const createdCustomer = await createWithSync<Customer>(syncConfig, dataToSend, state.customers);
       set({ customers: [createdCustomer, ...state.customers], syncMode: getSyncMode() });
       return createdCustomer;
     } catch (error) {
       // Fallback already handled by createWithSync
       console.error('Error creating customer:', error);
-      return newCustomer;
+      throw error;
     }
   },
 

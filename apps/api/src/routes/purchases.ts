@@ -48,6 +48,7 @@ router.get('/', authenticate, allRoles, async (req: AuthenticatedRequest, res, n
     const userBranchId = req.user!.branchId;
 
     const where = {
+      tenantId: req.user!.tenantId,
       ...(filters.supplierId ? { supplierId: filters.supplierId } : {}),
       ...(filters.branchId ? { branchId: filters.branchId } : {}),
       ...(filters.status ? { status: filters.status } : {}),
@@ -164,6 +165,7 @@ router.post('/', authenticate, allRoles, validate(CreatePurchaseSchema), async (
           number,
           supplierId,
           branchId,
+          tenantId: req.user!.tenantId,
           status: 'DRAFT',
           subtotal,
           taxes,

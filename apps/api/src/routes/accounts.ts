@@ -50,6 +50,7 @@ router.get('/', authenticate, allRoles, async (req: AuthenticatedRequest, res, n
     });
 
     const where = {
+      tenantId: req.user!.tenantId,
       ...(filters.type ? { type: filters.type } : {}),
       ...(filters.currency ? { currency: filters.currency } : {}),
       ...(filters.active !== undefined ? { active: filters.active } : {}),
@@ -92,8 +93,11 @@ router.get('/:id', authenticate, allRoles, validateParams(IdParamSchema), async 
   try {
     const { id } = req.params;
 
-    const account = await prisma.account.findUnique({
-      where: { id: id! },
+    const account = await prisma.account.findFirst({
+      where: {
+        id: id!,
+        tenantId: req.user!.tenantId,
+      },
     });
 
     if (!account) {
@@ -117,7 +121,10 @@ router.get('/:id', authenticate, allRoles, validateParams(IdParamSchema), async 
 router.post('/', authenticate, allRoles, validate(CreateAccountSchema), async (req: AuthenticatedRequest, res, next) => {
   try {
     const account = await prisma.account.create({
-      data: req.body,
+      data: {
+        ...req.body,
+        tenantId: req.user!.tenantId,
+      },
     });
 
     await prisma.auditLog.create({
@@ -148,8 +155,11 @@ router.put('/:id', authenticate, allRoles, validateParams(IdParamSchema), valida
   try {
     const { id } = req.params;
 
-    const existingAccount = await prisma.account.findUnique({
-      where: { id },
+    const existingAccount = await prisma.account.findFirst({
+      where: {
+        id,
+        tenantId: req.user!.tenantId,
+      },
     });
 
     if (!existingAccount) {
@@ -240,8 +250,11 @@ router.post('/:id/movements', authenticate, allRoles, validateParams(IdParamSche
     const { id } = req.params;
     const { amount, description, reference } = req.body;
 
-    const account = await prisma.account.findUnique({
-      where: { id: id! },
+    const account = await prisma.account.findFirst({
+      where: {
+        id: id!,
+        tenantId: req.user!.tenantId,
+      },
     });
 
     if (!account) {

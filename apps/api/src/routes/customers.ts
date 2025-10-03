@@ -55,6 +55,7 @@ router.get('/', authenticate, allRoles, async (req: AuthenticatedRequest, res, n
     const { skip, take, page, limit, search, sortBy, sortOrder } = getPaginationParams(filters);
 
     const where = {
+      tenantId: req.user!.tenantId,
       ...(filters.active !== undefined ? { active: filters.active } : {}),
       ...(search ? {
         OR: [
@@ -127,8 +128,11 @@ router.get('/:id', authenticate, allRoles, validateParams(IdParamSchema), async 
   try {
     const { id } = req.params;
 
-    const customer = await prisma.customer.findUnique({
-      where: { id },
+    const customer = await prisma.customer.findFirst({
+      where: {
+        id,
+        tenantId: req.user!.tenantId,
+      },
       select: {
         id: true,
         name: true,
@@ -211,6 +215,7 @@ router.post('/', authenticate, allRoles, validate(CreateCustomerSchema), async (
         taxId,
         birthday: birthday ? new Date(birthday) : null,
         creditLimit,
+        tenantId: req.user!.tenantId,
       },
       select: {
         id: true,
@@ -273,8 +278,11 @@ router.put('/:id', authenticate, allRoles, validateParams(IdParamSchema), valida
     const { id } = req.params;
     const updateData = req.body;
 
-    const existingCustomer = await prisma.customer.findUnique({
-      where: { id },
+    const existingCustomer = await prisma.customer.findFirst({
+      where: {
+        id,
+        tenantId: req.user!.tenantId,
+      },
     });
 
     if (!existingCustomer) {
@@ -349,8 +357,11 @@ router.get('/:id/account', authenticate, allRoles, validateParams(IdParamSchema)
   try {
     const { id } = req.params;
 
-    const customer = await prisma.customer.findUnique({
-      where: { id },
+    const customer = await prisma.customer.findFirst({
+      where: {
+        id,
+        tenantId: req.user!.tenantId,
+      },
       select: { name: true, currentBalance: true },
     });
 

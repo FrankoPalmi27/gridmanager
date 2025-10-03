@@ -36,6 +36,7 @@ router.get('/', authenticate, allRoles, async (req: AuthenticatedRequest, res, n
     const userBranchId = req.user!.branchId;
 
     const where = {
+      tenantId: req.user!.tenantId,
       ...(filters.customerId ? { customerId: filters.customerId } : {}),
       ...(filters.sellerId ? { sellerId: filters.sellerId } : {}),
       ...(filters.branchId ? { branchId: filters.branchId } : {}),
@@ -122,6 +123,7 @@ router.get('/:id', authenticate, allRoles, validateParams(IdParamSchema), async 
 
     const where = {
       id,
+      tenantId: req.user!.tenantId,
       ...(userRole === 'SELLER' ? { sellerId: userId } : {}),
     };
 
@@ -238,6 +240,7 @@ router.post('/', authenticate, allRoles, validate(CreateSaleSchema), async (req:
           customerId,
           sellerId,
           branchId,
+          tenantId: req.user!.tenantId,
           status: 'DRAFT',
           subtotal,
           taxes,

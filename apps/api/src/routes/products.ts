@@ -33,6 +33,7 @@ router.get('/', authenticate, allRoles, async (req: AuthenticatedRequest, res, n
     const { skip, take, page, limit, search, sortBy, sortOrder } = getPaginationParams(filters);
 
     const where = {
+      tenantId: req.user!.tenantId,
       ...(filters.active !== undefined ? { active: filters.active } : {}),
       ...(filters.category ? { category: filters.category } : {}),
       ...(filters.brand ? { brand: filters.brand } : {}),
@@ -86,8 +87,11 @@ router.get('/:id', authenticate, allRoles, validateParams(IdParamSchema), async 
   try {
     const { id } = req.params;
 
-    const product = await prisma.product.findUnique({
-      where: { id },
+    const product = await prisma.product.findFirst({
+      where: {
+        id,
+        tenantId: req.user!.tenantId,
+      },
     });
 
     if (!product) {
@@ -113,7 +117,10 @@ router.get('/:id', authenticate, allRoles, validateParams(IdParamSchema), async 
 router.post('/', authenticate, allRoles, validate(CreateProductSchema), async (req: AuthenticatedRequest, res, next) => {
   try {
     const product = await prisma.product.create({
-      data: req.body,
+      data: {
+        ...req.body,
+        tenantId: req.user!.tenantId,
+      },
     });
 
     await prisma.auditLog.create({
@@ -146,8 +153,11 @@ router.put('/:id', authenticate, allRoles, validateParams(IdParamSchema), valida
   try {
     const { id } = req.params;
 
-    const existingProduct = await prisma.product.findUnique({
-      where: { id },
+    const existingProduct = await prisma.product.findFirst({
+      where: {
+        id,
+        tenantId: req.user!.tenantId,
+      },
     });
 
     if (!existingProduct) {

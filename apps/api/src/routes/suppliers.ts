@@ -14,10 +14,18 @@ const IdParamSchema = z.object({
 
 const CreateSupplierSchema = z.object({
   name: z.string().min(2),
+  businessName: z.string().optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
   address: z.string().optional(),
   taxId: z.string().optional(),
+  contactPerson: z.string().optional(),
+  paymentTerms: z.number().optional(),
+  creditLimit: z.number().optional(),
+  currentBalance: z.number().optional(),
+  totalPurchases: z.number().optional(),
+  lastPurchaseDate: z.string().optional(),
+  active: z.boolean().optional(),
 });
 
 const UpdateSupplierSchema = CreateSupplierSchema.partial();

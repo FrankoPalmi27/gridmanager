@@ -251,19 +251,25 @@ model Customer {
 }
 
 model Supplier {
-  id             String  @id @default(cuid())
-  tenantId       String  // NUEVO
-  name           String
-  email          String?
-  phone          String?
-  address        String?
-  taxId          String? @unique
-  currentBalance Decimal @default(0) @db.Decimal(12, 2)
-  active         Boolean @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id               String   @id @default(cuid())
+  tenantId         String
+  name             String   // Nombre comercial
+  businessName     String?  // Razón social
+  email            String?
+  phone            String?
+  address          String?
+  taxId            String?  @unique
+  contactPerson    String?  // Persona de contacto
+  paymentTerms     Int      @default(30) // Días de plazo de pago
+  creditLimit      Decimal? @db.Decimal(12, 2) // Límite de crédito
+  currentBalance   Decimal  @default(0) @db.Decimal(12, 2)
+  totalPurchases   Decimal  @default(0) @db.Decimal(12, 2)
+  lastPurchaseDate DateTime?
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  tenant    Tenant    @relation(fields: [tenantId], references: [id]) // NUEVO
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
   purchases Purchase[]
   payments  Payment[]
 

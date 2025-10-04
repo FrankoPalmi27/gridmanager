@@ -127,25 +127,30 @@ export function ProductsPage() {
     setStockMovementsModal({ isOpen: false, product: null });
   };
 
-  const handleStockAdjustment = (product: Product) => {
+  const handleStockAdjustment = async (product: Product) => {
     const newStock = prompt('Nuevo stock:', product.stock.toString());
     if (newStock !== null && !isNaN(Number(newStock))) {
       const newStockValue = parseInt(newStock);
       const previousStock = product.stock;
-      
-      // Update the product stock
-      updateProduct(product.id, { stock: newStockValue });
-      
-      // Add stock movement record
-      addStockMovement({
-        productId: product.id,
-        type: newStockValue > previousStock ? 'in' : newStockValue < previousStock ? 'out' : 'adjustment',
-        quantity: Math.abs(newStockValue - previousStock),
-        previousStock,
-        newStock: newStockValue,
-        reason: `Ajuste manual de stock`,
-        createdBy: 'Usuario'
-      });
+
+      try {
+        // Update the product stock
+        await updateProduct(product.id, { stock: newStockValue });
+
+        // Add stock movement record
+        addStockMovement({
+          productId: product.id,
+          type: newStockValue > previousStock ? 'in' : newStockValue < previousStock ? 'out' : 'adjustment',
+          quantity: Math.abs(newStockValue - previousStock),
+          previousStock,
+          newStock: newStockValue,
+          reason: `Ajuste manual de stock`,
+          createdBy: 'Usuario'
+        });
+      } catch (error) {
+        console.error('Error updating stock:', error);
+        alert('Error al actualizar el stock');
+      }
     }
   };
 
@@ -884,28 +889,33 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
+                    onClick={async () => {
                       const adjustment = prompt('Cantidad a agregar (positivo) o quitar (negativo):', '10');
                       if (adjustment && !isNaN(Number(adjustment))) {
                         const adjustmentValue = parseInt(adjustment);
                         const newStock = stockMovementsModal.product!.stock + adjustmentValue;
-                        
+
                         if (newStock >= 0) {
-                          updateProduct(stockMovementsModal.product!.id, { stock: newStock });
-                          addStockMovement({
-                            productId: stockMovementsModal.product!.id,
-                            type: adjustmentValue > 0 ? 'in' : 'out',
-                            quantity: Math.abs(adjustmentValue),
-                            previousStock: stockMovementsModal.product!.stock,
-                            newStock: newStock,
-                            reason: `Ajuste rápido: ${adjustmentValue > 0 ? 'Entrada' : 'Salida'} de ${Math.abs(adjustmentValue)} unidades`,
-                            createdBy: 'Usuario'
-                          });
-                          // Update the modal state to reflect changes
-                          setStockMovementsModal(prev => ({
-                            ...prev,
-                            product: prev.product ? { ...prev.product, stock: newStock } : null
-                          }));
+                          try {
+                            await updateProduct(stockMovementsModal.product!.id, { stock: newStock });
+                            addStockMovement({
+                              productId: stockMovementsModal.product!.id,
+                              type: adjustmentValue > 0 ? 'in' : 'out',
+                              quantity: Math.abs(adjustmentValue),
+                              previousStock: stockMovementsModal.product!.stock,
+                              newStock: newStock,
+                              reason: `Ajuste rápido: ${adjustmentValue > 0 ? 'Entrada' : 'Salida'} de ${Math.abs(adjustmentValue)} unidades`,
+                              createdBy: 'Usuario'
+                            });
+                            // Update the modal state to reflect changes
+                            setStockMovementsModal(prev => ({
+                              ...prev,
+                              product: prev.product ? { ...prev.product, stock: newStock } : null
+                            }));
+                          } catch (error) {
+                            console.error('Error updating stock:', error);
+                            alert('Error al actualizar el stock');
+                          }
                         } else {
                           alert('El stock no puede ser negativo');
                         }

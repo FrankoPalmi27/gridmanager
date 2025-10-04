@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { productsApi } from '../lib/api';
-import { loadWithSync, getSyncMode, SyncConfig, updateWithSync } from '../lib/syncStorage';
+import { loadWithSync, getSyncMode, SyncConfig, updateWithSync, createWithSync } from '../lib/syncStorage';
 
 // Tipo para los productos
 export interface Product {
@@ -107,7 +107,7 @@ interface ProductsStore {
     stock: number;
     minStock: number;
     status?: 'active' | 'inactive';
-  }) => Product;
+  }) => Promise<Product>;
   addBulkProducts: (productsData: {
     name: string;
     category: string;
@@ -119,9 +119,9 @@ interface ProductsStore {
     minStock: number;
     status?: 'active' | 'inactive';
   }[]) => Product[];
-  updateProduct: (id: string, updatedData: Partial<Product>) => void;
+  updateProduct: (id: string, updatedData: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => void;
-  updateStock: (id: string, newStock: number) => void;
+  updateStock: (id: string, newStock: number) => Promise<void>;
   setProducts: (products: Product[]) => void;
   setCategories: (categories: Category[]) => void;
   resetToInitialProducts: () => void;
@@ -143,15 +143,90 @@ interface ProductsStore {
   generateStockAlert: (product: Product) => StockAlert | null;
 }
 
+// Helper to map backend product to frontend format
+const mapBackendToFrontend = (backendProduct: any): Product => {
+  const cost = Number(backendProduct.cost);
+  const price = Number(backendProduct.basePrice);
+  const margin = cost > 0 ? ((price - cost) / cost) * 100 : 0;
+
+  return {
+    id: backendProduct.id,
+    sku: backendProduct.sku,
+    name: backendProduct.name,
+    category: backendProduct.category || '',
+    brand: backendProduct.brand || '',
+    description: backendProduct.description || '',
+    cost,
+    price, // Backend uses basePrice
+    margin,
+    suggestedPrice: price,
+    supplier: '', // Not stored in backend
+    stock: backendProduct.currentStock || 0, // Backend uses currentStock
+    minStock: backendProduct.minStock || 0,
+    status: backendProduct.active ? 'active' : 'inactive', // Backend uses active boolean
+    createdAt: backendProduct.createdAt,
+  };
+};
+
+// Helper to map frontend product to backend format for CREATE
+const mapFrontendToBackendCreate = (frontendProduct: any) => ({
+  sku: frontendProduct.sku,
+  name: frontendProduct.name,
+  description: frontendProduct.description || '',
+  category: frontendProduct.category || '',
+  brand: frontendProduct.brand || '',
+  cost: Number(frontendProduct.cost),
+  basePrice: Number(frontendProduct.price), // Frontend uses price
+  taxRate: 0,
+  minStock: frontendProduct.minStock || 0,
+  unit: 'UNIT',
+  // Note: currentStock is NOT set on create - it starts at 0
+  // Stock adjustments should be done via stock movements
+});
+
+// Helper to map frontend product to backend format for UPDATE
+const mapFrontendToBackendUpdate = (frontendProduct: any) => {
+  const updateData: any = {};
+
+  if (frontendProduct.sku !== undefined) updateData.sku = frontendProduct.sku;
+  if (frontendProduct.name !== undefined) updateData.name = frontendProduct.name;
+  if (frontendProduct.description !== undefined) updateData.description = frontendProduct.description || '';
+  if (frontendProduct.category !== undefined) updateData.category = frontendProduct.category || '';
+  if (frontendProduct.brand !== undefined) updateData.brand = frontendProduct.brand || '';
+  if (frontendProduct.cost !== undefined) updateData.cost = Number(frontendProduct.cost);
+  if (frontendProduct.price !== undefined) updateData.basePrice = Number(frontendProduct.price);
+  if (frontendProduct.minStock !== undefined) updateData.minStock = frontendProduct.minStock;
+  if (frontendProduct.stock !== undefined) updateData.currentStock = frontendProduct.stock;
+  if (frontendProduct.status !== undefined) updateData.active = frontendProduct.status === 'active';
+
+  return updateData;
+};
+
 // Sync configuration
 const syncConfig: SyncConfig<Product> = {
   storageKey: 'products',
   apiGet: () => productsApi.getAll(),
-  apiUpdate: (id: string, data: Partial<Product>) => productsApi.update(id, data),
+  apiCreate: (data: any) => {
+    const backendData = mapFrontendToBackendCreate(data);
+    return productsApi.create(backendData);
+  },
+  apiUpdate: (id: string, data: Partial<Product>) => {
+    const backendData = mapFrontendToBackendUpdate(data);
+    return productsApi.update(id, backendData);
+  },
   extractData: (response: any) => {
     const data = response.data.data || response.data;
     // Handle paginated response
-    return data.items || data;
+    const items = data.items || data;
+    // Map all products from backend to frontend format
+    if (Array.isArray(items)) {
+      return items.map(mapBackendToFrontend);
+    }
+    // Handle single product response (from create/update)
+    if (items.product) {
+      return [mapBackendToFrontend(items.product)];
+    }
+    return [];
   },
 };
 
@@ -173,17 +248,18 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
     }
   },
 
-  addProduct: (productData) => {
+  addProduct: async (productData) => {
+    const state = get();
     // Calculate margin if not provided
-    const calculatedMargin = productData.margin || 
+    const calculatedMargin = productData.margin ||
       (productData.cost > 0 ? ((productData.price - productData.cost) / productData.cost) * 100 : 0);
-    
+
     // Calculate suggested price if not provided (using 50% margin as default)
-    const calculatedSuggestedPrice = productData.suggestedPrice || 
+    const calculatedSuggestedPrice = productData.suggestedPrice ||
       (productData.cost * 1.5);
 
-    const newProduct: Product = {
-      id: Date.now().toString(),
+    // Don't include ID - backend will generate it
+    const dataToSend = {
       sku: generateSKU(productData.category, productData.name),
       name: productData.name,
       category: productData.category,
@@ -197,14 +273,17 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
       stock: productData.stock,
       minStock: productData.minStock,
       status: productData.status || 'active',
-      createdAt: new Date().toISOString()
     };
 
-    set((state) => ({
-      products: [newProduct, ...state.products]
-    }));
-    
-    return newProduct;
+    try {
+      // Create with API sync and wait for response
+      const createdProduct = await createWithSync<Product>(syncConfig, dataToSend as any, state.products);
+      set({ products: [createdProduct, ...state.products], syncMode: getSyncMode() });
+      return createdProduct;
+    } catch (error) {
+      console.error('Error creating product:', error);
+      throw error;
+    }
   },
 
   addBulkProducts: (productsData) => {
@@ -238,13 +317,21 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
     return newProducts;
   },
 
-  updateProduct: (id, updatedData) => {
-    set((state) => {
+  updateProduct: async (id, updatedData) => {
+    const state = get();
+    try {
+      // Update with API sync first
+      await updateWithSync<Product>(syncConfig, id, updatedData, state.products);
+
+      // Update local state after successful API call
       const newProducts = state.products.map(product =>
         product.id === id ? { ...product, ...updatedData } : product
       );
-      return { products: newProducts };
-    });
+      set({ products: newProducts, syncMode: getSyncMode() });
+    } catch (error) {
+      console.error('Error updating product:', error);
+      throw error;
+    }
   },
 
   deleteProduct: (id) => {
@@ -254,13 +341,21 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
     });
   },
 
-  updateStock: (id, newStock) => {
-    set((state) => {
+  updateStock: async (id, newStock) => {
+    const state = get();
+    try {
+      // Update with API sync first
+      await updateWithSync<Product>(syncConfig, id, { stock: newStock }, state.products);
+
+      // Update local state after successful API call
       const newProducts = state.products.map(product =>
         product.id === id ? { ...product, stock: newStock } : product
       );
-      return { products: newProducts };
-    });
+      set({ products: newProducts, syncMode: getSyncMode() });
+    } catch (error) {
+      console.error('Error updating stock:', error);
+      throw error;
+    }
   },
 
   setProducts: (products) => {

@@ -144,9 +144,9 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
       };
 
       if (editingProduct) {
-        updateProduct(editingProduct.id, productData);
+        await updateProduct(editingProduct.id, productData);
       } else {
-        addProduct(productData);
+        await addProduct(productData);
       }
 
       onClose();

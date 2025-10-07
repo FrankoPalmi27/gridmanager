@@ -73,6 +73,9 @@ router.get('/', authenticate, allRoles, async (req: AuthenticatedRequest, res, n
         suppliers.map(supplier => ({
           ...supplier,
           currentBalance: Number(supplier.currentBalance),
+          totalPurchases: Number(supplier.totalPurchases),
+          creditLimit: supplier.creditLimit ? Number(supplier.creditLimit) : null,
+          paymentTerms: supplier.paymentTerms || 0,
         })),
         total,
         page,
@@ -105,6 +108,8 @@ router.get('/:id', authenticate, allRoles, validateParams(IdParamSchema), async 
         supplier: {
           ...supplier,
           currentBalance: Number(supplier.currentBalance),
+          totalPurchases: Number(supplier.totalPurchases),
+          creditLimit: supplier.creditLimit ? Number(supplier.creditLimit) : null,
         },
       },
     });
@@ -138,6 +143,8 @@ router.post('/', authenticate, allRoles, validate(CreateSupplierSchema), async (
         supplier: {
           ...supplier,
           currentBalance: Number(supplier.currentBalance),
+          totalPurchases: Number(supplier.totalPurchases),
+          creditLimit: supplier.creditLimit ? Number(supplier.creditLimit) : null,
         },
       },
     });
@@ -183,6 +190,8 @@ router.put('/:id', authenticate, allRoles, validateParams(IdParamSchema), valida
         supplier: {
           ...supplier,
           currentBalance: Number(supplier.currentBalance),
+          totalPurchases: Number(supplier.totalPurchases),
+          creditLimit: supplier.creditLimit ? Number(supplier.creditLimit) : null,
         },
       },
     });

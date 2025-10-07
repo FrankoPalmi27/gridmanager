@@ -34,18 +34,13 @@ export function ProductsPage() {
   const hasRequestedInitialLoad = useRef(false);
 
   useEffect(() => {
-    if (hasRequestedInitialLoad.current || isLoading) {
-      return;
-    }
-
-    if (products.length > 0) {
-      hasRequestedInitialLoad.current = true;
+    if (hasRequestedInitialLoad.current) {
       return;
     }
 
     hasRequestedInitialLoad.current = true;
     void loadProducts();
-  }, [isLoading, loadProducts, products.length]);
+  }, [loadProducts]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');

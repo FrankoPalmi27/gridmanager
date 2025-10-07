@@ -1,4 +1,4 @@
-import React, { useState, Fragment } from 'react';
+import React, { useState, Fragment, useEffect, useRef } from 'react';
 import { Dialog, Transition, Listbox } from '@headlessui/react';
 import { ChevronUpDownIcon } from '@heroicons/react/20/solid';
 import { Button } from '../components/ui/Button';
@@ -505,8 +505,22 @@ export function AccountsPage() {
   // Use centralized store instead of local state
   const {
     accounts,
-    transactions
+    transactions,
+    loadAccounts,
+    loadTransactions
   } = useAccountsStore();
+
+  const hasRequestedInitialLoad = useRef(false);
+
+  useEffect(() => {
+    if (hasRequestedInitialLoad.current) {
+      return;
+    }
+
+    hasRequestedInitialLoad.current = true;
+    void loadAccounts();
+    void loadTransactions();
+  }, [loadAccounts, loadTransactions]);
 
   // Keep local setters for compatibility with existing code
   const setAccounts = (_newAccounts: Account[] | ((prev: Account[]) => Account[])) => {
@@ -516,9 +530,6 @@ export function AccountsPage() {
   const setTransactions = (_newTransactions: Transaction[] | ((prev: Transaction[]) => Transaction[])) => {
     // This is handled by the store now, keeping for compatibility
   };
-
-  // Accounts and transactions are loaded from localStorage on store initialization
-  // Only call loadAccounts/loadTransactions manually if you need to refresh from API
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAccount, setSelectedAccount] = useState<string>('all');

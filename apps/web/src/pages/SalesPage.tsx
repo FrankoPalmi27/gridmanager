@@ -71,18 +71,13 @@ export function SalesPage() {
   const hasRequestedInitialLoad = useRef(false);
 
   useEffect(() => {
-    if (hasRequestedInitialLoad.current || isLoading) {
-      return;
-    }
-
-    if (sales.length > 0) {
-      hasRequestedInitialLoad.current = true;
+    if (hasRequestedInitialLoad.current) {
       return;
     }
 
     hasRequestedInitialLoad.current = true;
     void loadSales();
-  }, [isLoading, loadSales, sales.length]);
+  }, [loadSales]);
   
   // Migrate existing sales to include new payment fields if missing
   const migratedSales = sales.map(sale => ({

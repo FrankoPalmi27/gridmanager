@@ -37,18 +37,21 @@ export function CustomersPage() {
   const hasRequestedInitialLoad = useRef(false);
 
   useEffect(() => {
-    if (hasRequestedInitialLoad.current || isLoading) {
-      return;
-    }
+    console.log('[CustomersPage] useEffect triggered', {
+      hasRequested: hasRequestedInitialLoad.current,
+      isLoading,
+      customersLength: customers.length
+    });
 
-    if (customers.length > 0) {
-      hasRequestedInitialLoad.current = true;
+    if (hasRequestedInitialLoad.current) {
+      console.log('[CustomersPage] Already loaded, skipping');
       return;
     }
 
     hasRequestedInitialLoad.current = true;
+    console.log('[CustomersPage] Calling loadCustomers...');
     void loadCustomers();
-  }, [customers.length, isLoading, loadCustomers]);
+  }, [loadCustomers]);
   
   // Form state
   const [formData, setFormData] = useState({

@@ -32,19 +32,21 @@ export function SuppliersPage() {
 
   // Load suppliers on mount
   useEffect(() => {
-    if (hasRequestedInitialLoad.current || isLoading) {
+    console.log('[SuppliersPage] useEffect triggered', {
+      hasRequested: hasRequestedInitialLoad.current,
+      isLoading,
+      suppliersLength: suppliers.length
+    });
+
+    if (hasRequestedInitialLoad.current) {
+      console.log('[SuppliersPage] Already loaded, skipping');
       return;
     }
 
-    if (suppliers.length > 0) {
-      console.log('✅ Suppliers already loaded from store:', suppliers.length);
-      return;
-    }
-
-    console.log('📥 Loading suppliers from API...');
     hasRequestedInitialLoad.current = true;
+    console.log('[SuppliersPage] Calling loadSuppliers...');
     loadSuppliers();
-  }, [suppliers.length, loadSuppliers, isLoading]);
+  }, [loadSuppliers]);
 
   // Form state
   const [formData, setFormData] = useState<SupplierFormData>({

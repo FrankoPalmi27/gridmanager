@@ -89,12 +89,15 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
   syncMode: getSyncMode(),
 
   loadSuppliers: async () => {
+    console.log('[SuppliersStore] Starting loadSuppliers...');
     set({ isLoading: true, syncMode: getSyncMode() });
     try {
+      console.log('[SuppliersStore] Calling loadWithSync...');
       const suppliers = await loadWithSync<Supplier>(syncConfig, initialSuppliers);
+      console.log('[SuppliersStore] Loaded suppliers:', suppliers.length, suppliers);
       set({ suppliers, isLoading: false });
     } catch (error) {
-      console.error('Error loading suppliers:', error);
+      console.error('[SuppliersStore] Error loading suppliers:', error);
       set({ isLoading: false });
     }
   },

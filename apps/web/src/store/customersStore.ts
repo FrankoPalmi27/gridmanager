@@ -98,12 +98,16 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
 
   addCustomer: async (customerData) => {
     const state = get();
-    // Don't include ID - backend will generate it
-    const dataToSend = {
-      ...customerData,
-      createdAt: new Date().toISOString(),
-      balance: customerData.balance || 0,
-      status: customerData.status || 'active'
+
+    // Map frontend data to backend schema - only send fields that backend accepts
+    const dataToSend: any = {
+      name: customerData.name,
+      email: customerData.email || undefined,
+      phone: customerData.phone || undefined,
+      address: customerData.address || undefined,
+      taxId: undefined, // Not provided in frontend form yet
+      birthday: undefined, // Not provided in frontend form yet
+      creditLimit: customerData.balance ? Number(customerData.balance) : undefined,
     };
 
     try {

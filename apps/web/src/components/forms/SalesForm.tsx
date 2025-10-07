@@ -76,9 +76,21 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<SalesFormErrors>({});
 
-  const safeProducts = useMemo(() => (Array.isArray(products) ? products : []), [products]);
-  const safeCustomers = useMemo(() => (Array.isArray(customers) ? customers : []), [customers]);
-  const safeAccounts = useMemo(() => (Array.isArray(accounts) ? accounts : []), [accounts]);
+  // Ensure stores return arrays - with extra safety
+  const safeProducts = useMemo(() => {
+    if (!products) return [];
+    return Array.isArray(products) ? products : [];
+  }, [products]);
+
+  const safeCustomers = useMemo(() => {
+    if (!customers) return [];
+    return Array.isArray(customers) ? customers : [];
+  }, [customers]);
+
+  const safeAccounts = useMemo(() => {
+    if (!accounts) return [];
+    return Array.isArray(accounts) ? accounts : [];
+  }, [accounts]);
   const activeAccountsRaw = getActiveAccounts();
   const activeAccounts = Array.isArray(activeAccountsRaw) ? activeAccountsRaw : safeAccounts;
 

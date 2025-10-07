@@ -215,17 +215,21 @@ const syncConfig: SyncConfig<Product> = {
     return productsApi.update(id, backendData);
   },
   extractData: (response: any) => {
-    const data = response.data.data || response.data;
-    // Handle paginated response
-    const items = data.items || data;
-    // Map all products from backend to frontend format
+    const responseData = response.data.data || response.data;
+
+    // Handle single product response (from create/update)
+    if (responseData.product) {
+      return [mapBackendToFrontend(responseData.product)];
+    }
+
+    // Handle paginated response (from list)
+    // Backend returns { data: [...], total, page, limit, totalPages }
+    const items = responseData.data || responseData.items || responseData;
     if (Array.isArray(items)) {
       return items.map(mapBackendToFrontend);
     }
-    // Handle single product response (from create/update)
-    if (items.product) {
-      return [mapBackendToFrontend(items.product)];
-    }
+
+    console.warn('⚠️ Unexpected products response structure:', responseData);
     return [];
   },
 };

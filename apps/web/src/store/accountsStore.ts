@@ -70,9 +70,14 @@ const accountsSyncConfig: SyncConfig<Account> = {
   apiCreate: (data: Account) => accountsApi.create(data),
   apiUpdate: (id: string, data: Partial<Account>) => accountsApi.update(id, data),
   extractData: (response: any) => {
-    const data = response.data.data || response.data;
-    // Handle paginated response
-    return data.items || data;
+    const responseData = response.data.data || response.data;
+    // Handle paginated response: { data: [...], total, page, limit, totalPages }
+    const items = responseData.data || responseData.items || responseData;
+    if (Array.isArray(items)) {
+      return items;
+    }
+    console.warn('⚠️ Unexpected accounts response structure:', responseData);
+    return [];
   },
 };
 

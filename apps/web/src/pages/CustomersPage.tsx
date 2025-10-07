@@ -292,7 +292,7 @@ export function CustomersPage() {
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Total Clientes</h3>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalCustomers}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
             </div>
           </div>
@@ -304,7 +304,7 @@ export function CustomersPage() {
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Clientes Activos</h3>
-                <p className="text-2xl font-bold text-gray-900">{stats.activeCustomers}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.active}</p>
               </div>
             </div>
           </div>
@@ -316,7 +316,7 @@ export function CustomersPage() {
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Balance Positivo</h3>
-                <p className="text-2xl font-bold text-gray-900">{stats.positiveBalance}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalPositiveBalance)}</p>
               </div>
             </div>
           </div>
@@ -328,7 +328,7 @@ export function CustomersPage() {
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Balance Negativo</h3>
-                <p className="text-2xl font-bold text-gray-900">{stats.negativeBalance}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalNegativeBalance)}</p>
               </div>
             </div>
           </div>

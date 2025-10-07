@@ -62,19 +62,21 @@ const syncConfig: SyncConfig<Customer> = {
   apiCreate: (data: any) => customersApi.create(data),
   apiUpdate: (id: string, data: Partial<Customer>) => customersApi.update(id, data),
   extractData: (response: any) => {
-    const data = response.data.data || response.data;
+    const responseData = response.data.data || response.data;
 
     // Handle single customer response (from create/update)
-    if (data.customer) {
-      return [mapBackendToFrontend(data.customer)];
+    if (responseData.customer) {
+      return [mapBackendToFrontend(responseData.customer)];
     }
 
     // Handle paginated response (from list)
-    const items = data.items || data;
+    // Backend returns { data: [...], total, page, limit, totalPages }
+    const items = responseData.data || responseData.items || responseData;
     if (Array.isArray(items)) {
       return items.map(mapBackendToFrontend);
     }
 
+    console.warn('⚠️ Unexpected customers response structure:', responseData);
     return [];
   },
 };

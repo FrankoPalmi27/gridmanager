@@ -66,19 +66,21 @@ const syncConfig: SyncConfig<Supplier> = {
   apiCreate: (data: any) => suppliersApi.create(data),
   apiUpdate: (id: string, data: Partial<Supplier>) => suppliersApi.update(id, data),
   extractData: (response: any) => {
-    const data = response.data.data || response.data;
+    const responseData = response.data.data || response.data;
 
     // Handle single supplier response (from create/update)
-    if (data.supplier) {
-      return [mapBackendToFrontend(data.supplier)];
+    if (responseData.supplier) {
+      return [mapBackendToFrontend(responseData.supplier)];
     }
 
     // Handle paginated response (from list)
-    const items = data.items || data;
+    // Backend returns { data: [...], total, page, limit, totalPages }
+    const items = responseData.data || responseData.items || responseData;
     if (Array.isArray(items)) {
       return items.map(mapBackendToFrontend);
     }
 
+    console.warn('⚠️ Unexpected suppliers response structure:', responseData);
     return [];
   },
 };

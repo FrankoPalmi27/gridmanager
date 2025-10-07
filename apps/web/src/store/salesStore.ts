@@ -125,7 +125,16 @@ const syncConfig: SyncConfig<Sale> = {
   storageKey: 'sales',
   apiGet: () => salesApi.getAll(),
   apiCreate: (data: Sale) => salesApi.create(data),
-  extractData: (response: any) => response.data.data || response.data,
+  extractData: (response: any) => {
+    const responseData = response.data.data || response.data;
+    // Handle paginated response: { data: [...], total, page, limit, totalPages }
+    const items = responseData.data || responseData.items || responseData;
+    if (Array.isArray(items)) {
+      return items;
+    }
+    console.warn('⚠️ Unexpected sales response structure:', responseData);
+    return [];
+  },
 };
 
 // ============================================

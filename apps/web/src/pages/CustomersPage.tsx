@@ -137,15 +137,12 @@ export function CustomersPage() {
     setLoading(true);
     
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       if (editingCustomer) {
         // Update existing customer
-        updateCustomer(editingCustomer.id, formData);
+        await updateCustomer(editingCustomer.id, formData);
       } else {
         // Add new customer
-        addCustomer({
+        await addCustomer({
           name: formData.name,
           email: formData.email,
           phone: formData.celular,
@@ -155,11 +152,12 @@ export function CustomersPage() {
           notes: formData.notes
         });
       }
-      
+
       handleCloseModal();
-      
+
     } catch (error) {
       console.error('Error saving customer:', error);
+      alert('Error al guardar el cliente. Por favor intenta de nuevo.');
     } finally {
       setLoading(false);
     }

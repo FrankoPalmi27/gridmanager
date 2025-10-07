@@ -72,6 +72,16 @@ export async function createWithSync<T extends { id?: string | number }>(
   }
 
   const response = await config.apiCreate(item);
+
+  // Use extractData if available to properly transform the response
+  if (config.extractData) {
+    const items = config.extractData(response);
+    if (items && items.length > 0) {
+      return items[0];
+    }
+  }
+
+  // Fallback to direct extraction
   const createdItem = response.data.data || response.data;
 
   if (!createdItem) {

@@ -41,6 +41,20 @@ interface CustomersStore {
   resetStore: () => void;
 }
 
+// Helper to map backend customer to frontend format
+const mapBackendToFrontend = (backendCustomer: any): Customer => ({
+  id: backendCustomer.id,
+  name: backendCustomer.name,
+  email: backendCustomer.email || '',
+  phone: backendCustomer.phone || '',
+  celular: backendCustomer.phone || '',
+  balance: Number(backendCustomer.currentBalance || 0),
+  status: backendCustomer.active ? 'active' : 'inactive',
+  createdAt: backendCustomer.createdAt,
+  address: backendCustomer.address || '',
+  notes: backendCustomer.notes || '',
+});
+
 // Sync configuration
 const syncConfig: SyncConfig<Customer> = {
   storageKey: 'customers',
@@ -49,8 +63,19 @@ const syncConfig: SyncConfig<Customer> = {
   apiUpdate: (id: string, data: Partial<Customer>) => customersApi.update(id, data),
   extractData: (response: any) => {
     const data = response.data.data || response.data;
-    // Handle paginated response
-    return data.items || data;
+
+    // Handle single customer response (from create/update)
+    if (data.customer) {
+      return [mapBackendToFrontend(data.customer)];
+    }
+
+    // Handle paginated response (from list)
+    const items = data.items || data;
+    if (Array.isArray(items)) {
+      return items.map(mapBackendToFrontend);
+    }
+
+    return [];
   },
 };
 

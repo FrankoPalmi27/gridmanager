@@ -105,21 +105,19 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
     const state = get();
 
     // Map frontend data to backend schema - send only what backend accepts
+    // Only include fields that have values to avoid sending undefined
     const dataToSend: any = {
       name: supplierData.name,
-      businessName: supplierData.businessName || undefined,
-      email: supplierData.email || undefined,
-      phone: supplierData.phone || undefined,
-      address: supplierData.address || undefined,
-      taxId: supplierData.taxId || undefined,
-      contactPerson: supplierData.contactPerson || undefined,
-      paymentTerms: supplierData.paymentTerms || 0,
-      creditLimit: supplierData.creditLimit || undefined,
-      currentBalance: 0,
-      totalPurchases: 0,
-      lastPurchaseDate: undefined,
-      active: true,
     };
+
+    if (supplierData.businessName) dataToSend.businessName = supplierData.businessName;
+    if (supplierData.email) dataToSend.email = supplierData.email;
+    if (supplierData.phone) dataToSend.phone = supplierData.phone;
+    if (supplierData.address) dataToSend.address = supplierData.address;
+    if (supplierData.taxId) dataToSend.taxId = supplierData.taxId;
+    if (supplierData.contactPerson) dataToSend.contactPerson = supplierData.contactPerson;
+    if (supplierData.paymentTerms !== undefined) dataToSend.paymentTerms = Number(supplierData.paymentTerms);
+    if (supplierData.creditLimit !== undefined) dataToSend.creditLimit = Number(supplierData.creditLimit);
 
     try {
       // Create with API sync and wait for response

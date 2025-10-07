@@ -3,6 +3,20 @@ import { useAuthStore } from '@/store/authStore';
 
 const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api/v1';
 
+const getTenantSlugFromLocation = (): string | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const segments = window.location.pathname.split('/').filter(Boolean);
+  const empresaIndex = segments.indexOf('empresa');
+  if (empresaIndex !== -1 && segments[empresaIndex + 1]) {
+    return segments[empresaIndex + 1];
+  }
+
+  return null;
+};
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -12,10 +26,16 @@ export const api = axios.create({
 
 // Request interceptor to add auth token
 api.interceptors.request.use((config) => {
-  const { tokens } = useAuthStore.getState();
+  const { tokens, tenant } = useAuthStore.getState();
   if (tokens?.accessToken) {
     config.headers.Authorization = `Bearer ${tokens.accessToken}`;
   }
+
+  const tenantSlug = tenant?.slug ?? getTenantSlugFromLocation();
+  if (tenantSlug) {
+    config.headers['X-Tenant-Slug'] = tenantSlug;
+  }
+
   return config;
 });
 

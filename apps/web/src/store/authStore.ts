@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface AuthUser {
   id: string;
@@ -32,24 +33,37 @@ interface AuthState {
   setTenant: (tenant: TenantInfo | null) => void;
 }
 
-export const useAuthStore = create<AuthState>()((set) => ({
-  user: null,
-  tokens: null,
-  tenant: null,
-  isLoading: false,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      tokens: null,
+      tenant: null,
+      isLoading: false,
 
-  setAuth: (user, tokens) =>
-    set({ user, tokens, isLoading: false }),
+      setAuth: (user, tokens) =>
+        set({ user, tokens, isLoading: false }),
 
-  clearAuth: () =>
-    set({ user: null, tokens: null, tenant: null, isLoading: false }),
+      clearAuth: () =>
+        set({ user: null, tokens: null, tenant: null, isLoading: false }),
 
-  setLoading: (isLoading) =>
-    set({ isLoading }),
+      setLoading: (isLoading) =>
+        set({ isLoading }),
 
-  updateTokens: (tokens) =>
-    set({ tokens }),
+      updateTokens: (tokens) =>
+        set({ tokens }),
 
-  setTenant: (tenant) =>
-    set({ tenant }),
-}));
+      setTenant: (tenant) =>
+        set({ tenant }),
+    }),
+    {
+      name: 'gridmanager-auth-storage',
+      // Only persist user, tokens, and tenant - not loading state
+      partialize: (state) => ({
+        user: state.user,
+        tokens: state.tokens,
+        tenant: state.tenant,
+      }),
+    }
+  )
+);

@@ -86,12 +86,15 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
 
   // Load customers with API sync
   loadCustomers: async () => {
+    console.log('[CustomersStore] Starting loadCustomers...');
     set({ isLoading: true, syncMode: getSyncMode() });
     try {
+      console.log('[CustomersStore] Calling loadWithSync...');
       const customers = await loadWithSync<Customer>(syncConfig, initialCustomers);
+      console.log('[CustomersStore] Loaded customers:', customers.length, customers);
       set({ customers, isLoading: false });
     } catch (error) {
-      console.error('Error loading customers:', error);
+      console.error('[CustomersStore] Error loading customers:', error);
       set({ isLoading: false });
     }
   },

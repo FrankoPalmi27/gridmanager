@@ -65,8 +65,8 @@ export function createApp() {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID'],
-    exposedHeaders: ['X-Tenant-ID'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID', 'X-Tenant-Slug'],
+    exposedHeaders: ['X-Tenant-ID', 'X-Tenant-Slug'],
   }));
 
   // Rate limiting

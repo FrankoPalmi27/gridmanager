@@ -42,6 +42,24 @@ interface SuppliersState {
   };
 }
 
+// Helper to map backend supplier to frontend format
+const mapBackendToFrontend = (backendSupplier: any): Supplier => ({
+  id: backendSupplier.id,
+  name: backendSupplier.name,
+  businessName: backendSupplier.businessName || '',
+  taxId: backendSupplier.taxId || '',
+  email: backendSupplier.email || '',
+  phone: backendSupplier.phone || '',
+  address: backendSupplier.address || '',
+  contactPerson: backendSupplier.contactPerson || '',
+  paymentTerms: backendSupplier.paymentTerms || 0,
+  currentBalance: Number(backendSupplier.currentBalance || 0),
+  creditLimit: backendSupplier.creditLimit,
+  active: backendSupplier.active !== false,
+  lastPurchaseDate: backendSupplier.lastPurchaseDate || undefined,
+  totalPurchases: Number(backendSupplier.totalPurchases || 0),
+});
+
 const syncConfig: SyncConfig<Supplier> = {
   storageKey: 'suppliers',
   apiGet: () => suppliersApi.getAll(),
@@ -49,8 +67,19 @@ const syncConfig: SyncConfig<Supplier> = {
   apiUpdate: (id: string, data: Partial<Supplier>) => suppliersApi.update(id, data),
   extractData: (response: any) => {
     const data = response.data.data || response.data;
-    // Handle paginated response
-    return data.items || data;
+
+    // Handle single supplier response (from create/update)
+    if (data.supplier) {
+      return [mapBackendToFrontend(data.supplier)];
+    }
+
+    // Handle paginated response (from list)
+    const items = data.items || data;
+    if (Array.isArray(items)) {
+      return items.map(mapBackendToFrontend);
+    }
+
+    return [];
   },
 };
 
@@ -74,12 +103,22 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
 
   addSupplier: async (supplierData) => {
     const state = get();
-    // Don't include ID - backend will generate it
-    const dataToSend = {
-      ...supplierData,
+
+    // Map frontend data to backend schema - send only what backend accepts
+    const dataToSend: any = {
+      name: supplierData.name,
+      businessName: supplierData.businessName || undefined,
+      email: supplierData.email || undefined,
+      phone: supplierData.phone || undefined,
+      address: supplierData.address || undefined,
+      taxId: supplierData.taxId || undefined,
+      contactPerson: supplierData.contactPerson || undefined,
+      paymentTerms: supplierData.paymentTerms || 0,
+      creditLimit: supplierData.creditLimit || undefined,
       currentBalance: 0,
       totalPurchases: 0,
-      active: true
+      lastPurchaseDate: undefined,
+      active: true,
     };
 
     try {

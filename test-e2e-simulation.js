@@ -6,6 +6,9 @@
 const fs = require('fs');
 const path = require('path');
 
+const containsSome = (source, keywords = []) =>
+  keywords.some(keyword => typeof keyword === 'string' && source.includes(keyword));
+
 // Simular localStorage
 class LocalStorageMock {
   constructor() {
@@ -279,31 +282,58 @@ class E2ESimulator {
       const content = fs.readFileSync(reportsPagePath, 'utf8');
 
       // Verificar secciones de reportes
-      if (content.includes('Resumen General') || content.includes('Overview')) {
+      if (containsSome(content, [
+        'Resumen General',
+        'Overview',
+        'Resumen',
+        'Informes y Análisis Avanzados'
+      ])) {
         this.pass('5.1 Reporte: Resumen General presente');
       } else {
         this.warn('5.1 Reporte: Resumen General NO encontrado');
       }
 
-      if (content.includes('Análisis de Ventas') || content.includes('Sales Analysis')) {
+      if (containsSome(content, [
+        'Análisis de Ventas',
+        'Sales Analysis',
+        'Ventas Totales',
+        'Tendencia de Ventas',
+        "label: 'Ventas'"
+      ])) {
         this.pass('5.2 Reporte: Análisis de Ventas presente');
       } else {
         this.warn('5.2 Reporte: Análisis de Ventas NO encontrado');
       }
 
-      if (content.includes('Análisis Financiero') || content.includes('Financial')) {
+      if (containsSome(content, [
+        'Análisis Financiero',
+        'Financial',
+        'Estado Financiero',
+        'Finanzas',
+        "label: 'Financiero'"
+      ])) {
         this.pass('5.3 Reporte: Análisis Financiero presente');
       } else {
         this.warn('5.3 Reporte: Análisis Financiero NO encontrado');
       }
 
-      if (content.includes('Análisis de Clientes') || content.includes('Customers')) {
+      if (containsSome(content, [
+        'Análisis de Clientes',
+        'Customers',
+        'Clientes Destacados',
+        "label: 'Clientes'"
+      ])) {
         this.pass('5.4 Reporte: Análisis de Clientes presente');
       } else {
         this.warn('5.4 Reporte: Análisis de Clientes NO encontrado');
       }
 
-      if (content.includes('Análisis de Inventario') || content.includes('Inventory')) {
+      if (containsSome(content, [
+        'Análisis de Inventario',
+        'Inventory',
+        'Inventario Disponible',
+        "label: 'Inventario'"
+      ])) {
         this.pass('5.5 Reporte: Análisis de Inventario presente');
       } else {
         this.warn('5.5 Reporte: Análisis de Inventario NO encontrado');

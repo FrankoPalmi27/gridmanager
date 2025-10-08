@@ -1,10 +1,12 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { StoreApi } from 'zustand';
 import { useAccountsStore } from './accountsStore';
 import { useProductsStore } from './productsStore';
 import { useSystemConfigStore } from './systemConfigStore';
 import { useCustomersStore } from './customersStore';
 import { salesApi } from '../lib/api';
-import { loadWithSync, createWithSync, getSyncMode, SyncConfig } from '../lib/syncStorage';
+import { loadWithSync, createWithSync, updateWithSync, deleteWithSync, getSyncMode, SyncConfig } from '../lib/syncStorage';
 
 // ============================================
 // TYPES & INTERFACES
@@ -86,9 +88,9 @@ interface SalesStore {
   // Actions
   loadSales: () => Promise<void>;
   addSale: (saleData: AddSaleData) => Promise<Sale>;
-  updateSale: (saleId: number, updatedData: UpdateSaleData) => void;
+  updateSale: (saleId: number, updatedData: UpdateSaleData) => Promise<void>;
   updateSaleStatus: (saleId: number, newStatus: 'completed' | 'pending' | 'cancelled') => void;
-  deleteSale: (saleId: number) => void;
+  deleteSale: (saleId: number) => Promise<void>;
   updateDashboardStats: (newStats: Partial<DashboardStats>) => void;
   setSales: (sales: Sale[]) => void;
   validateStock: (productId: string, quantity: number) => StockValidationResult;
@@ -125,6 +127,8 @@ const syncConfig: SyncConfig<Sale> = {
   storageKey: 'sales',
   apiGet: () => salesApi.getAll(),
   apiCreate: (data: Sale) => salesApi.create(data),
+  apiUpdate: (id: number | string, data: Partial<Sale>) => salesApi.update(id, data),
+  apiDelete: (id: number | string) => salesApi.delete(id),
   extractData: (response: any) => {
     const responseData = response.data.data || response.data;
     // Handle paginated response: { data: [...], total, page, limit, totalPages }
@@ -137,11 +141,114 @@ const syncConfig: SyncConfig<Sale> = {
   },
 };
 
+type SalesBroadcastEvent =
+  | {
+      type: 'sales/update';
+      payload: {
+        sales: Sale[];
+        dashboardStats: DashboardStats;
+        syncMode?: 'online' | 'offline';
+      };
+      source: string;
+      timestamp: number;
+    }
+  | {
+      type: 'sales/request-refresh';
+      source: string;
+      timestamp: number;
+    };
+
+const BROADCAST_CHANNEL_NAME = 'grid-manager:sales';
+
+const createTabId = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
+const tabId = createTabId();
+
+const broadcastChannel =
+  typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
+    ? new BroadcastChannel(BROADCAST_CHANNEL_NAME)
+    : null;
+
+const broadcast = (event: SalesBroadcastEvent) => {
+  if (!broadcastChannel) {
+    return;
+  }
+
+  broadcastChannel.postMessage(event);
+};
+
+let isBroadcastRegistered = false;
+
+const registerBroadcastListener = (
+  set: StoreApi<SalesStore>['setState'],
+  get: StoreApi<SalesStore>['getState'],
+) => {
+  if (!broadcastChannel || isBroadcastRegistered) {
+    return;
+  }
+
+  broadcastChannel.addEventListener('message', (event: MessageEvent<SalesBroadcastEvent>) => {
+    const data = event.data;
+
+    if (!data || data.source === tabId) {
+      return;
+    }
+
+    if (data.type === 'sales/update') {
+      const { sales, dashboardStats, syncMode } = data.payload;
+      set((state) => ({
+        sales,
+        dashboardStats,
+        syncMode: syncMode ?? state.syncMode,
+      }));
+    }
+
+    if (data.type === 'sales/request-refresh') {
+      void get().loadSales();
+    }
+  });
+
+  isBroadcastRegistered = true;
+};
+
+const storage = typeof window !== 'undefined'
+  ? createJSONStorage<SalesStore>(() => window.localStorage)
+  : undefined;
+
 // ============================================
 // ZUSTAND STORE
 // ============================================
 
-export const useSalesStore = create<SalesStore>((set, get) => ({
+export const useSalesStore = create<SalesStore>()(
+  persist(
+    (set, get) => {
+      registerBroadcastListener(set, get);
+
+      const broadcastState = (overrides?: {
+        sales?: Sale[];
+        dashboardStats?: DashboardStats;
+        syncMode?: 'online' | 'offline';
+      }) => {
+        const state = get();
+        broadcast({
+          type: 'sales/update',
+          payload: {
+            sales: overrides?.sales ?? state.sales,
+            dashboardStats: overrides?.dashboardStats ?? state.dashboardStats,
+            syncMode: overrides?.syncMode ?? state.syncMode,
+          },
+          source: tabId,
+          timestamp: Date.now(),
+        });
+      };
+
+      return {
   // ============================================
   // INITIAL STATE
   // ============================================
@@ -156,12 +263,16 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
   // ============================================
 
   loadSales: async () => {
-    set({ isLoading: true, syncMode: getSyncMode() });
+    const mode = getSyncMode();
+    console.log('[SalesStore] loadSales → syncMode:', mode);
+    set({ isLoading: true, syncMode: mode });
     try {
-  const sales = await loadWithSync<Sale>(syncConfig, []);
-      set({ sales, isLoading: false });
+      const sales = await loadWithSync<Sale>(syncConfig, []);
+      console.log('[SalesStore] loadSales → received', sales.length, 'items');
+      set({ sales, isLoading: false, syncMode: mode });
+      broadcastState({ sales, syncMode: mode });
     } catch (error) {
-      console.error('Error loading sales:', error);
+      console.error('[SalesStore] Error loading sales:', error);
       set({ isLoading: false });
     }
   },
@@ -285,6 +396,7 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
 
     // Intentar sincronizar con API
     try {
+      console.log('[SalesStore] addSale → attempting API create', { syncMode: getSyncMode(), payload: { client: saleData.client, productId: saleData.productId, quantity: saleData.quantity } });
       const createdSale = await createWithSync(syncConfig, newSale, state.sales);
 
       // Actualizar state con respuesta del servidor
@@ -295,13 +407,17 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
         monthlyGrowth: state.dashboardStats.monthlyGrowth + 0.1
       };
 
+      const nextSales = [createdSale, ...state.sales];
+      const nextSyncMode = getSyncMode();
       set({
-        sales: [createdSale, ...state.sales],
+        sales: nextSales,
         dashboardStats: newStats,
-        syncMode: getSyncMode()
+        syncMode: nextSyncMode
       });
+      broadcastState({ sales: nextSales, dashboardStats: newStats, syncMode: nextSyncMode });
+      console.log('[SalesStore] addSale → API success', createdSale?.id);
     } catch (error) {
-      console.error('Error syncing sale:', error);
+      console.error('[SalesStore] Error syncing sale:', error);
 
       const newSales = [newSale, ...state.sales];
       const newStats = {
@@ -311,11 +427,13 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
         monthlyGrowth: state.dashboardStats.monthlyGrowth + 0.1
       };
 
+      const nextSyncMode = getSyncMode();
       set({
         sales: newSales,
         dashboardStats: newStats,
-        syncMode: getSyncMode()
+        syncMode: nextSyncMode
       });
+      broadcastState({ sales: newSales, dashboardStats: newStats, syncMode: nextSyncMode });
     }
 
     // 🔥 INTEGRACIÓN: Actualizar balance del cliente (cuenta corriente)
@@ -354,7 +472,7 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
   // UPDATE SALE
   // ============================================
 
-  updateSale: (saleId: number, updatedData: UpdateSaleData) => {
+  updateSale: async (saleId: number, updatedData: UpdateSaleData) => {
     const state = get();
     const sale = state.sales.find(s => s.id === saleId);
     if (!sale) {
@@ -382,60 +500,84 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
     const newPaymentStatus = updatedData.paymentStatus || sale.paymentStatus || 'pending';
     const newAccountId = updatedData.accountId ?? sale.accountId;
 
-  const wasPending = !sale.paymentStatus || sale.paymentStatus === 'pending' || sale.paymentStatus === 'partial';
+    const wasPending = !sale.paymentStatus || sale.paymentStatus === 'pending' || sale.paymentStatus === 'partial';
     const isPending = newPaymentStatus === 'pending' || newPaymentStatus === 'partial';
 
     const previousCustomer = getCustomerByName(sale.client.name);
     const nextCustomer = getCustomerByName(updatedData.client);
 
-    // Reverse previous customer balance impact if applicable
     if (previousCustomer && wasPending) {
       updateCustomerBalance(previousCustomer.id, originalAmount);
     }
 
-    // Remove previous linked transactions if necessary
     if (sale.paymentStatus === 'paid' && sale.accountId) {
       removeLinkedTransactions('sale', sale.id.toString());
     }
 
-    let updatedSale: Sale | null = null;
+    const updatedCobrado = newPaymentStatus === 'paid'
+      ? newAmount
+      : newPaymentStatus === 'partial'
+        ? Math.min(sale.cobrado || 0, newAmount)
+        : 0;
+
+    const updatedACobrar = newPaymentStatus === 'paid'
+      ? 0
+      : newAmount - updatedCobrado;
+
+    const backendPayload: Partial<Sale> = {
+      client: {
+        name: updatedData.client,
+        email: `${updatedData.client.toLowerCase().replace(' ', '.')}@email.com`,
+        avatar: generateAvatar(updatedData.client)
+      },
+      amount: newAmount,
+      items: updatedData.quantity,
+      status: newPaymentStatus === 'paid' ? 'completed' : 'pending',
+      salesChannel: updatedData.salesChannel ?? sale.salesChannel,
+      paymentStatus: newPaymentStatus,
+      accountId: newAccountId,
+      cobrado: updatedCobrado,
+      aCobrar: updatedACobrar,
+      productName: updatedData.product ?? sale.productName,
+      productId: sale.productId,
+    };
+
+    try {
+      await updateWithSync<Sale>(syncConfig, saleId, backendPayload, state.sales);
+    } catch (error) {
+      console.error('Error syncing sale update:', error);
+      throw error;
+    }
+
+    const nextSyncMode = getSyncMode();
+    let nextSales: Sale[] | null = null;
+    let nextStats: DashboardStats | null = null;
 
     set((storeState) => {
       const newSales = storeState.sales.map(existingSale => {
-        if (existingSale.id !== saleId) return existingSale;
-
-        const updatedCobrado = newPaymentStatus === 'paid'
-          ? newAmount
-          : newPaymentStatus === 'partial'
-            ? Math.min(existingSale.cobrado || 0, newAmount)
-            : 0;
-
-        const updatedACobrar = newPaymentStatus === 'paid'
-          ? 0
-          : newAmount - updatedCobrado;
+        if (existingSale.id !== saleId) {
+          return existingSale;
+        }
 
         const refreshedSale: Sale = {
           ...existingSale,
-          client: {
-            name: updatedData.client,
-            email: `${updatedData.client.toLowerCase().replace(' ', '.')}@email.com`,
-            avatar: generateAvatar(updatedData.client)
-          },
+          ...backendPayload,
+          client: backendPayload.client ?? existingSale.client,
           amount: newAmount,
           items: updatedData.quantity,
-          status: newPaymentStatus === 'paid' ? 'completed' : 'pending',
-          salesChannel: updatedData.salesChannel || existingSale.salesChannel,
-          paymentStatus: newPaymentStatus,
-          accountId: newAccountId, // El método de pago viene de la cuenta
-          cobrado: updatedCobrado,
-          aCobrar: updatedACobrar,
-          productName: updatedData.product || existingSale.productName
+          status: backendPayload.status ?? existingSale.status,
+          salesChannel: backendPayload.salesChannel ?? existingSale.salesChannel,
+          paymentStatus: backendPayload.paymentStatus ?? existingSale.paymentStatus,
+          accountId: backendPayload.accountId ?? existingSale.accountId,
+          cobrado: backendPayload.cobrado ?? existingSale.cobrado,
+          aCobrar: backendPayload.aCobrar ?? existingSale.aCobrar,
+          productName: backendPayload.productName ?? existingSale.productName,
         };
 
-        updatedSale = refreshedSale;
         return refreshedSale;
       });
 
+      const updatedSale = newSales.find(s => s.id === saleId);
       if (!updatedSale) {
         return storeState;
       }
@@ -447,18 +589,25 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
         monthlyGrowth: storeState.dashboardStats.monthlyGrowth
       };
 
+      nextSales = newSales;
+      nextStats = newStats;
+
       return {
+        ...storeState,
         sales: newSales,
-        dashboardStats: newStats
+        dashboardStats: newStats,
+        syncMode: nextSyncMode,
       };
     });
 
-    // Apply new customer balance impact if sale remains pending or partial
+    if (nextSales && nextStats) {
+      broadcastState({ sales: nextSales, dashboardStats: nextStats, syncMode: nextSyncMode });
+    }
+
     if (nextCustomer && isPending) {
       updateCustomerBalance(nextCustomer.id, -newAmount);
     }
 
-    // Register new linked transaction when the sale is paid
     if (newPaymentStatus === 'paid' && newAccountId) {
       addLinkedTransaction(
         newAccountId,
@@ -472,7 +621,6 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
       );
     }
 
-    // Sync inventory when the quantity changes
     if (sale.productId && currentProduct && netQuantityChange !== 0) {
       const targetStock = currentProduct.stock - netQuantityChange;
       updateStockWithMovement(
@@ -495,13 +643,14 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
       );
       return { sales: newSales };
     });
+    broadcastState();
   },
 
   // ============================================
   // DELETE SALE
   // ============================================
 
-  deleteSale: (saleId: number) => {
+  deleteSale: async (saleId: number) => {
     const { updateStockWithMovement, getProductById } = useProductsStore.getState();
     const { removeLinkedTransactions } = useAccountsStore.getState();
 
@@ -548,23 +697,42 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
       console.error('Error revirtiendo balance de cliente al eliminar venta:', error);
     }
 
+    try {
+      await deleteWithSync<Sale>(syncConfig, saleId, state.sales);
+    } catch (error) {
+      console.error('Error deleting sale:', error);
+      throw error;
+    }
+
     // Actualizar el state de ventas
-    set((state) => {
-      // Actualizar stats
+    const nextSyncMode = getSyncMode();
+    let nextSales: Sale[] | null = null;
+    let nextStats: DashboardStats | null = null;
+
+    set((storeState) => {
       const newStats = {
-        totalSales: state.dashboardStats.totalSales - saleToDelete.amount,
-        totalTransactions: state.dashboardStats.totalTransactions - 1,
-        averagePerDay: Math.round((state.dashboardStats.totalSales - saleToDelete.amount) / 30),
-        monthlyGrowth: state.dashboardStats.monthlyGrowth
+        totalSales: storeState.dashboardStats.totalSales - saleToDelete.amount,
+        totalTransactions: storeState.dashboardStats.totalTransactions - 1,
+        averagePerDay: Math.round((storeState.dashboardStats.totalSales - saleToDelete.amount) / 30),
+        monthlyGrowth: storeState.dashboardStats.monthlyGrowth
       };
 
-      const newSales = state.sales.filter(sale => sale.id !== saleId);
+      const newSales = storeState.sales.filter(sale => sale.id !== saleId);
+
+      nextSales = newSales;
+      nextStats = newStats;
 
       return {
+        ...storeState,
         sales: newSales,
-        dashboardStats: newStats
+        dashboardStats: newStats,
+        syncMode: nextSyncMode,
       };
     });
+
+    if (nextSales && nextStats) {
+      broadcastState({ sales: nextSales, dashboardStats: nextStats, syncMode: nextSyncMode });
+    }
   },
 
   // ============================================
@@ -572,10 +740,10 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
   // ============================================
 
   updateDashboardStats: (newStats: Partial<DashboardStats>) => {
-    set((state) => {
-      const updatedStats = { ...state.dashboardStats, ...newStats };
-      return { dashboardStats: updatedStats };
-    });
+    const state = get();
+    const updatedStats = { ...state.dashboardStats, ...newStats };
+    set({ dashboardStats: updatedStats });
+    broadcastState({ dashboardStats: updatedStats });
   },
 
   // ============================================
@@ -584,5 +752,13 @@ export const useSalesStore = create<SalesStore>((set, get) => ({
 
   setSales: (sales: Sale[]) => {
     set({ sales });
+    broadcastState({ sales });
   },
-}));
+      };
+    },
+    {
+      name: 'grid-manager:sales-store',
+      storage,
+    },
+  ),
+);

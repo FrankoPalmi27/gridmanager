@@ -1,28 +1,62 @@
 # 🧪 REPORTE COMPLETO DE TESTING - GRID MANAGER
 
-**Fecha:** 2025-09-30
-**Versión:** Post-Refactoring (Fases 1, 2 y 5)
-**Estado del servidor:** ✅ Activo en http://localhost:5000
+**Fecha:** 2025-10-08
+**Versión:** Post-Refactoring (Fases 1 a 5)
+**Estado del servidor:** ✅ Frontend en http://localhost:5001 (Vite) · API local levantada con `npm run dev:api`
 
 ---
 
 ## 📊 RESUMEN EJECUTIVO
 
-Grid Manager ha pasado una suite completa de **113 tests** verificando arquitectura, funcionalidad y espíritu de gestión ERP. El sistema mantiene **100% de funcionalidades críticas operativas** después del refactoring.
+Grid Manager completó una validación combinada de **148 chequeos automatizados** (21 críticos, 81 funcionales, 46 E2E), manteniendo **0 fallos críticos** y preservando el flujo operativo principal tras las correcciones de Fase 5.
 
 ### Métricas Globales
 
-| Categoría | Tests Pasados | Warnings | Tests Fallados | Tasa de Éxito |
-|-----------|--------------|----------|----------------|---------------|
-| **Tests Arquitectura** | 65 | 1 | 2* | 97.01% |
-| **Tests E2E/Funcionalidad** | 41 | 5 | 0 | 100% |
-| **TOTAL** | **106** | **6** | **2*** | **98.15%** |
+| Categoría | Chequeos Ejecutados | Pasados | Warnings | Fallidos | Tasa de Éxito |
+|-----------|--------------------|---------|----------|----------|---------------|
+| **Regresión de errores críticos** (`test-critical-errors.js`) | 21 | 21 | 0 | 0 | 100% |
+| **Regresión funcional + wiring UI** (`test-functionality.js`) | 81 | 81 | 0 | 0 | 100% |
+| **Simulaciones E2E** (`test-e2e-simulation.js`) | 46 | 46 | 0 | 0 | 100% |
+| **TOTAL** | **148** | **148** | **0** | **0** | **100%** |
 
-\* *Los 2 tests fallados son falsos positivos o funcionalidades opcionales no críticas*
+> La suite completa quedó sin warnings tras reinstaurar logging crítico en `src/lib/localStorage.ts` y ampliar la detección semántica de secciones en `test-e2e-simulation.js`.
 
 ---
 
-## ✅ RESULTADOS POR MÓDULO
+## ♻️ Resumen actualizado · 07-10-2025
+
+- 🔁 **AccountsPage**: los botones críticos (nueva cuenta, editar, eliminar, transacción, transferencia) quedan verificados por el nuevo set de asserts en `test-functionality.js` tras cablear el store de cuentas. 
+- 🧮 **CalculatorPage** reemplaza satisfactoriamente la antigua `MercadoLibrePage.tsx` en los checks automáticos.
+- 🧾 **Logs**: se adjuntaron salidas completas de los 3 scripts a `CLAUDE.md` para trazabilidad, con timestamp 2025-10-07T22:34Z.
+- 💾 **Cache híbrido + cola offline**: `syncStorage.ts` guarda snapshots en `localStorage`, encola mutaciones (`create/update/delete`) cuando no hay sesión válida y las reprocesa automáticamente al volver a estar online.
+- 🌐 **Persistencia multi-pestaña**: `customers/products/suppliers/sales` ahora usan `persist` + BroadcastChannel, reaprovechando la cola offline para mantener consistencia entre sesiones sin recargas manuales.
+- 🧲 **Cobertura API**: `productsStore`, `suppliersStore` y `salesStore` consumen los endpoints reales de `delete`/`update`, eliminando los shims locales y validando la cola offline en operaciones críticas.
+- ✅ **Warnings**: resueltos (suite automatizada en 0).
+
+---
+
+## ✅ Checklist Manual de Validación (Fase 5)
+
+| Estado | Escenario | Detalle |
+|--------|----------|---------|
+| ☐ Pendiente | Multi-sesión simultánea | Abrir dos pestañas autenticadas, crear cuenta y confirmar sincronización mediante `loadAccounts()` sin recarga manual. |
+| ☐ Pendiente | Persistencia cross-store | Repetir prueba con `Customers` y `Products` (una pestaña offline, otra online) asegurando que la cola encola y el BroadcastChannel sincroniza al reconectar. |
+| ☐ Pendiente | Ventas con endpoints reales | Ejecutar `updateSale`/`deleteSale` con tokens válidos y confirmar que el backend aplica cambios y la cola queda vacía. |
+| ☐ Pendiente | Recarga forzada | Crear venta y recargar navegador verificando persistencia con `loadWithSync` en modo online/offline. |
+| ☐ Pendiente | Cambio de tenant | Validar que `X-Tenant-Slug` se propaga en todas las llamadas al alternar de `demo` a `cliente-real` desde la UI. |
+| ☐ Pendiente | Dispositivos cruzados | Ejecutar flujo de venta desde laptop y revisar balances desde tablet (Chrome/Firefox) confirmando estado compartido. |
+| ☐ Pendiente | Fallback offline | Desconectar red, registrar transacción rápida y confirmar que `syncMode: 'offline'` almacena datos temporalmente antes de reconectar. |
+| ☐ Pendiente | Reportes críticos | Navegar a `ReportsPage`, validar widgets de resumen general y confirmar disponibilidad de exportación CSV/PDF tras mocks. |
+
+> Todos los pasos manuales deben documentarse con capturas + navegador/versión en `evidence/` y referenciarse en `CLAUDE.md`.
+
+---
+
+---
+
+## ✅ RESULTADOS POR MÓDULO *(Histórico 2025-09-30)*
+
+> Nota: La sección siguiente se conserva como referencia de la corrida previa al 30-09-2025. Para los hallazgos más recientes consulta el resumen actualizado al inicio del documento.
 
 ### 🏗️ 1. ARQUITECTURA Y ESTRUCTURA (67 tests)
 

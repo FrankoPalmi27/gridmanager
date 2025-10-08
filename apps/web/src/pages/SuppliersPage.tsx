@@ -45,8 +45,8 @@ export function SuppliersPage() {
 
     hasRequestedInitialLoad.current = true;
     console.log('[SuppliersPage] Calling loadSuppliers...');
-    loadSuppliers();
-  }, [loadSuppliers]);
+    void loadSuppliers();
+  }, [loadSuppliers, suppliers.length, isLoading]);
 
   // Form state
   const [formData, setFormData] = useState<SupplierFormData>({

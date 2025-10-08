@@ -130,6 +130,9 @@ export const suppliersApi = {
     
   update: (id: string, data: any) =>
     api.put(`/suppliers/${id}`, data),
+
+  delete: (id: string) =>
+    api.delete(`/suppliers/${id}`),
     
   getAccount: (id: string) =>
     api.get(`/suppliers/${id}/account`),
@@ -147,6 +150,9 @@ export const productsApi = {
     
   update: (id: string, data: any) =>
     api.put(`/products/${id}`, data),
+
+  delete: (id: string) =>
+    api.delete(`/products/${id}`),
     
   getStockMovements: (id: string) =>
     api.get(`/products/${id}/stock-movements`),
@@ -167,6 +173,12 @@ export const salesApi = {
     
   create: (data: any) =>
     api.post('/sales', data),
+
+  update: (id: number | string, data: any) =>
+    api.put(`/sales/${id}`, data),
+
+  delete: (id: number | string) =>
+    api.delete(`/sales/${id}`),
     
   updateStatus: (id: string, status: string) =>
     api.patch(`/sales/${id}/status`, { status }),
@@ -212,6 +224,9 @@ export const accountsApi = {
     
   update: (id: string, data: any) =>
     api.put(`/accounts/${id}`, data),
+
+  delete: (id: string) =>
+    api.delete(`/accounts/${id}`),
     
   getMovements: (id: string, params?: any) =>
     api.get(`/accounts/${id}/movements`, { params }),

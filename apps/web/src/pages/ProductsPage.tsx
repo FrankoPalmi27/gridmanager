@@ -29,7 +29,7 @@ type SortField = 'name' | 'category' | 'brand' | 'price' | 'cost' | 'stock' | 's
 type SortOrder = 'asc' | 'desc';
 
 export function ProductsPage() {
-  const { products, stats, updateProduct, deleteProduct, categories, setCategories, getStockMovementsByProduct, addStockMovement, loadProducts, isLoading } = useProductsStore();
+  const { products, stats, updateProduct, deleteProduct, categories, setCategories, getStockMovementsByProduct, addStockMovement, loadProducts } = useProductsStore();
 
   const hasRequestedInitialLoad = useRef(false);
 
@@ -149,7 +149,7 @@ export function ProductsPage() {
     }
   };
 
-  const handleDeleteProduct = (product: Product) => {
+  const handleDeleteProduct = async (product: Product) => {
     // ✅ CONFIRMACIÓN DOBLE OBLIGATORIA
     const firstConfirm = window.confirm(
       `¿Estás seguro de que quieres eliminar el producto "${product.name}" (SKU: ${product.sku})?
@@ -186,7 +186,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
     }
 
     try {
-      deleteProduct(product.id);
+      await deleteProduct(product.id);
       alert(`✅ Producto "${product.name}" eliminado correctamente.`);
     } catch (error) {
       alert(`❌ Error al eliminar el producto: ${error}`);

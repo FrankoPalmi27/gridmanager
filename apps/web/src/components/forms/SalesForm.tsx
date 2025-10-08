@@ -292,7 +292,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
       
       if (editingSale) {
         // Update existing sale
-        updateSale(editingSale.id, formData);
+        await updateSale(editingSale.id, formData);
         
         if (onSuccess) {
           onSuccess(editingSale);

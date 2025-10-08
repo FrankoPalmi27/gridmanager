@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { StoreApi } from 'zustand';
 import { accountsApi } from '../lib/api';
 import { loadWithSync, createWithSync, updateWithSync, deleteWithSync, getSyncMode, SyncConfig } from '../lib/syncStorage';
 
@@ -46,6 +48,7 @@ interface AccountsStore {
   accounts: Account[];
   transactions: Transaction[];
   isLoading: boolean;
+  error: string | null;
   syncMode: 'online' | 'offline';
   loadAccounts: () => Promise<void>;
   loadTransactions: () => Promise<void>;
@@ -57,10 +60,19 @@ interface AccountsStore {
   addTransaction: (transactionData: Omit<Transaction, 'id'>) => Transaction;
   getTransactionsByAccount: (accountId: string) => Transaction[];
   getAllTransactions: () => Transaction[];
+  transferBetweenAccounts: (transfer: {
+    fromAccountId: string;
+    toAccountId: string;
+    amount: number;
+    description: string;
+    date?: string;
+    reference?: string;
+  }) => boolean;
   // Métodos para manejo de transacciones enlazadas
   addLinkedTransaction: (accountId: string, amount: number, description: string, linkedTo: { type: 'sale' | 'purchase' | 'manual'; id: string; number: string }) => Transaction;
   removeLinkedTransactions: (linkedType: 'sale' | 'purchase' | 'manual', linkedId: string) => void;
   getLinkedTransactions: (linkedType: 'sale' | 'purchase' | 'manual', linkedId: string) => Transaction[];
+  setError: (message: string | null) => void;
 }
 
 // Sync configuration for accounts
@@ -69,6 +81,7 @@ const accountsSyncConfig: SyncConfig<Account> = {
   apiGet: () => accountsApi.getAll(),
   apiCreate: (data: Account) => accountsApi.create(data),
   apiUpdate: (id: string, data: Partial<Account>) => accountsApi.update(id, data),
+  apiDelete: (id: string) => accountsApi.delete(id),
   extractData: (response: any) => {
     const responseData = response.data.data || response.data;
     // Handle paginated response: { data: [...], total, page, limit, totalPages }
@@ -81,183 +94,461 @@ const accountsSyncConfig: SyncConfig<Account> = {
   },
 };
 
-export const useAccountsStore = create<AccountsStore>((set, get) => ({
-  accounts: initialAccounts,
-  transactions: initialTransactions,
-  isLoading: false,
-  syncMode: getSyncMode(),
-
-  loadAccounts: async () => {
-    set({ isLoading: true, syncMode: getSyncMode() });
-    try {
-  const accounts = await loadWithSync<Account>(accountsSyncConfig, initialAccounts);
-      set({ accounts, isLoading: false });
-    } catch (error) {
-      console.error('Error loading accounts:', error);
-      set({ isLoading: false });
-    }
-  },
-
-  loadTransactions: async () => {
-    // Note: Transactions are typically loaded per account via getMovements endpoint
-  // Note: transactions are managed in-memory until backend endpoints are implemented
-    set({ syncMode: getSyncMode() });
-  },
-
-  addAccount: async (accountData) => {
-    const state = get();
-    const newAccount: Account = {
-      ...accountData,
-      id: Date.now().toString(),
-      createdDate: new Date().toISOString()
-    };
-
-    try {
-  const createdAccount = await createWithSync<Account>(accountsSyncConfig, newAccount, state.accounts);
-      set({ accounts: [createdAccount, ...state.accounts], syncMode: getSyncMode() });
-      return createdAccount;
-    } catch (error) {
-      console.error('Error creating account:', error);
-      return newAccount;
-    }
-  },
-
-  updateAccount: async (id, updatedData) => {
-    const state = get();
-
-    try {
-      await updateWithSync(accountsSyncConfig, id, updatedData, state.accounts);
-
-      const newAccounts = state.accounts.map(account =>
-        account.id === id ? { ...account, ...updatedData } : account
-      );
-      set({ accounts: newAccounts, syncMode: getSyncMode() });
-    } catch (error) {
-      console.error('Error updating account:', error);
-    }
-  },
-
-  deleteAccount: async (id) => {
-    const state = get();
-
-    try {
-      await deleteWithSync(accountsSyncConfig, id, state.accounts);
-
-      const newAccounts = state.accounts.filter(account => account.id !== id);
-      set({ accounts: newAccounts, syncMode: getSyncMode() });
-    } catch (error) {
-      console.error('Error deleting account:', error);
-    }
-  },
-
-  setAccounts: (accounts) => {
-    set({ accounts });
-  },
-
-  getActiveAccounts: () => {
-    const state = get();
-    return state.accounts.filter(account => account.active);
-  },
-
-  addTransaction: (transactionData) => {
-    const newTransaction: Transaction = {
-      ...transactionData,
-      id: Date.now().toString()
-    };
-
-    set((state) => ({
-      transactions: [newTransaction, ...state.transactions],
-    }));
-    
-    return newTransaction;
-  },
-
-  getTransactionsByAccount: (accountId) => {
-    const state = get();
-    return state.transactions.filter(transaction => transaction.accountId === accountId);
-  },
-
-  getAllTransactions: () => {
-    const state = get();
-    return state.transactions;
-  },
-
-  // Implementación de métodos para transacciones enlazadas
-  addLinkedTransaction: (accountId, amount, description, linkedTo) => {
-    const newTransaction: Transaction = {
-      id: Date.now().toString(),
-      accountId,
-      type: amount > 0 ? 'income' : 'expense',
-      amount: Math.abs(amount),
-      description,
-      date: new Date().toISOString().split('T')[0],
-      category: linkedTo.type === 'sale' ? 'Ventas' : linkedTo.type === 'purchase' ? 'Compras' : 'Operaciones',
-      reference: linkedTo.number,
-      linkedTo
-    };
-
-    set((state) => {
-      const newTransactions = [newTransaction, ...state.transactions];
-
-      // Actualizar balance de la cuenta
-      const newAccounts = state.accounts.map(account => 
-        account.id === accountId 
-          ? { ...account, balance: account.balance + amount }
-          : account
-      );
-
-      return { 
-        transactions: newTransactions,
-        accounts: newAccounts
+type BroadcastEvent =
+  | {
+      type: 'accounts/update';
+      payload: {
+        accounts: Account[];
+        transactions?: Transaction[];
+        syncMode?: 'online' | 'offline';
       };
-    });
+      source: string;
+      timestamp: number;
+    }
+  | {
+      type: 'accounts/request-refresh';
+      source: string;
+      timestamp: number;
+    };
 
-    return newTransaction;
-  },
+const BROADCAST_CHANNEL_NAME = 'grid-manager:accounts';
 
-  removeLinkedTransactions: (linkedType, linkedId) => {
-    set((state) => {
-      // Encontrar transacciones enlazadas
-      const linkedTransactions = state.transactions.filter(
-        transaction => 
-          transaction.linkedTo?.type === linkedType && 
-          transaction.linkedTo?.id === linkedId
-      );
-
-      // Calcular el balance a revertir por cuenta
-      const balanceChanges: { [accountId: string]: number } = {};
-      linkedTransactions.forEach(transaction => {
-        const balanceChange = transaction.type === 'income' ? -transaction.amount : transaction.amount;
-        balanceChanges[transaction.accountId] = (balanceChanges[transaction.accountId] || 0) + balanceChange;
-      });
-
-      // Remover transacciones enlazadas
-      const newTransactions = state.transactions.filter(
-        transaction => 
-          !(transaction.linkedTo?.type === linkedType && 
-            transaction.linkedTo?.id === linkedId)
-      );
-
-      // Actualizar balances de las cuentas afectadas
-      const newAccounts = state.accounts.map(account => 
-        balanceChanges[account.id] 
-          ? { ...account, balance: account.balance + balanceChanges[account.id] }
-          : account
-      );
-
-      return { 
-        transactions: newTransactions,
-        accounts: newAccounts
-      };
-    });
-  },
-
-  getLinkedTransactions: (linkedType, linkedId) => {
-    const state = get();
-    return state.transactions.filter(
-      transaction => 
-        transaction.linkedTo?.type === linkedType && 
-        transaction.linkedTo?.id === linkedId
-    );
+const createTabId = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
   }
-}));
+
+  return `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
+const tabId = createTabId();
+
+const broadcastChannel =
+  typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
+    ? new BroadcastChannel(BROADCAST_CHANNEL_NAME)
+    : null;
+
+const broadcast = (event: Omit<BroadcastEvent, 'source' | 'timestamp'>) => {
+  if (!broadcastChannel) {
+    return;
+  }
+
+  broadcastChannel.postMessage({
+    ...event,
+    source: tabId,
+    timestamp: Date.now(),
+  } as BroadcastEvent);
+};
+
+let isBroadcastRegistered = false;
+
+const registerBroadcastListener = (
+  set: StoreApi<AccountsStore>['setState'],
+  get: StoreApi<AccountsStore>['getState'],
+) => {
+  if (!broadcastChannel || isBroadcastRegistered) {
+    return;
+  }
+
+  broadcastChannel.addEventListener('message', (event: MessageEvent<BroadcastEvent>) => {
+    const data = event.data;
+
+    if (!data || data.source === tabId) {
+      return;
+    }
+
+    if (data.type === 'accounts/update') {
+      const { accounts, transactions, syncMode } = data.payload;
+      set((state) => ({
+        accounts,
+        transactions: transactions ?? state.transactions,
+        syncMode: syncMode ?? state.syncMode,
+      }));
+    }
+
+    if (data.type === 'accounts/request-refresh') {
+      void get().loadAccounts();
+    }
+  });
+
+  isBroadcastRegistered = true;
+};
+
+const storage = typeof window !== 'undefined'
+  ? createJSONStorage<AccountsStore>(() => window.localStorage)
+  : undefined;
+
+export const useAccountsStore = create<AccountsStore>()(
+  persist(
+    (set, get) => {
+      registerBroadcastListener(set, get);
+
+      return {
+        accounts: initialAccounts,
+        transactions: initialTransactions,
+        isLoading: false,
+        error: null,
+        syncMode: getSyncMode(),
+
+        loadAccounts: async () => {
+          const mode = getSyncMode();
+          set({ isLoading: true, syncMode: mode, error: null });
+
+          try {
+            const accounts = await loadWithSync<Account>(accountsSyncConfig, initialAccounts);
+            set((state) => ({
+              accounts,
+              isLoading: false,
+              syncMode: mode,
+              error: null,
+              transactions: state.transactions,
+            }));
+
+            broadcast({
+              type: 'accounts/update',
+              payload: { accounts, syncMode: mode },
+            });
+          } catch (error) {
+            console.error('[AccountsStore] Error loading accounts:', error);
+            set((state) => ({
+              isLoading: false,
+              error: 'No se pudo actualizar la lista de cuentas. Se muestran los datos almacenados localmente.',
+              accounts: state.accounts,
+              transactions: state.transactions,
+            }));
+          }
+        },
+
+        loadTransactions: async () => {
+          set({ syncMode: getSyncMode() });
+        },
+
+        addAccount: async (accountData) => {
+          const newAccount: Account = {
+            ...accountData,
+            id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(),
+            createdDate: new Date().toISOString(),
+          };
+
+          set({ error: null });
+
+          try {
+            const createdAccount = await createWithSync<Account>(accountsSyncConfig, newAccount, get().accounts);
+
+            set((state) => {
+              const accounts = [createdAccount, ...state.accounts.filter((account) => account.id !== createdAccount.id)];
+              broadcast({
+                type: 'accounts/update',
+                payload: { accounts },
+              });
+              return {
+                accounts,
+                syncMode: getSyncMode(),
+              };
+            });
+
+            return createdAccount;
+          } catch (error) {
+            console.error('[AccountsStore] Error creating account:', error);
+            set((state) => {
+              const accounts = [newAccount, ...state.accounts];
+              broadcast({
+                type: 'accounts/update',
+                payload: { accounts },
+              });
+              return {
+                accounts,
+                error: 'Cuenta guardada sin conexión. Se sincronizará cuando vuelva la conexión.',
+                syncMode: getSyncMode(),
+              };
+            });
+
+            return newAccount;
+          }
+        },
+
+        updateAccount: async (id, updatedData) => {
+          set({ error: null });
+          const previousState = get().accounts;
+
+          try {
+            await updateWithSync(accountsSyncConfig, id, updatedData, previousState);
+
+            set((state) => {
+              const accounts = state.accounts.map((account) =>
+                account.id === id ? { ...account, ...updatedData } : account,
+              );
+              broadcast({
+                type: 'accounts/update',
+                payload: { accounts },
+              });
+              return { accounts, syncMode: getSyncMode() };
+            });
+          } catch (error) {
+            console.error('[AccountsStore] Error updating account:', error);
+            set({ accounts: previousState, error: 'No se pudo actualizar la cuenta. Revisa la conexión.' });
+          }
+        },
+
+        deleteAccount: async (id) => {
+          set({ error: null });
+          const previousState = get().accounts;
+
+          try {
+            await deleteWithSync(accountsSyncConfig, id, previousState);
+
+            set((state) => {
+              const accounts = state.accounts.filter((account) => account.id !== id);
+              const transactions = state.transactions.filter((transaction) => transaction.accountId !== id);
+              broadcast({
+                type: 'accounts/update',
+                payload: { accounts, transactions },
+              });
+              return { accounts, transactions, syncMode: getSyncMode() };
+            });
+          } catch (error) {
+            console.error('[AccountsStore] Error deleting account:', error);
+            set({ accounts: previousState, error: 'No se pudo eliminar la cuenta. Intenta nuevamente.' });
+          }
+        },
+
+        setAccounts: (accounts) => {
+          set({ accounts });
+          broadcast({
+            type: 'accounts/update',
+            payload: { accounts },
+          });
+        },
+
+        getActiveAccounts: () => {
+          return get().accounts.filter((account) => account.active);
+        },
+
+        addTransaction: (transactionData) => {
+          const newTransaction: Transaction = {
+            ...transactionData,
+            id:
+              typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                ? crypto.randomUUID()
+                : Date.now().toString(),
+          };
+
+          set((state) => {
+            const transactions = [newTransaction, ...state.transactions];
+            const balanceDelta =
+              newTransaction.type === 'income'
+                ? newTransaction.amount
+                : newTransaction.type === 'expense'
+                  ? -newTransaction.amount
+                  : 0;
+
+            const accounts = state.accounts.map((account) =>
+              account.id === newTransaction.accountId
+                ? { ...account, balance: account.balance + balanceDelta }
+                : account,
+            );
+            broadcast({
+              type: 'accounts/update',
+              payload: { accounts, transactions },
+            });
+            return { transactions, accounts };
+          });
+
+          return newTransaction;
+        },
+
+        getTransactionsByAccount: (accountId) => {
+          return get().transactions.filter((transaction) => transaction.accountId === accountId);
+        },
+
+        getAllTransactions: () => {
+          return get().transactions;
+        },
+
+        transferBetweenAccounts: ({
+          fromAccountId,
+          toAccountId,
+          amount,
+          description,
+          date,
+          reference,
+        }) => {
+          if (amount <= 0) {
+            set({ error: 'El monto de la transferencia debe ser mayor a 0.' });
+            return false;
+          }
+
+          const accountsState = get().accounts;
+          const fromAccount = accountsState.find((account) => account.id === fromAccountId);
+          const toAccount = accountsState.find((account) => account.id === toAccountId);
+
+          if (!fromAccount || !toAccount) {
+            set({ error: 'No se encontraron las cuentas seleccionadas.' });
+            return false;
+          }
+
+          if (fromAccountId === toAccountId) {
+            set({ error: 'Selecciona cuentas distintas para transferir.' });
+            return false;
+          }
+
+          if (fromAccount.balance < amount) {
+            set({ error: 'Saldo insuficiente en la cuenta origen.' });
+            return false;
+          }
+
+          const movementDate = date ?? new Date().toISOString().split('T')[0];
+          const sanitizedDescription = description.trim() || 'Transferencia entre cuentas';
+
+          const outgoingTransaction: Transaction = {
+            id: `${Date.now()}-out`,
+            accountId: fromAccountId,
+            type: 'expense',
+            amount,
+            description: `${sanitizedDescription} (Salida)`,
+            date: movementDate,
+            category: 'Transferencia Entre Cuentas',
+            reference,
+          };
+
+          const incomingTransaction: Transaction = {
+            id: `${Date.now()}-in`,
+            accountId: toAccountId,
+            type: 'income',
+            amount,
+            description: `${sanitizedDescription} (Entrada)`,
+            date: movementDate,
+            category: 'Transferencia Entre Cuentas',
+            reference,
+          };
+
+          set((state) => {
+            const transactions = [incomingTransaction, outgoingTransaction, ...state.transactions];
+            const accounts = state.accounts.map((account) => {
+              if (account.id === fromAccountId) {
+                return { ...account, balance: account.balance - amount };
+              }
+
+              if (account.id === toAccountId) {
+                return { ...account, balance: account.balance + amount };
+              }
+
+              return account;
+            });
+
+            broadcast({
+              type: 'accounts/update',
+              payload: { accounts, transactions },
+            });
+
+            return { accounts, transactions };
+          });
+          return true;
+        },
+
+        // Implementación de métodos para transacciones enlazadas
+        addLinkedTransaction: (accountId, amount, description, linkedTo) => {
+          const newTransaction: Transaction = {
+            id:
+              typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                ? crypto.randomUUID()
+                : Date.now().toString(),
+            accountId,
+            type: amount > 0 ? 'income' : 'expense',
+            amount: Math.abs(amount),
+            description,
+            date: new Date().toISOString().split('T')[0],
+            category: linkedTo.type === 'sale' ? 'Ventas' : linkedTo.type === 'purchase' ? 'Compras' : 'Operaciones',
+            reference: linkedTo.number,
+            linkedTo,
+          };
+
+          set((state) => {
+            const newTransactions = [newTransaction, ...state.transactions];
+
+            // Actualizar balance de la cuenta
+            const newAccounts = state.accounts.map((account) =>
+              account.id === accountId ? { ...account, balance: account.balance + amount } : account,
+            );
+
+            broadcast({
+              type: 'accounts/update',
+              payload: { accounts: newAccounts, transactions: newTransactions },
+            });
+
+            return {
+              transactions: newTransactions,
+              accounts: newAccounts,
+            };
+          });
+
+          return newTransaction;
+        },
+
+        removeLinkedTransactions: (linkedType, linkedId) => {
+          set((state) => {
+            // Encontrar transacciones enlazadas
+            const linkedTransactions = state.transactions.filter(
+              (transaction) =>
+                transaction.linkedTo?.type === linkedType && transaction.linkedTo?.id === linkedId,
+            );
+
+            // Calcular el balance a revertir por cuenta
+            const balanceChanges: { [accountId: string]: number } = {};
+            linkedTransactions.forEach((transaction) => {
+              const balanceChange = transaction.type === 'income' ? -transaction.amount : transaction.amount;
+              balanceChanges[transaction.accountId] = (balanceChanges[transaction.accountId] || 0) + balanceChange;
+            });
+
+            // Remover transacciones enlazadas
+            const newTransactions = state.transactions.filter(
+              (transaction) => !(transaction.linkedTo?.type === linkedType && transaction.linkedTo?.id === linkedId),
+            );
+
+            // Actualizar balances de las cuentas afectadas
+            const newAccounts = state.accounts.map((account) =>
+              balanceChanges[account.id]
+                ? { ...account, balance: account.balance + balanceChanges[account.id] }
+                : account,
+            );
+
+            broadcast({
+              type: 'accounts/update',
+              payload: { accounts: newAccounts, transactions: newTransactions },
+            });
+
+            return {
+              transactions: newTransactions,
+              accounts: newAccounts,
+            };
+          });
+        },
+
+        getLinkedTransactions: (linkedType, linkedId) => {
+          return get().transactions.filter(
+            (transaction) =>
+              transaction.linkedTo?.type === linkedType && transaction.linkedTo?.id === linkedId,
+          );
+        },
+
+        setError: (message) => {
+          set({ error: message });
+        },
+      };
+    },
+    {
+      name: 'grid-manager:accounts@v1',
+      storage,
+      partialize: (state) => ({
+        accounts: state.accounts,
+        transactions: state.transactions,
+        syncMode: state.syncMode,
+      }),
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) {
+          console.error('[AccountsStore] Error rehydrating state', error);
+        }
+      },
+    },
+  ),
+);

@@ -51,7 +51,7 @@ export function CustomersPage() {
     hasRequestedInitialLoad.current = true;
     console.log('[CustomersPage] Calling loadCustomers...');
     void loadCustomers();
-  }, [loadCustomers]);
+  }, [loadCustomers, customers.length, isLoading]);
   
   // Form state
   const [formData, setFormData] = useState({

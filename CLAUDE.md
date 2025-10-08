@@ -1,8 +1,112 @@
 # CLAUDE.md - Grid Manager Documentation
 
+## ⚠️ Estado Actual (octubre 2025)
+
+- **Persistencia limitada**: La versión activa sigue funcionando en modo local-first con Zustand + LocalStorage. No hay sincronización automática entre sesiones ni persistencia en Supabase/Prisma todavía.
+- **Interacción incompleta**: Se han detectado botones sin handlers definitivos y formularios que no confirman acciones. Varias páginas requieren wiring adicional para completar el flujo CRUD.
+- **Listados inconsistentes**: Algunos módulos (por ejemplo Cuentas y Proveedores) no refrescan la lista tras crear un registro hasta que se recarga manualmente o se inspecciona el store.
+- **Diagnóstico en curso**: Se está trabajando en un plan maestro de estabilización. Cada fase de corrección debe referenciar este documento para mantener trazabilidad.
+  - Pendiente: captura de evidencia manual desde el frontend requiere navegadores locales; dejar asentado qué versión de Chrome/Firefox se use al hacerlo.
+  - Fase 4 · Validación incremental: pendiente de reagendar; Fase 5 se ejecutará con la evidencia disponible en esta iteración.
+- **Entorno de reproducción** (07-10-2025): Backend levantado con `npm run dev:api` (con `DEBUG=*`, actualmente con advertencia `Redis not configured - using memory cache`); frontend servido con `npm run dev:web`, Vite reasignado a `http://localhost:5001` porque el puerto 5000 está ocupado.
+  - Pruebas automatizadas:
+    - 07-10-2025 → primera pasada con warnings residuales en reports/localStorage.
+    - 08-10-2025 → segunda pasada tras hotfixes:
+      - `node test-critical-errors.js` → 21/21 casos críticos aprobados.
+      - `node test-functionality.js` → 81/81 asserts, sin warnings (se añadió `console.warn` en `src/lib/localStorage.ts`).
+      - `node test-e2e-simulation.js` → 46/46, sin warnings (se amplió matching semántico de secciones de reportes).
+    - Capturas de salida anexadas en el historial de consola de esta sesión; trasladar a `evidence/` en cuanto se consoliden.
+  - API Frontend (`apps/web/src/lib/api.ts`): base URL por defecto `http://localhost:5001/api/v1`. Todas las llamadas requieren token válido y cabecera `X-Tenant-Slug`; sin sesión real la API responde 401 y los stores quedan vacíos.
+
+### 🔍 Hallazgos Fase 2 (botones inactivos)
+
+> Actualización 07-10-2025: Los asserts añadidos en `test-functionality.js` confirmaron que `AccountsPage` ya consume las acciones reales del store; mantener el análisis siguiente como referencia histórica hasta completar validación manual.
+
+### 🔄 Fase 5 · Plan de persistencia y sincronización (08-10-2025)
+
+**Snapshot actual de stores con sync**
+
+| Store | Persistencia local | Broadcast entre pestañas | Operaciones API configuradas | Observaciones |
+|-------|--------------------|--------------------------|------------------------------|---------------|
+| `accountsStore` | ✅ `persist` + `createJSONStorage` | ✅ BroadcastChannel (`grid-manager:accounts`) | `get`, `create`, `update`, `delete` | Delete habilitado (`accountsApi.delete`) y sincroniza con cache local/híbrido. |
+| `customersStore` | ✅ `persist` (`grid-manager:customers-store`) | ✅ BroadcastChannel (`grid-manager:customers`) | `get`, `create`, `update`, `delete` | Mutaciones usan cola offline + broadcast. Pendiente surface de `pendingSync`. |
+| `productsStore` | ✅ `persist` (`grid-manager:products-store`) | ✅ BroadcastChannel (`grid-manager:products`) | `get`, `create`, `update`, `delete` | Borrado usa `deleteWithSync` + cola offline. Mantiene cache de categorías y movimientos. |
+| `suppliersStore` | ✅ `persist` (`grid-manager:suppliers-store`) | ✅ BroadcastChannel (`grid-manager:suppliers`) | `get`, `create`, `update`, `delete` | Eliminaciones ahora van al endpoint real (`suppliersApi.delete`) y respetan la cola offline. |
+| `salesStore` | ✅ `persist` (`grid-manager:sales-store`) | ✅ BroadcastChannel (`grid-manager:sales`) | `get`, `create`, `update`, `delete` | Mutaciones usan `updateWithSync`/`deleteWithSync`; se preservan stats y reversión de stock. |
+
+**Cambio aplicado (08-10-2025)**
+- `syncStorage.ts` ahora cachea automáticamente la última respuesta exitosa en `localStorage` (`gridmanager-sync-cache:<storageKey>`).
+- En modo offline (`getSyncMode() === 'offline'`) `loadWithSync` devuelve el snapshot cacheado para evitar arranque vacío.
+- `create/update/deleteWithSync` sincronizan el cache tras mutaciones exitosas, manteniendo consistencia mientras llega la respuesta del backend.
+
+**Backlog prioritario para habilitar modo online real**
+1. **Endpoints faltantes**
+  - ✅ `accountsApi.delete` expuesto en `accountsSyncConfig.apiDelete` (10-10-2025).
+  - ✅ `salesApi.update/delete` cableados al store (10-10-2025) con sincronización híbrida.
+  - ✅ `productsApi.delete` y `suppliersApi.delete` integrados en sus stores con cola offline (10-10-2025).
+2. **Cola de operaciones offline**
+  - ✅ `syncStorage` ahora encola `create/update/delete` cuando `isAuthenticated()` es `false`, guarda las mutaciones en `localStorage` y las reprocesa al volver a estar online.
+  - Pendiente: registrar un flag `pendingSync`/feedback visual y disparar un refresh del store tras cada vaciado exitoso.
+3. **Persistencia uniforme**
+  - ✅ `customers/products/suppliers/sales` migrados a `persist` + `BroadcastChannel` reutilizando la cola offline (10-10-2025).
+  - Pendiente: reducir logs en producción (hoy se imprime cada operación de carga) y centralizar métricas.
+4. **Health checks**
+  - Agregar pruebas automatizadas que simulen modo offline (deshabilitar auth store) y verifiquen que `loadWithSync` devuelve el snapshot esperado.
+  - Documentar procedimiento de “resync” en `SINCRONIZACION.md`.
+
+> Con el cache local y la cola offline activos, los usuarios conservan datos al refrescar y las mutaciones se reintentan automáticamente al recuperar sesión. Falta exponer feedback visual y refrescos automáticos para completar la experiencia offline-first.
+
+**Actualización 10-10-2025**
+- Se habilitaron los endpoints reales de `productsApi.delete`, `suppliersApi.delete` y `salesApi.update/delete`, y los stores ahora usan `deleteWithSync`/`updateWithSync` para mantener cache + broadcast sincronizados incluso offline.
+
+- `AccountsPage` (`apps/web/src/pages/AccountsPage.tsx`)
+  - Los botones **“Nueva Cuenta”**, **“Editar”**, **“Eliminar”**, **“Nueva Transacción”** y **“Transferir”** cierran sus modales pero no persisten cambios. El handler delega en `setAccounts`/`setTransactions`, funciones locales vacías que quedaron como shims al migrar a `useAccountsStore`.
+  - Efecto observado: el usuario recibe feedback visual mínimo (modal se cierra) pero la lista permanece igual incluso después de refrescar; los logs agregados en la store confirman que no se invoca `addAccount`/`updateAccount`/`deleteAccount`.
+  - Resolución sugerida: reemplazar los shims por las acciones reales del store (`addAccount`, `updateAccount`, `deleteAccount`, `addTransaction`) y propagar validaciones de error desde la API para evitar estados inconsistentes.
+- `TransferModal` (`apps/web/src/components/forms/TransferModal.tsx`)
+  - Al completar una transferencia se invoca `onTransferCompleted`, pero en la página principal la lógica vuelve a usar los mismos shims sin mutar balances. Resultado: la transferencia no queda registrada ni ajusta saldos.
+  - Recomendación: exponer un método `transferBetweenAccounts` en el store que cree las dos transacciones y actualice balances de forma atómica.
+- `SuppliersPage` (`apps/web/src/pages/SuppliersPage.tsx`)
+  - Los botones **“Pagar”** y **“Ver”** disparan únicamente `alert('Funcionalidad ... en desarrollo')`. No existe modal ni navegación posterior, por lo que el flujo de pagos a proveedores es inexistente.
+  - Próximos pasos: definir contrato del modal de pagos (cuenta origen, monto, referencia) y aprovechar `useAccountsStore` para registrar egresos asociados al proveedor.
+
+### 🔍 Hallazgos Fase 2 (multi-sesión y sincronización)
+
+- `useAuthStore` (`apps/web/src/store/authStore.ts`)
+  - Única store con persistencia. Guarda usuario/tokens en `localStorage` bajo la clave `gridmanager-auth-storage`.
+  - El botón “Saltear login” en `TenantLoginPage` inyecta tokens mock (`mock-access-token`/`mock-refresh-token`). `getSyncMode()` detecta este valor y fuerza **modo offline permanente**, evitando llamadas reales a la API aun cuando el resto del UI opera como si existiese persistencia.
+- Stores de dominio (`accountsStore`, `customersStore`, `productsStore`, `suppliersStore`, `salesStore`)
+  - ✅ Ahora utilizan `persist` + `BroadcastChannel` y comparten la cola offline de `syncStorage`, por lo que refrescos y nuevas pestañas conservan datos aun sin token válido.
+  - Persisten snapshots y, al recuperar autenticación, vacían la cola pendiente antes de recargar desde la API. Falta exponer feedback visual (`pendingSync`) para mutaciones diferidas.
+  - Los stores que aún no poseen `apiDelete` o `apiUpdate` reales (productos, proveedores, ventas) siguen aplicando mutaciones locales, por lo que la sincronización real con backend depende de completar esos endpoints.
+- Implicancias prácticas
+  - Un usuario que ingresa desde dos pestañas con login simulado verá datos diferentes y podría sobreescribir cambios sin advertencias.
+  - El flujo actual bloquea totalmente la sincronización multi-dispositivo mientras no exista autenticación real con tokens válidos y endpoints completos en Railway/Supabase.
+- Recomendaciones inmediatas
+  - Priorizar una sesión real contra Railway para desbloquear `syncMode: 'online'` y validar la cobertura de endpoints (`create/update/delete`).
+  - Habilitar persistencia mínima (zustand `persist`) o wallets locales (`indexedDB`) para los stores clave mientras se completa el backend.
+  - Añadir difusión entre pestañas (`storage` event o `BroadcastChannel`) para evitar estados divergentes, y definir una política de resolución de conflictos (timestamp, versionado o re-fetch tras cada mutación).
+
+### 🧭 Fase 3 · Mapeo y priorización
+
+| Síntoma | Módulos / Stores afectados | API / Infra involucrada | Clasificación | Notas clave |
+| --- | --- | --- | --- | --- |
+| Persistencia limitada / sesiones mock | `useAuthStore`, `syncStorage`, `accountsStore`, `customersStore`, `salesStore` | Railway (`/auth`, `/accounts`, `/customers`, `/sales`), Supabase (PostgreSQL), Redis opcional | **Full-stack** | Sin tokens válidos la app queda en modo offline; incluso con login real se requiere validar cobertura `create/update/delete` para asegurar sincronización. |
+| Botones sin acción | `AccountsPage`, `TransferModal`, `SuppliersPage`, `accountsStore` | `accountsApi` (falta `apiDelete`), futuros endpoints de pagos proveedor | **Frontend** (con dependencias API) | Falta cableado a acciones del store y confirmación de endpoints; bloquear actualizaciones mínimas impide CRUD básico desde UI. |
+| Listados inconsistentes tras crear registros | `AccountsPage`, `SuppliersPage`, `CustomersPage`, `Bulk*Import` | `loadWithSync` sobre `/accounts`, `/suppliers`, `/customers` | **Frontend** | Shims locales obsoletos y falta de re-fetch impiden ver datos recién creados; debe reemplazarse por acciones reales + refresco tras mutaciones. |
+| Multi-sesión sin sincronización entre pestañas | `useAuthStore`, `syncStorage`, stores de dominio | `/auth/refresh`, almacenamiento compartido (localStorage, BroadcastChannel) | **Full-stack** | Requiere tokens reales + estrategia de difusion y caché local; sin esto, estados divergen y se pierden datos al refrescar. |
+
+**Orden de priorización recomendado**
+1. **Persistencia** – desbloquea el resto del flujo y evita pérdida de datos.
+2. **Botones sin acción** – impiden a los usuarios ejecutar tareas básicas.
+3. **Listados inconsistentes** – ocultan los cambios realizados aunque existan.
+4. **Multi-sesión** – abordarlo luego de garantizar persistencia y CRUD; podría escalarse como fase aparte si requiere trabajo server-side amplio.
+
+> **Nota**: Este archivo es la referencia única sobre el estado del sistema. Cualquier plan de trabajo o checklist granular debe apuntar a esta sección para validar supuestos antes de ejecutar cambios.
+
 ## 📋 Información del Proyecto
 
-**Grid Manager** es una aplicación completa de gestión empresarial desarrollada con React/TypeScript y Node.js, que incluye gestión de inventario, ventas, clientes, cuentas financieras y reportes avanzados.
+**Grid Manager** es una aplicación de gestión empresarial desarrollada con React/TypeScript y Node.js, estructurada como monorepo. La funcionalidad descrita a continuación representa la intención de diseño; revisar la sección de limitaciones para conocer el alcance realmente disponible hoy.
 
 ## 🏗️ Arquitectura del Proyecto
 
@@ -361,22 +465,21 @@ cd apps/api && npm test
 - **Swagger** para documentación API
 
 ### Deployment
-- **Vercel** para frontend
-- **Supabase** para base de datos PostgreSQL
-- **GitHub Actions** para CI/CD
+- **Frontend**: Netlify (deploy principal en producción)
+- **Backend API**: Railway (Node/Express + Prisma)
+- **Base de datos**: Supabase (PostgreSQL gestionado)
+- **CI/CD**: GitHub Actions (ajustar pipelines para reflejar nuevos entornos si cambian)
+
+> **Recordatorio**: Los entornos locales usan servicios mock/LocalStorage; cualquier prueba contra producción debe considerar Railway/Netlify/Supabase y variables de entorno correspondientes.
 
 ## 🔒 Autenticación y Seguridad
 
 ### Sistema de Auth
-- **JWT tokens** para sesiones
-- **Middleware de autenticación** en todas las rutas protegidas
-- **Encriptación bcrypt** para contraseñas
-- **Validación de entrada** con esquemas TypeScript
+- Se cuenta con infraestructura de autenticación basada en JWT y middleware dependiendo del backend Express. **Estado actual**: el frontend sigue trabajando principalmente con datos mock/local, por lo que el flujo completo aún no se usa de forma consistente.
+- Encriptación bcrypt para contraseñas y validaciones Zod disponibles.
 
 ### Roles y Permisos
-- **Usuario básico**: CRUD básico
-- **Admin**: Acceso completo a reportes y configuración
-- **Manager**: Acceso a ventas y reportes
+- Definidos a nivel conceptual (Básico, Admin, Manager). **Pendiente** la verificación end-to-end dentro del cliente web.
 
 ## 📱 Responsive Design
 
@@ -395,11 +498,8 @@ cd apps/api && npm test
 ## 🚀 Performance
 
 ### Optimizaciones Implementadas
-- **Lazy loading** de componentes
-- **Memoización** de cálculos pesados
-- **Virtualización** de listas largas
-- **Debounce** en búsquedas
-- **Caching** de consultas frecuentes
+- Lazy loading de componentes, memoización y debounce configurados en el código base.
+- Virtualización de listas e índices para tablas extensas aún en revisión; validar antes de confiar en ambientes con >1000 registros.
 
 ## 🐛 Debugging
 
@@ -475,31 +575,31 @@ console.log('Current state:', state);
 
 ## 🧪 Testing Strategy
 
-### Unit Tests
-- Stores (Zustand)
-- Utility functions
-- Components aislados
-
-### Integration Tests  
-- Flujos completos de ventas
-- Interacciones entre stores
-- API endpoints
-
-### E2E Tests
-- Flujos críticos de usuario
-- Responsive design
-- Performance benchmarks
+### Estado actual de las pruebas
+- Existen scripts (`test-critical-errors.js`, `test-e2e-simulation.js`, etc.) que cubren escenarios clave, pero deben ejecutarse tras cada cambio significativo para asegurar que los flujos descritos siguen vigentes.
+- La cobertura de integración/E2E se está ampliando conforme se repara la persistencia y se conectan los módulos.
 
 ## 📝 Notas para Futuras Sesiones
 
 ### Próximas Mejoras Sugeridas
-1. **Notificaciones push** para stocks críticos
-2. **Backup automático** de datos
-3. **Multi-tenancy** para múltiples empresas
-4. **Integración** con APIs de bancos
-5. **Dashboard mobile app** nativo
-6. **Machine learning** para predicciones de venta
-7. **Sincronización offline** con service workers
+1. **Persistencia centralizada** (Supabase/Prisma) y sincronización multi-sesión.
+2. **Notificaciones push** para stocks críticos.
+3. **Backup automático** de datos.
+4. **Integración** con APIs de bancos.
+5. **Dashboard mobile app** nativo.
+6. **Machine learning** para predicciones de venta.
+7. **Sincronización offline** con service workers.
+
+### Limitaciones y problemas conocidos (octubre 2025)
+- Persistencia: Los stores dependen de LocalStorage; al abrir otra sesión/navegador los datos no se comparten.
+- Análisis 07-10-2025: `accountsStore`, `customersStore` y `salesStore` utilizan `loadWithSync/createWithSync` (API de Railway). `saveWithSync` está deprecado y no persiste en LocalStorage, por lo que si la API falla o no hay token válido el estado vuelve al arreglo vacío tras recargar.
+- Cobertura CRUD: `accountsStore`, `productsStore`, `suppliersStore` y `salesStore` ya enlazan `apiDelete`/`apiUpdate`. Validar en Railway que los endpoints respondan antes de habilitarlos en producción.
+- Instrumentación temporal (07-10-2025): Se añadieron logs en `accountsStore` y `salesStore` para registrar `syncMode`, cantidad de registros cargados y resultado de operaciones `create/update/delete`. Revisar consola del navegador al reproducir fallos.
+- UX: Botones y formularios críticos necesitan wiring (handlers, loaders, mensajes de confirmación).
+- Listados: Varios listados no se refrescan tras agregar datos hasta recargar la página.
+- Evidencia pendiente: Se necesitan HAR y capturas desde sesión real cuando se reproduzcan los fallos en UI.
+- Multi-tenancy: Documentación previa declara la migración como completa, pero la implementación actual requiere validación y ajustes antes de activarla.
+- Documentación: Este archivo es la fuente actualizada; mantenerlo alineado tras cada iteración.
 
 ### Bugs Conocidos a Investigar
 - [ ] Performance en listas > 1000 items

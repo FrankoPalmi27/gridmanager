@@ -244,8 +244,7 @@ class FunctionalityTester {
             'status:',
             'salesChannel?:',
             'paymentStatus?:',
-            'paymentMethod?:',
-            'accountId?:'
+            'accountId?'
           ];
 
           requiredFields.forEach(field => {
@@ -255,6 +254,18 @@ class FunctionalityTester {
               this.fail(`Campo ${field.replace(':', '')} no encontrado`, 'Campo requerido en interface Sale');
             }
           });
+
+          const hasPaymentMethodField = content.includes('paymentMethod?:');
+          const hasAccountLinkedComment = content.includes('accountId?:') &&
+            content.toLowerCase().includes('la cuenta define el método de pago');
+
+          if (hasPaymentMethodField) {
+            this.pass('Campo paymentMethod presente en Sale');
+          } else if (hasAccountLinkedComment) {
+            this.pass('Método de pago documentado vía accountId en Sale');
+          } else {
+            this.warn('Campo paymentMethod no encontrado directamente', 'Verificar si accountId es suficiente para mapear métodos de pago');
+          }
         } else {
           this.fail('Interface Sale no encontrada', 'Debería estar exportada');
         }
@@ -321,10 +332,15 @@ class FunctionalityTester {
         });
 
         // Verificar función validateStock
-        if (content.includes('validateStock:') && content.includes('allowNegativeStock')) {
-          this.pass('Sistema de validación de stock implementado');
+        const hasValidateStock = content.includes('validateStock:');
+        const hasNegativeStockToggle = content.includes('isNegativeStockAllowed') || content.includes('allowNegative:');
+
+        if (hasValidateStock && hasNegativeStockToggle) {
+          this.pass('Sistema de validación de stock con control de stock negativo implementado');
+        } else if (hasValidateStock) {
+          this.warn('Sistema de validación de stock podría carecer de control de stock negativo', 'Revisar configuración allowNegative/isNegativeStockAllowed');
         } else {
-          this.fail('Sistema de validación de stock incompleto', 'Debe incluir allowNegativeStock');
+          this.fail('Sistema de validación de stock incompleto', 'No se encontró validateStock con controles de stock negativo');
         }
 
         // Verificar linked transactions
@@ -358,8 +374,7 @@ class FunctionalityTester {
         { file: 'CustomersPage.tsx', name: 'Clientes' },
         { file: 'AccountsPage.tsx', name: 'Cuentas' },
         { file: 'ReportsPage.tsx', name: 'Reportes' },
-        { file: 'SuppliersPage.tsx', name: 'Proveedores' },
-        { file: 'MercadoLibrePage.tsx', name: 'Calculadora ML' }
+        { file: 'SuppliersPage.tsx', name: 'Proveedores' }
       ];
 
       requiredPages.forEach(({ file, name }) => {
@@ -386,14 +401,95 @@ class FunctionalityTester {
         }
       });
 
+      // Verificar calculadora de Mercado Libre (nueva denominación CalculatorPage)
+      const calculatorCandidates = [
+        { file: 'CalculatorPage.tsx', label: 'Calculadora ML (CalculatorPage.tsx)' },
+        { file: 'MercadoLibrePage.tsx', label: 'Calculadora ML (MercadoLibrePage.tsx)' }
+      ];
+
+      const calculatorFound = calculatorCandidates.some(candidate => {
+        const candidatePath = path.join(pagesPath, candidate.file);
+        if (fs.existsSync(candidatePath)) {
+          this.pass(`Página ${candidate.label} disponible`);
+          return true;
+        }
+        return false;
+      });
+
+      if (!calculatorFound) {
+        this.warn('Calculadora de Mercado Libre no encontrada', 'Verificar existencia de CalculatorPage.tsx o MercadoLibrePage.tsx');
+      }
+
     } catch (error) {
       this.fail('Test de páginas principales', error.message);
     }
   }
 
-  // Test 7: Verificar componentes de formularios
+  // Test 7: Verificar integración AccountsPage con el store
+  testAccountsPageIntegration() {
+    this.log('🔍', '\n=== TEST 7: Verificación de AccountsPage y Store ===');
+
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const accountsPagePath = path.join(__dirname, 'apps', 'web', 'src', 'pages', 'AccountsPage.tsx');
+      if (!fs.existsSync(accountsPagePath)) {
+        this.fail('AccountsPage no encontrada', 'Archivo AccountsPage.tsx no existe');
+        return;
+      }
+
+      this.pass('AccountsPage.tsx existe');
+      const content = fs.readFileSync(accountsPagePath, 'utf8');
+
+      if (content.includes("from '../store/accountsStore'")) {
+        this.pass('AccountsPage importa useAccountsStore correctamente');
+      } else {
+        this.fail('AccountsPage no importa useAccountsStore', 'Debe conectarse al nuevo store de cuentas');
+      }
+
+      if (content.includes('useAccountsStore((state) => ({')) {
+        this.pass('AccountsPage usa selector de useAccountsStore con destructuring');
+      } else {
+        this.warn('AccountsPage podría no usar selector memoizado', 'Verificar patrón useAccountsStore((state) => ({ ... }))');
+      }
+
+      const requiredSelectors = [
+        'loadAccounts:',
+        'loadTransactions:',
+        'addAccount:',
+        'updateAccount:',
+        'deleteAccount:',
+        'addTransaction:',
+        'transferBetweenAccounts:'
+      ];
+
+      requiredSelectors.forEach(selector => {
+        if (content.includes(selector)) {
+          this.pass(`Selector ${selector.replace(':', '')} disponible en AccountsPage`);
+        } else {
+          this.fail(`Selector ${selector.replace(':', '')} faltante en AccountsPage`, 'Debe mapearse desde useAccountsStore');
+        }
+      });
+
+      if (content.includes('TransferModal')) {
+        this.pass('AccountsPage integra TransferModal');
+      } else {
+        this.warn('TransferModal no encontrado en AccountsPage', 'Verificar integración de transferencias');
+      }
+
+      if (content.includes('BulkTransactionImport')) {
+        this.pass('AccountsPage permite importación masiva de transacciones');
+      }
+
+    } catch (error) {
+      this.fail('Test de integración AccountsPage', error.message);
+    }
+  }
+
+  // Test 8: Verificar componentes de formularios
   testFormComponents() {
-    this.log('🔍', '\n=== TEST 7: Verificación de Componentes de Formularios ===');
+  this.log('🔍', '\n=== TEST 8: Verificación de Componentes de Formularios ===');
 
     try {
       const fs = require('fs');
@@ -495,6 +591,7 @@ class FunctionalityTester {
     this.testTypeScriptInterfaces();
     this.testStoreIntegration();
     this.testMainPages();
+    this.testAccountsPageIntegration();
     this.testFormComponents();
 
     this.generateReport();

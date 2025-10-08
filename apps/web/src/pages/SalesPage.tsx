@@ -66,7 +66,7 @@ export function SalesPage() {
   const { tableScrollRef } = useTableScroll();
   
   // Get real sales data from context
-  const { sales, deleteSale, loadSales, isLoading } = useSalesStore();
+  const { sales, deleteSale, loadSales } = useSalesStore();
 
   const hasRequestedInitialLoad = useRef(false);
 
@@ -147,9 +147,14 @@ export function SalesPage() {
 
   // Scroll functions now provided by useTableScroll hook
 
-  const handleDeleteSale = (sale: any) => {
+  const handleDeleteSale = async (sale: any) => {
     if (confirm(`¿Estás seguro de que deseas eliminar la venta ${sale.number}?`)) {
-      deleteSale(sale.id);
+      try {
+        await deleteSale(sale.id);
+      } catch (error) {
+        console.error('Error deleting sale:', error);
+        alert('No se pudo eliminar la venta. Intenta nuevamente.');
+      }
     }
   };
 
@@ -593,6 +598,7 @@ export function SalesPage() {
             <select
               value={activeFilter}
               onChange={(e) => setActiveFilter(e.target.value)}
+              aria-label="Filtro rápido de ventas"
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               {filters.map((filter) => (

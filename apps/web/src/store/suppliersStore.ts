@@ -1,6 +1,8 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { StoreApi } from 'zustand';
 import { suppliersApi } from '../lib/api';
-import { loadWithSync, createWithSync, updateWithSync, getSyncMode, SyncConfig } from '../lib/syncStorage';
+import { loadWithSync, createWithSync, updateWithSync, deleteWithSync, getSyncMode, SyncConfig } from '../lib/syncStorage';
 
 export interface Supplier {
   id: string;
@@ -30,7 +32,7 @@ interface SuppliersState {
   getSuppliers: () => Supplier[];
   addSupplier: (supplier: Omit<Supplier, 'id'>) => Promise<Supplier>;
   updateSupplier: (id: string, supplier: Partial<Supplier>) => Promise<void>;
-  deleteSupplier: (id: string) => void;
+  deleteSupplier: (id: string) => Promise<void>;
   getActiveSuppliers: () => Supplier[];
   getSupplierById: (id: string) => Supplier | undefined;
   updateSupplierBalance: (id: string, amount: number) => void;
@@ -65,6 +67,7 @@ const syncConfig: SyncConfig<Supplier> = {
   apiGet: () => suppliersApi.getAll(),
   apiCreate: (data: any) => suppliersApi.create(data),
   apiUpdate: (id: string, data: Partial<Supplier>) => suppliersApi.update(id, data),
+  apiDelete: (id: string) => suppliersApi.delete(id),
   extractData: (response: any) => {
     const responseData = response.data.data || response.data;
 
@@ -85,7 +88,103 @@ const syncConfig: SyncConfig<Supplier> = {
   },
 };
 
-export const useSuppliersStore = create<SuppliersState>((set, get) => ({
+type SuppliersBroadcastEvent =
+  | {
+      type: 'suppliers/update';
+      payload: {
+        suppliers: Supplier[];
+        syncMode?: 'online' | 'offline';
+      };
+      source: string;
+      timestamp: number;
+    }
+  | {
+      type: 'suppliers/request-refresh';
+      source: string;
+      timestamp: number;
+    };
+
+const BROADCAST_CHANNEL_NAME = 'grid-manager:suppliers';
+
+const createTabId = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
+const tabId = createTabId();
+
+const broadcastChannel =
+  typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
+    ? new BroadcastChannel(BROADCAST_CHANNEL_NAME)
+    : null;
+
+const broadcast = (event: SuppliersBroadcastEvent) => {
+  if (!broadcastChannel) {
+    return;
+  }
+
+  broadcastChannel.postMessage(event);
+};
+
+let isBroadcastRegistered = false;
+
+const registerBroadcastListener = (
+  set: StoreApi<SuppliersState>['setState'],
+  get: StoreApi<SuppliersState>['getState'],
+) => {
+  if (!broadcastChannel || isBroadcastRegistered) {
+    return;
+  }
+
+  broadcastChannel.addEventListener('message', (event: MessageEvent<SuppliersBroadcastEvent>) => {
+    const data = event.data;
+
+    if (!data || data.source === tabId) {
+      return;
+    }
+
+    if (data.type === 'suppliers/update') {
+      const { suppliers, syncMode } = data.payload;
+      set((state) => ({
+        suppliers,
+        syncMode: syncMode ?? state.syncMode,
+      }));
+    }
+
+    if (data.type === 'suppliers/request-refresh') {
+      void get().loadSuppliers();
+    }
+  });
+
+  isBroadcastRegistered = true;
+};
+
+const storage = typeof window !== 'undefined'
+  ? createJSONStorage<SuppliersState>(() => window.localStorage)
+  : undefined;
+
+export const useSuppliersStore = create<SuppliersState>()(
+  persist(
+    (set, get) => {
+      registerBroadcastListener(set, get);
+
+      const broadcastState = (nextSuppliers?: Supplier[], nextSyncMode?: 'online' | 'offline') => {
+        const state = get();
+        broadcast({
+          type: 'suppliers/update',
+          payload: {
+            suppliers: nextSuppliers ?? state.suppliers,
+            syncMode: nextSyncMode ?? state.syncMode,
+          },
+          source: tabId,
+          timestamp: Date.now(),
+        });
+      };
+
+      return {
   suppliers: initialSuppliers,
   isLoading: false,
   syncMode: getSyncMode(),
@@ -97,7 +196,9 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
       console.log('[SuppliersStore] Calling loadWithSync...');
       const suppliers = await loadWithSync<Supplier>(syncConfig, initialSuppliers);
       console.log('[SuppliersStore] Loaded suppliers:', suppliers.length, suppliers);
-      set({ suppliers, isLoading: false });
+      const nextSyncMode = getSyncMode();
+      set({ suppliers, isLoading: false, syncMode: nextSyncMode });
+      broadcastState(suppliers, nextSyncMode);
     } catch (error) {
       console.error('[SuppliersStore] Error loading suppliers:', error);
       set({ isLoading: false });
@@ -127,7 +228,10 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
     try {
       // Create with API sync and wait for response
       const createdSupplier = await createWithSync<Supplier>(syncConfig, dataToSend, state.suppliers);
-      set({ suppliers: [createdSupplier, ...state.suppliers], syncMode: getSyncMode() });
+      const nextSuppliers = [createdSupplier, ...state.suppliers];
+      const nextSyncMode = getSyncMode();
+      set({ suppliers: nextSuppliers, syncMode: nextSyncMode });
+      broadcastState(nextSuppliers, nextSyncMode);
       return createdSupplier;
     } catch (error) {
       console.error('Error creating supplier:', error);
@@ -149,28 +253,37 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
           : supplier
       );
 
-      set({ suppliers: newSuppliers, syncMode: getSyncMode() });
+      const nextSyncMode = getSyncMode();
+      set({ suppliers: newSuppliers, syncMode: nextSyncMode });
+      broadcastState(newSuppliers, nextSyncMode);
     } catch (error) {
       console.error('Error updating supplier:', error);
       throw error;
     }
   },
 
-  deleteSupplier: (id) => set((state) => {
-    const newSuppliers = state.suppliers.filter(supplier => supplier.id !== id);
+  deleteSupplier: async (id) => {
+    const state = get();
 
-    // Soft delete via update if API available
-    updateWithSync(syncConfig, id, { active: false }, state.suppliers)
-      .catch((error) => console.error('Error syncing supplier deletion:', error));
+    try {
+      await deleteWithSync<Supplier>(syncConfig, id, state.suppliers);
+    } catch (error) {
+      console.error('Error deleting supplier:', error);
+      throw error;
+    }
 
-    return { suppliers: newSuppliers };
-  }),
+    const nextSuppliers = state.suppliers.filter(supplier => supplier.id !== id);
+    const nextSyncMode = getSyncMode();
+    set({ suppliers: nextSuppliers, syncMode: nextSyncMode });
+    broadcastState(nextSuppliers, nextSyncMode);
+  },
 
   getActiveSuppliers: () => get().suppliers.filter(supplier => supplier.active),
 
   getSupplierById: (id) => get().suppliers.find(supplier => supplier.id === id),
 
-  updateSupplierBalance: (id, amount) => set((state) => {
+  updateSupplierBalance: (id, amount) => {
+    const state = get();
     const newSuppliers = state.suppliers.map(supplier =>
       supplier.id === id
         ? {
@@ -191,8 +304,10 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
       }, state.suppliers).catch((error) => console.error('Error syncing supplier balance:', error));
     }
 
-    return { suppliers: newSuppliers };
-  }),
+    const nextSyncMode = getSyncMode();
+    set({ suppliers: newSuppliers, syncMode: nextSyncMode });
+    broadcastState(newSuppliers, nextSyncMode);
+  },
 
   getSupplierStats: () => {
     const suppliers = get().suppliers;
@@ -203,4 +318,11 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
       totalPurchases: suppliers.reduce((sum, s) => sum + s.totalPurchases, 0)
     };
   }
-}));
+      };
+    },
+    {
+      name: 'grid-manager:suppliers-store',
+      storage,
+    },
+  ),
+);

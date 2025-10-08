@@ -1,6 +1,8 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { StoreApi } from 'zustand';
 import { productsApi } from '../lib/api';
-import { loadWithSync, getSyncMode, SyncConfig, updateWithSync, createWithSync } from '../lib/syncStorage';
+import { loadWithSync, getSyncMode, SyncConfig, updateWithSync, createWithSync, deleteWithSync } from '../lib/syncStorage';
 
 // Tipo para los productos
 export interface Product {
@@ -120,7 +122,7 @@ interface ProductsStore {
     status?: 'active' | 'inactive';
   }[]) => Product[];
   updateProduct: (id: string, updatedData: Partial<Product>) => Promise<void>;
-  deleteProduct: (id: string) => void;
+  deleteProduct: (id: string) => Promise<void>;
   updateStock: (id: string, newStock: number) => Promise<void>;
   setProducts: (products: Product[]) => void;
   setCategories: (categories: Category[]) => void;
@@ -214,6 +216,7 @@ const syncConfig: SyncConfig<Product> = {
     const backendData = mapFrontendToBackendUpdate(data);
     return productsApi.update(id, backendData);
   },
+  apiDelete: (id: string) => productsApi.delete(id),
   extractData: (response: any) => {
     const responseData = response.data.data || response.data;
 
@@ -234,7 +237,114 @@ const syncConfig: SyncConfig<Product> = {
   },
 };
 
-export const useProductsStore = create<ProductsStore>((set, get) => ({
+type ProductsBroadcastEvent =
+  | {
+      type: 'products/update';
+      payload: {
+        products: Product[];
+        categories: Category[];
+        stockMovements: StockMovement[];
+        syncMode?: 'online' | 'offline';
+      };
+      source: string;
+      timestamp: number;
+    }
+  | {
+      type: 'products/request-refresh';
+      source: string;
+      timestamp: number;
+    };
+
+const BROADCAST_CHANNEL_NAME = 'grid-manager:products';
+
+const createTabId = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
+const tabId = createTabId();
+
+const broadcastChannel =
+  typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
+    ? new BroadcastChannel(BROADCAST_CHANNEL_NAME)
+    : null;
+
+const broadcast = (event: ProductsBroadcastEvent) => {
+  if (!broadcastChannel) {
+    return;
+  }
+
+  broadcastChannel.postMessage(event);
+};
+
+let isBroadcastRegistered = false;
+
+const registerBroadcastListener = (
+  set: StoreApi<ProductsStore>['setState'],
+  get: StoreApi<ProductsStore>['getState'],
+) => {
+  if (!broadcastChannel || isBroadcastRegistered) {
+    return;
+  }
+
+  broadcastChannel.addEventListener('message', (event: MessageEvent<ProductsBroadcastEvent>) => {
+    const data = event.data;
+
+    if (!data || data.source === tabId) {
+      return;
+    }
+
+    if (data.type === 'products/update') {
+      const { products, categories, stockMovements, syncMode } = data.payload;
+      set((state) => ({
+        products,
+        categories,
+        stockMovements,
+        syncMode: syncMode ?? state.syncMode,
+      }));
+    }
+
+    if (data.type === 'products/request-refresh') {
+      void get().loadProducts();
+    }
+  });
+
+  isBroadcastRegistered = true;
+};
+
+const storage = typeof window !== 'undefined'
+  ? createJSONStorage<ProductsStore>(() => window.localStorage)
+  : undefined;
+
+export const useProductsStore = create<ProductsStore>()(
+  persist(
+    (set, get) => {
+      registerBroadcastListener(set, get);
+
+      const broadcastState = (overrides?: {
+        products?: Product[];
+        categories?: Category[];
+        stockMovements?: StockMovement[];
+        syncMode?: 'online' | 'offline';
+      }) => {
+        const state = get();
+        broadcast({
+          type: 'products/update',
+          payload: {
+            products: overrides?.products ?? state.products,
+            categories: overrides?.categories ?? state.categories,
+            stockMovements: overrides?.stockMovements ?? state.stockMovements,
+            syncMode: overrides?.syncMode ?? state.syncMode,
+          },
+          source: tabId,
+          timestamp: Date.now(),
+        });
+      };
+
+      return {
   products: initialProducts,
   categories: [],
   stockMovements: [],
@@ -242,10 +352,12 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
   syncMode: getSyncMode(),
 
   loadProducts: async () => {
-    set({ isLoading: true, syncMode: getSyncMode() });
+    const mode = getSyncMode();
+    set({ isLoading: true, syncMode: mode });
     try {
       const products = await loadWithSync<Product>(syncConfig, initialProducts);
-      set({ products, isLoading: false });
+      set({ products, isLoading: false, syncMode: mode });
+      broadcastState({ products, syncMode: mode });
     } catch (error) {
       console.error('Error loading products:', error);
       set({ isLoading: false });
@@ -282,7 +394,10 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
     try {
       // Create with API sync and wait for response
       const createdProduct = await createWithSync<Product>(syncConfig, dataToSend as any, state.products);
-      set({ products: [createdProduct, ...state.products], syncMode: getSyncMode() });
+      const nextProducts = [createdProduct, ...state.products];
+      const nextSyncMode = getSyncMode();
+      set({ products: nextProducts, syncMode: nextSyncMode });
+      broadcastState({ products: nextProducts, syncMode: nextSyncMode });
       return createdProduct;
     } catch (error) {
       console.error('Error creating product:', error);
@@ -314,9 +429,12 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
       currentTimestamp += 1; // Ensure unique IDs
     });
 
+    const nextSyncMode = getSyncMode();
     set((state) => ({
-      products: [...newProducts, ...state.products]
+      products: [...newProducts, ...state.products],
+      syncMode: nextSyncMode,
     }));
+    broadcastState({ syncMode: nextSyncMode });
     
     return newProducts;
   },
@@ -331,18 +449,29 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
       const newProducts = state.products.map(product =>
         product.id === id ? { ...product, ...updatedData } : product
       );
-      set({ products: newProducts, syncMode: getSyncMode() });
+      const nextSyncMode = getSyncMode();
+      set({ products: newProducts, syncMode: nextSyncMode });
+      broadcastState({ products: newProducts, syncMode: nextSyncMode });
     } catch (error) {
       console.error('Error updating product:', error);
       throw error;
     }
   },
 
-  deleteProduct: (id) => {
-    set((state) => {
-      const newProducts = state.products.filter(product => product.id !== id);
-      return { products: newProducts };
-    });
+  deleteProduct: async (id) => {
+    const state = get();
+
+    try {
+      await deleteWithSync<Product>(syncConfig, id, state.products);
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      throw error;
+    }
+
+    const nextProducts = state.products.filter(product => product.id !== id);
+    const nextSyncMode = getSyncMode();
+    set({ products: nextProducts, syncMode: nextSyncMode });
+    broadcastState({ products: nextProducts, syncMode: nextSyncMode });
   },
 
   updateStock: async (id, newStock) => {
@@ -355,7 +484,9 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
       const newProducts = state.products.map(product =>
         product.id === id ? { ...product, stock: newStock } : product
       );
-      set({ products: newProducts, syncMode: getSyncMode() });
+      const nextSyncMode = getSyncMode();
+      set({ products: newProducts, syncMode: nextSyncMode });
+      broadcastState({ products: newProducts, syncMode: nextSyncMode });
     } catch (error) {
       console.error('Error updating stock:', error);
       throw error;
@@ -364,14 +495,17 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
 
   setProducts: (products) => {
     set({ products });
+    broadcastState({ products });
   },
 
   setCategories: (categories) => {
     set({ categories });
+    broadcastState({ categories });
   },
 
   resetToInitialProducts: () => {
     set({ products: initialProducts });
+    broadcastState({ products: initialProducts });
   },
 
   // Stock movements functions
@@ -386,6 +520,7 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
       const newMovements = [newMovement, ...state.stockMovements];
       return { stockMovements: newMovements };
     });
+    broadcastState();
   },
 
   getStockMovementsByProduct: (productId) => {
@@ -429,6 +564,8 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
         stockMovements: newMovements
       };
     });
+
+    broadcastState();
 
     updateWithSync<Product>(syncConfig, productId, { stock: newStock }, get().products)
       .catch((error) => console.error('Error syncing stock update:', error));
@@ -519,4 +656,11 @@ export const useProductsStore = create<ProductsStore>((set, get) => ({
       categories: getAllCategories(state.products, state.categories)
     };
   }
-}));
+      };
+    },
+    {
+      name: 'grid-manager:products-store',
+      storage,
+    },
+  ),
+);

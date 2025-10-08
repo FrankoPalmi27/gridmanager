@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { StoreApi } from 'zustand';
 import { customersApi } from '../lib/api';
 import { loadWithSync, createWithSync, updateWithSync, deleteWithSync, getSyncMode, SyncConfig } from '../lib/syncStorage';
 
@@ -81,7 +83,103 @@ const syncConfig: SyncConfig<Customer> = {
   },
 };
 
-export const useCustomersStore = create<CustomersStore>((set, get) => ({
+type CustomersBroadcastEvent =
+  | {
+      type: 'customers/update';
+      payload: {
+        customers: Customer[];
+        syncMode?: 'online' | 'offline';
+      };
+      source: string;
+      timestamp: number;
+    }
+  | {
+      type: 'customers/request-refresh';
+      source: string;
+      timestamp: number;
+    };
+
+const BROADCAST_CHANNEL_NAME = 'grid-manager:customers';
+
+const createTabId = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
+const tabId = createTabId();
+
+const broadcastChannel =
+  typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
+    ? new BroadcastChannel(BROADCAST_CHANNEL_NAME)
+    : null;
+
+const broadcast = (event: CustomersBroadcastEvent) => {
+  if (!broadcastChannel) {
+    return;
+  }
+
+  broadcastChannel.postMessage(event);
+};
+
+let isBroadcastRegistered = false;
+
+const registerBroadcastListener = (
+  set: StoreApi<CustomersStore>['setState'],
+  get: StoreApi<CustomersStore>['getState'],
+) => {
+  if (!broadcastChannel || isBroadcastRegistered) {
+    return;
+  }
+
+  broadcastChannel.addEventListener('message', (event: MessageEvent<CustomersBroadcastEvent>) => {
+    const data = event.data;
+
+    if (!data || data.source === tabId) {
+      return;
+    }
+
+    if (data.type === 'customers/update') {
+      const { customers, syncMode } = data.payload;
+      set((state) => ({
+        customers,
+        syncMode: syncMode ?? state.syncMode,
+      }));
+    }
+
+    if (data.type === 'customers/request-refresh') {
+      void get().loadCustomers();
+    }
+  });
+
+  isBroadcastRegistered = true;
+};
+
+const storage = typeof window !== 'undefined'
+  ? createJSONStorage<CustomersStore>(() => window.localStorage)
+  : undefined;
+
+export const useCustomersStore = create<CustomersStore>()(
+  persist(
+    (set, get) => {
+      registerBroadcastListener(set, get);
+
+      const broadcastState = (nextCustomers?: Customer[], nextSyncMode?: 'online' | 'offline') => {
+        const state = get();
+        broadcast({
+          type: 'customers/update',
+          payload: {
+            customers: nextCustomers ?? state.customers,
+            syncMode: nextSyncMode ?? state.syncMode,
+          },
+          source: tabId,
+          timestamp: Date.now(),
+        });
+      };
+
+      return {
   customers: initialCustomers,
   isLoading: false,
   syncMode: getSyncMode(),
@@ -92,9 +190,11 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
     set({ isLoading: true, syncMode: getSyncMode() });
     try {
       console.log('[CustomersStore] Calling loadWithSync...');
-      const customers = await loadWithSync<Customer>(syncConfig, initialCustomers);
-      console.log('[CustomersStore] Loaded customers:', customers.length, customers);
-      set({ customers, isLoading: false });
+  const customers = await loadWithSync<Customer>(syncConfig, initialCustomers);
+  console.log('[CustomersStore] Loaded customers:', customers.length, customers);
+  const nextSyncMode = getSyncMode();
+  set({ customers, isLoading: false, syncMode: nextSyncMode });
+  broadcastState(customers, nextSyncMode);
     } catch (error) {
       console.error('[CustomersStore] Error loading customers:', error);
       set({ isLoading: false });
@@ -118,7 +218,10 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
     try {
       // Try to create with API sync
       const createdCustomer = await createWithSync<Customer>(syncConfig, dataToSend, state.customers);
-      set({ customers: [createdCustomer, ...state.customers], syncMode: getSyncMode() });
+      const nextCustomers = [createdCustomer, ...state.customers];
+      const nextSyncMode = getSyncMode();
+      set({ customers: nextCustomers, syncMode: nextSyncMode });
+      broadcastState(nextCustomers, nextSyncMode);
       return createdCustomer;
     } catch (error) {
       // Fallback already handled by createWithSync
@@ -138,7 +241,9 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
       const newCustomers = state.customers.map(customer =>
         customer.id === id ? { ...customer, ...updatedData } : customer
       );
-      set({ customers: newCustomers, syncMode: getSyncMode() });
+      const nextSyncMode = getSyncMode();
+      set({ customers: newCustomers, syncMode: nextSyncMode });
+      broadcastState(newCustomers, nextSyncMode);
     } catch (error) {
       // Fallback already handled by updateWithSync
       console.error('Error updating customer:', error);
@@ -154,7 +259,9 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
 
       // Update local state
       const newCustomers = state.customers.filter(customer => customer.id !== id);
-      set({ customers: newCustomers, syncMode: getSyncMode() });
+      const nextSyncMode = getSyncMode();
+      set({ customers: newCustomers, syncMode: nextSyncMode });
+      broadcastState(newCustomers, nextSyncMode);
     } catch (error) {
       // Fallback already handled by deleteWithSync
       console.error('Error deleting customer:', error);
@@ -183,6 +290,8 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
 
     updateWithSync<Customer>(syncConfig, id, { balance: updatedBalance }, state.customers)
       .catch((error) => console.error('Error syncing customer balance:', error));
+
+    broadcastState();
   },
 
   resetCustomer: (id) => {
@@ -204,6 +313,8 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
 
     updateWithSync<Customer>(syncConfig, id, { balance: 0 }, state.customers)
       .catch((error) => console.error('Error resetting customer balance:', error));
+
+    broadcastState();
   },
 
   getCustomerById: (id) => {
@@ -218,6 +329,7 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
 
   resetStore: () => {
     set({ customers: [] });
+    broadcastState([]);
   },
 
   get stats() {
@@ -238,4 +350,11 @@ export const useCustomersStore = create<CustomersStore>((set, get) => ({
       totalNegativeBalance
     };
   }
-}));
+      };
+    },
+    {
+      name: 'grid-manager:customers-store',
+      storage,
+    },
+  ),
+);

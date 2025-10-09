@@ -141,6 +141,21 @@ const syncConfig: SyncConfig<Sale> = {
   },
 };
 
+const SALES_SYNC_CACHE_KEY = 'gridmanager-sync-cache:sales';
+
+const persistSalesCache = (sales: Sale[]) => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return;
+  }
+
+  try {
+    const normalized = Array.isArray(sales) ? sales : [];
+    window.localStorage.setItem(SALES_SYNC_CACHE_KEY, JSON.stringify(normalized));
+  } catch (error) {
+    console.warn('[SalesStore] ⚠️ No se pudo persistir el cache local de ventas:', error);
+  }
+};
+
 type SalesBroadcastEvent =
   | {
       type: 'sales/update';
@@ -266,10 +281,12 @@ export const useSalesStore = create<SalesStore>()(
     const mode = getSyncMode();
     console.log('[SalesStore] loadSales → syncMode:', mode);
     set({ isLoading: true, syncMode: mode });
+    const fallbackSales = get().sales;
     try {
-      const sales = await loadWithSync<Sale>(syncConfig, []);
+      const sales = await loadWithSync<Sale>(syncConfig, fallbackSales);
       console.log('[SalesStore] loadSales → received', sales.length, 'items');
       set({ sales, isLoading: false, syncMode: mode });
+      persistSalesCache(sales);
       broadcastState({ sales, syncMode: mode });
     } catch (error) {
       console.error('[SalesStore] Error loading sales:', error);
@@ -414,6 +431,7 @@ export const useSalesStore = create<SalesStore>()(
         dashboardStats: newStats,
         syncMode: nextSyncMode
       });
+      persistSalesCache(nextSales);
       broadcastState({ sales: nextSales, dashboardStats: newStats, syncMode: nextSyncMode });
       console.log('[SalesStore] addSale → API success', createdSale?.id);
     } catch (error) {
@@ -433,6 +451,7 @@ export const useSalesStore = create<SalesStore>()(
         dashboardStats: newStats,
         syncMode: nextSyncMode
       });
+      persistSalesCache(newSales);
       broadcastState({ sales: newSales, dashboardStats: newStats, syncMode: nextSyncMode });
     }
 

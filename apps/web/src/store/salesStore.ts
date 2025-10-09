@@ -13,7 +13,7 @@ import { loadWithSync, createWithSync, updateWithSync, deleteWithSync, getSyncMo
 // ============================================
 
 export interface Sale {
-  id: number;
+  id: string | number;
   number: string;
   client: {
     name: string;
@@ -89,9 +89,9 @@ interface SalesStore {
   // Actions
   loadSales: () => Promise<void>;
   addSale: (saleData: AddSaleData) => Promise<Sale>;
-  updateSale: (saleId: number, updatedData: UpdateSaleData) => Promise<void>;
-  updateSaleStatus: (saleId: number, newStatus: 'completed' | 'pending' | 'cancelled') => void;
-  deleteSale: (saleId: number) => Promise<void>;
+  updateSale: (saleId: string | number, updatedData: UpdateSaleData) => Promise<void>;
+  updateSaleStatus: (saleId: string | number, newStatus: 'completed' | 'pending' | 'cancelled') => void;
+  deleteSale: (saleId: string | number) => Promise<void>;
   updateDashboardStats: (newStats: Partial<DashboardStats>) => void;
   setSales: (sales: Sale[]) => void;
   validateStock: (productId: string, quantity: number) => StockValidationResult;
@@ -120,6 +120,170 @@ const generateAvatar = (name: string): string => {
     .toUpperCase();
 };
 
+const mapBackendStatus = (status?: string | null): 'completed' | 'pending' | 'cancelled' => {
+  if (!status) {
+    return 'pending';
+  }
+
+  const normalized = status.toLowerCase();
+  if (normalized === 'confirmed' || normalized === 'completed' || normalized === 'finalized') {
+    return 'completed';
+  }
+
+  if (normalized === 'cancelled' || normalized === 'canceled') {
+    return 'cancelled';
+  }
+
+  return 'pending';
+};
+
+const normalizeDate = (value?: string | Date | null): string => {
+  if (!value) {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString().split('T')[0];
+  }
+
+  // Intentar normalizar cadenas ISO u otros formatos
+  const asDate = new Date(value);
+  if (!Number.isNaN(asDate.getTime())) {
+    return asDate.toISOString().split('T')[0];
+  }
+
+  return value.split('T')[0] ?? value;
+};
+
+const normalizeNumber = (value: unknown, fallback = 0): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+
+  return fallback;
+};
+
+const normalizeApiSale = (rawSale: any): Sale => {
+  if (!rawSale || typeof rawSale !== 'object') {
+    throw new Error('normalizeApiSale received invalid sale payload');
+  }
+
+  const clientName = rawSale.client?.name
+    || rawSale.customer?.name
+    || rawSale.customerName
+    || 'Cliente sin nombre';
+
+  const clientEmail = rawSale.client?.email
+    || rawSale.customer?.email
+    || rawSale.customerEmail
+    || 'cliente@sin-email.local';
+
+  const mappedStatus = mapBackendStatus(rawSale.status);
+
+  const amount = normalizeNumber(rawSale.total ?? rawSale.amount ?? rawSale.subtotal, 0);
+
+  const itemsArray: any[] | undefined = Array.isArray(rawSale.items)
+    ? rawSale.items
+    : Array.isArray(rawSale.saleItems)
+      ? rawSale.saleItems
+      : undefined;
+
+  const itemsCount = normalizeNumber(
+    rawSale.itemCount ?? rawSale.items?.length ?? rawSale.items ?? itemsArray?.length,
+    0
+  );
+
+  const firstItem = itemsArray?.[0];
+
+  const paymentStatus: 'paid' | 'pending' | 'partial' = rawSale.paymentStatus
+    ?? (mappedStatus === 'completed' ? 'paid' : 'pending');
+
+  const cobrado = normalizeNumber(
+    rawSale.cobrado
+      ?? (paymentStatus === 'paid' ? amount : rawSale.collectedAmount)
+      ?? 0,
+    paymentStatus === 'paid' ? amount : 0
+  );
+
+  const aCobrar = normalizeNumber(
+    rawSale.aCobrar ?? amount - cobrado,
+    Math.max(amount - cobrado, 0)
+  );
+
+  const saleId = rawSale.id ?? rawSale.saleId ?? `temp-${Date.now()}`;
+
+  return {
+    id: saleId,
+    number: rawSale.number ?? rawSale.code ?? `VTA-${String(Date.now()).slice(-6)}`,
+    client: {
+      name: clientName,
+      email: clientEmail,
+      avatar: generateAvatar(clientName),
+    },
+    amount,
+    date: normalizeDate(rawSale.date ?? rawSale.createdAt ?? rawSale.updatedAt),
+    status: mappedStatus,
+    items: itemsCount,
+    seller: rawSale.seller?.name
+      ? {
+          name: rawSale.seller.name,
+          initials: generateAvatar(rawSale.seller.name),
+        }
+      : undefined,
+    sparkline: rawSale.sparkline ?? [40, 60, 90, 120, Math.max(amount / 100, 10)],
+    salesChannel: rawSale.salesChannel ?? 'store',
+    paymentStatus,
+    accountId: rawSale.accountId,
+    cobrado,
+    aCobrar,
+    productId: rawSale.productId ?? firstItem?.productId,
+    productName: rawSale.productName
+      ?? firstItem?.product?.name
+      ?? firstItem?.productName
+      ?? rawSale.product?.name,
+  };
+};
+
+const normalizeApiSalesArray = (raw: any): Sale[] => {
+  if (!raw) {
+    return [];
+  }
+
+  if (Array.isArray(raw)) {
+    return raw.map(normalizeApiSale);
+  }
+
+  if (Array.isArray(raw.data)) {
+    return raw.data.map(normalizeApiSale);
+  }
+
+  if (Array.isArray(raw.items)) {
+    return raw.items.map(normalizeApiSale);
+  }
+
+  if (raw.sale) {
+    return [normalizeApiSale(raw.sale)];
+  }
+
+  if (raw.data && raw.data.sale) {
+    return [normalizeApiSale(raw.data.sale)];
+  }
+
+  if (raw.data) {
+    return normalizeApiSalesArray(raw.data);
+  }
+
+  console.warn('[SalesStore] ⚠️ Unexpected sales payload shape. Returning empty array.', raw);
+  return [];
+};
+
 // ============================================
 // SYNC CONFIGURATION
 // ============================================
@@ -131,14 +295,12 @@ const syncConfig: SyncConfig<Sale> = {
   apiUpdate: (id: number | string, data: Partial<Sale>) => salesApi.update(id, data),
   apiDelete: (id: number | string) => salesApi.delete(id),
   extractData: (response: any) => {
-    const responseData = response.data.data || response.data;
-    // Handle paginated response: { data: [...], total, page, limit, totalPages }
-    const items = responseData.data || responseData.items || responseData;
-    if (Array.isArray(items)) {
-      return items;
+    const responseData = response?.data?.data ?? response?.data;
+    const mapped = normalizeApiSalesArray(responseData);
+    if (mapped.length === 0) {
+      console.warn('⚠️ Unexpected sales response structure:', responseData);
     }
-    console.warn('⚠️ Unexpected sales response structure:', responseData);
-    return [];
+    return mapped;
   },
 };
 
@@ -380,7 +542,7 @@ export const useSalesStore = create<SalesStore>()(
     const totalAmount = saleData.quantity * saleData.price;
 
     const newSale: Sale & { customerId?: string; price?: number; quantity?: number } = {
-      id: Date.now(),
+      id: `temp-${Date.now()}`,
       number: `VTA-2024-${String(state.sales.length + 1).padStart(3, '0')}`,
       client: {
         name: saleData.client,
@@ -501,7 +663,7 @@ export const useSalesStore = create<SalesStore>()(
   // UPDATE SALE
   // ============================================
 
-  updateSale: async (saleId: number, updatedData: UpdateSaleData) => {
+  updateSale: async (saleId: string | number, updatedData: UpdateSaleData) => {
     const state = get();
     const sale = state.sales.find(s => s.id === saleId);
     if (!sale) {
@@ -665,7 +827,7 @@ export const useSalesStore = create<SalesStore>()(
   // UPDATE SALE STATUS
   // ============================================
 
-  updateSaleStatus: (saleId: number, newStatus: 'completed' | 'pending' | 'cancelled') => {
+  updateSaleStatus: (saleId: string | number, newStatus: 'completed' | 'pending' | 'cancelled') => {
     set((state) => {
       const newSales = state.sales.map(sale =>
         sale.id === saleId ? { ...sale, status: newStatus } : sale
@@ -679,7 +841,7 @@ export const useSalesStore = create<SalesStore>()(
   // DELETE SALE
   // ============================================
 
-  deleteSale: async (saleId: number) => {
+  deleteSale: async (saleId: string | number) => {
     const { updateStockWithMovement, getProductById } = useProductsStore.getState();
     const { removeLinkedTransactions } = useAccountsStore.getState();
 

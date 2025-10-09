@@ -138,8 +138,7 @@ export function SalesPage() {
   const handleCloseModal = () => {
     setIsNewSaleModalOpen(false);
     setEditingSale(null);
-    // Refrescar la lista de ventas al cerrar el modal
-    void loadSales();
+    // No es necesario refrescar - Zustand actualiza el estado automáticamente
   };
 
   // Scroll functions now provided by useTableScroll hook

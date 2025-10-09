@@ -290,7 +290,12 @@ export const useSalesStore = create<SalesStore>()(
       broadcastState({ sales, syncMode: mode });
     } catch (error) {
       console.error('[SalesStore] Error loading sales:', error);
-      set({ isLoading: false });
+      // ✅ Preservar datos locales cuando falla la sincronización
+      set((state) => ({
+        isLoading: false,
+        sales: state.sales,
+        syncMode: mode,
+      }));
     }
   },
 

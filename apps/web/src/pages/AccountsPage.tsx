@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { ArrowLeftRight, Plus, RefreshCw, Search } from 'lucide-react';
 
@@ -8,7 +8,6 @@ import { StatusBadge } from '../components/ui/StatusBadge';
 import BulkTransactionImport from '../components/BulkTransactionImport';
 import { TransferModal } from '../components/forms/TransferModal';
 import { useTableScroll } from '../hooks/useTableScroll';
-import { useResourceLoader } from '../hooks/useResourceLoader';
 import { formatCurrency, formatDate } from '../lib/formatters';
 import { useAccountsStore, type Account, type Transaction } from '../store/accountsStore';
 
@@ -600,15 +599,17 @@ export function AccountsPage() {
     setError: state.setError,
   }));
 
-  const loadData = useCallback(async () => {
-    await Promise.all([loadAccounts(), loadTransactions()]);
-  }, [loadAccounts, loadTransactions]);
+  const hasRequestedInitialLoad = useRef(false);
 
-  const {
-    loading: isInitialLoading,
-    error: loaderError,
-    refresh,
-  } = useResourceLoader(loadData, [loadData]);
+  useEffect(() => {
+    if (hasRequestedInitialLoad.current) {
+      return;
+    }
+
+    hasRequestedInitialLoad.current = true;
+    void loadAccounts();
+    void loadTransactions();
+  }, [loadAccounts, loadTransactions]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState<'all' | string>('all');
@@ -637,10 +638,10 @@ export function AccountsPage() {
   }, [storeError]);
 
   useEffect(() => {
-    if (loaderError) {
+    if (storeError) {
       setDismissedLoaderError(false);
     }
-  }, [loaderError]);
+  }, [storeError]);
 
   const openAccountModal = (account?: Account) => {
     setError(null);
@@ -863,9 +864,9 @@ export function AccountsPage() {
     [accounts],
   );
 
-  const isBusy = isLoading || isInitialLoading;
-  const banner = !dismissedLoaderError && loaderError
-    ? ({ type: 'error', message: loaderError } satisfies FeedbackState)
+  const isBusy = isLoading;
+  const banner = !dismissedLoaderError && storeError
+    ? ({ type: 'error', message: storeError } satisfies FeedbackState)
     : feedback;
 
   const dismissBanner = () => {
@@ -873,7 +874,7 @@ export function AccountsPage() {
       return;
     }
 
-    if (!dismissedLoaderError && loaderError && banner.message === loaderError) {
+    if (!dismissedLoaderError && storeError && banner.message === storeError) {
       setDismissedLoaderError(true);
     } else {
       setFeedback(null);
@@ -893,7 +894,10 @@ export function AccountsPage() {
           <div className="flex flex-wrap items-center gap-3">
             <Button
               variant="outline"
-              onClick={() => refresh()}
+              onClick={() => {
+                void loadAccounts();
+                void loadTransactions();
+              }}
               disabled={isBusy}
               icon={<RefreshCw className="h-4 w-4" />}
             >

@@ -226,15 +226,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
               </>
             ) : (
               <Button
-                onClick={() => {
-                  const newCategory = {
-                    id: Date.now().toString(),
-                    name: 'Nueva Categoría',
-                    description: '',
-                    createdAt: new Date().toISOString()
-                  };
-                  setCategories([...categories, newCategory]);
-                }}
+                onClick={() => setIsCategoryModalOpen(true)}
                 variant="primary"
                 size="sm"
                 className="w-full sm:w-auto"

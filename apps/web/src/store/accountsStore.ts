@@ -192,10 +192,14 @@ export const useAccountsStore = create<AccountsStore>()(
 
         loadAccounts: async () => {
           const mode = getSyncMode();
+          const currentAccounts = get().accounts;
           set({ isLoading: true, syncMode: mode, error: null });
 
           try {
-            const accounts = await loadWithSync<Account>(accountsSyncConfig, initialAccounts);
+            // Usar las cuentas actuales como fallback en lugar de un array vacío
+            const accounts = await loadWithSync<Account>(accountsSyncConfig, currentAccounts);
+
+            // Solo actualizar si realmente obtuvimos cuentas o si no teníamos ninguna
             set((state) => ({
               accounts,
               isLoading: false,

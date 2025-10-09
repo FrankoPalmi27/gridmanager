@@ -269,8 +269,31 @@ export async function loadWithSync<T>(
       : response.data.data || response.data;
 
     if (Array.isArray(data)) {
-      writeCache(config.storageKey, data);
-      return data;
+      let mergedData = data as T[];
+
+      if (offlineSnapshot && offlineSnapshot.length) {
+        const offlineOnly = offlineSnapshot.filter((offlineItem: any) => {
+          const offlineId = offlineItem && typeof offlineItem === 'object' ? (offlineItem as any).id : undefined;
+          if (offlineId === undefined || offlineId === null) {
+            return false;
+          }
+
+          return !mergedData.some((remoteItem: any) => {
+            if (!remoteItem || typeof remoteItem !== 'object') {
+              return false;
+            }
+            const remoteId = (remoteItem as any).id;
+            return remoteId !== undefined && remoteId !== null && remoteId === offlineId;
+          });
+        });
+
+        if (offlineOnly.length) {
+          mergedData = [...offlineOnly, ...mergedData];
+        }
+      }
+
+      writeCache(config.storageKey, mergedData);
+      return mergedData;
     }
 
     console.warn(`⚠️ Unexpected response shape for ${config.storageKey}, returning default value`);
@@ -309,10 +332,10 @@ export async function createWithSync<T extends { id?: string | number }>(
     throw new Error('apiCreate not configured');
   }
 
-  if (!isAuthenticated()) {
-    const apiPayload = { ...item };
+  const queueOfflineItem = (reason?: unknown): T => {
     const tempId = item.id ?? `offline-${Date.now()}`;
     const offlineItem = { ...item, id: tempId } as T;
+    const apiPayload = { ...item };
 
     upsertCacheItem(config.storageKey, offlineItem);
     enqueueMutation({
@@ -322,31 +345,45 @@ export async function createWithSync<T extends { id?: string | number }>(
       tempId,
     });
 
+    if (reason) {
+      console.warn(`⚠️ Falling back to offline create for ${config.storageKey}:`, reason);
+    }
+
     return offlineItem;
+  };
+
+  if (!isAuthenticated()) {
+    return queueOfflineItem();
   }
 
   await flushQueuedMutations(config);
 
-  const response = await config.apiCreate(item);
+  try {
+    const response = await config.apiCreate(item);
 
-  // Use extractData if available to properly transform the response
-  if (config.extractData) {
-    const items = config.extractData(response);
-    if (items && items.length > 0) {
-      return items[0];
+    // Use extractData if available to properly transform the response
+    if (config.extractData) {
+      const items = config.extractData(response);
+      if (items && items.length > 0) {
+        const createdItem = items[0];
+        upsertCacheItem(config.storageKey, createdItem);
+        return createdItem;
+      }
     }
+
+    // Fallback to direct extraction
+    const createdItem = response.data.data || response.data;
+
+    if (!createdItem) {
+      throw new Error(`Empty response when creating item in ${config.storageKey}`);
+    }
+
+    upsertCacheItem(config.storageKey, createdItem);
+
+    return createdItem;
+  } catch (error) {
+    return queueOfflineItem(error);
   }
-
-  // Fallback to direct extraction
-  const createdItem = response.data.data || response.data;
-
-  if (!createdItem) {
-    throw new Error(`Empty response when creating item in ${config.storageKey}`);
-  }
-
-  upsertCacheItem(config.storageKey, createdItem);
-
-  return createdItem;
 }
 
 /**

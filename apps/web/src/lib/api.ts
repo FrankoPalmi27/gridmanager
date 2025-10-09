@@ -171,11 +171,29 @@ export const salesApi = {
   getById: (id: string) =>
     api.get(`/sales/${id}`),
 
-  create: (data: any) => {
+  create: async (data: any) => {
     // Transform frontend Sale format to backend CreateSaleSchema format
+
+    // Obtener el primer branch del tenant si no hay branchId
+    let branchId = data.branchId;
+    if (!branchId) {
+      try {
+        // Intentar obtener branches del tenant
+        const branchesResponse = await api.get('/branches', { params: { limit: 1 } });
+        const branches = branchesResponse.data?.data?.data || branchesResponse.data?.data || [];
+        if (branches.length > 0) {
+          branchId = branches[0].id;
+        }
+      } catch (error) {
+        console.warn('[salesApi] No se pudo obtener branch, la venta se guardará solo localmente');
+        // Si no hay branches, lanzar error para que se guarde solo localmente
+        throw new Error('No hay sucursales disponibles. La venta se guardará localmente.');
+      }
+    }
+
     const backendData = {
-      customerId: data.customerId || data.client?.id, // Necesitamos el ID del cliente
-      branchId: data.branchId || 'default-branch-id', // TODO: Obtener branch real del usuario
+      customerId: data.customerId || data.client?.id,
+      branchId,
       currency: 'ARS',
       notes: data.notes || `Venta ${data.number || ''} - ${data.client?.name || ''}`.trim(),
       items: data.items && Array.isArray(data.items)

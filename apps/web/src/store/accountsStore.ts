@@ -87,7 +87,20 @@ const accountsSyncConfig: SyncConfig<Account> = {
     // Handle paginated response: { data: [...], total, page, limit, totalPages }
     const items = responseData.data || responseData.items || responseData;
     if (Array.isArray(items)) {
-      return items;
+      // Transform backend data to frontend format
+      return items.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        accountNumber: item.accountNumber || '',
+        bankName: '', // Backend doesn't have this field
+        accountType: item.type || 'BANK', // type → accountType
+        paymentMethod: undefined, // Backend doesn't have this field
+        balance: Number(item.currentBalance) || 0, // currentBalance → balance
+        currency: item.currency || 'ARS',
+        active: item.active !== undefined ? item.active : true,
+        createdDate: item.createdAt || new Date().toISOString(),
+        description: '', // Backend doesn't have this field
+      }));
     }
     console.warn('⚠️ Unexpected accounts response structure:', responseData);
     return [];

@@ -215,15 +215,35 @@ export const usersApi = {
 export const accountsApi = {
   getAll: (params?: any) =>
     api.get('/accounts', { params }),
-    
+
   getById: (id: string) =>
     api.get(`/accounts/${id}`),
-    
-  create: (data: any) =>
-    api.post('/accounts', data),
-    
-  update: (id: string, data: any) =>
-    api.put(`/accounts/${id}`, data),
+
+  create: (data: any) => {
+    // Transform frontend data to backend format
+    const backendData = {
+      name: data.name,
+      type: data.accountType || 'BANK', // accountType → type
+      accountNumber: data.accountNumber || null,
+      currentBalance: data.balance || 0, // balance → currentBalance
+      currency: data.currency || 'ARS',
+      active: data.active !== undefined ? data.active : true,
+    };
+    return api.post('/accounts', backendData);
+  },
+
+  update: (id: string, data: any) => {
+    // Transform frontend data to backend format
+    const backendData: any = {};
+    if (data.name !== undefined) backendData.name = data.name;
+    if (data.accountType !== undefined) backendData.type = data.accountType;
+    if (data.accountNumber !== undefined) backendData.accountNumber = data.accountNumber;
+    if (data.balance !== undefined) backendData.currentBalance = data.balance;
+    if (data.currency !== undefined) backendData.currency = data.currency;
+    if (data.active !== undefined) backendData.active = data.active;
+
+    return api.put(`/accounts/${id}`, backendData);
+  },
 
   delete: (id: string) =>
     api.delete(`/accounts/${id}`),

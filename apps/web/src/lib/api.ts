@@ -167,19 +167,34 @@ export const productsApi = {
 export const salesApi = {
   getAll: (params?: any) =>
     api.get('/sales', { params }),
-    
+
   getById: (id: string) =>
     api.get(`/sales/${id}`),
-    
-  create: (data: any) =>
-    api.post('/sales', data),
+
+  create: (data: any) => {
+    // Transform frontend Sale format to backend CreateSaleSchema format
+    const backendData = {
+      customerId: data.customerId || data.client?.id, // Necesitamos el ID del cliente
+      branchId: data.branchId || 'default-branch-id', // TODO: Obtener branch real del usuario
+      currency: 'ARS',
+      notes: data.notes || `Venta ${data.number || ''} - ${data.client?.name || ''}`.trim(),
+      items: data.items && Array.isArray(data.items)
+        ? data.items
+        : [{
+            productId: data.productId,
+            quantity: typeof data.items === 'number' ? data.items : data.quantity || 1,
+            unitPrice: data.price || (data.amount / (typeof data.items === 'number' ? data.items : 1)),
+          }],
+    };
+    return api.post('/sales', backendData);
+  },
 
   update: (id: number | string, data: any) =>
     api.put(`/sales/${id}`, data),
 
   delete: (id: number | string) =>
     api.delete(`/sales/${id}`),
-    
+
   updateStatus: (id: string, status: string) =>
     api.patch(`/sales/${id}/status`, { status }),
 };

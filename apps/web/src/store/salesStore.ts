@@ -59,6 +59,7 @@ interface StockValidationResult {
 
 interface AddSaleData {
   client: string;
+  customerId: string; // ID del cliente para la API
   product: string;
   productId: string;
   quantity: number;
@@ -378,7 +379,7 @@ export const useSalesStore = create<SalesStore>()(
     const state = get();
     const totalAmount = saleData.quantity * saleData.price;
 
-    const newSale: Sale = {
+    const newSale: Sale & { customerId?: string; price?: number; quantity?: number } = {
       id: Date.now(),
       number: `VTA-2024-${String(state.sales.length + 1).padStart(3, '0')}`,
       client: {
@@ -386,6 +387,7 @@ export const useSalesStore = create<SalesStore>()(
         email: `${saleData.client.toLowerCase().replace(' ', '.')}@email.com`,
         avatar: generateAvatar(saleData.client)
       },
+      customerId: saleData.customerId, // ID del cliente para la API
       amount: totalAmount,
       date: new Date().toISOString().split('T')[0],
       status: saleData.paymentStatus === 'paid' ? 'completed' : 'pending',
@@ -401,7 +403,10 @@ export const useSalesStore = create<SalesStore>()(
       cobrado: saleData.paymentStatus === 'paid' ? totalAmount : 0,
       aCobrar: saleData.paymentStatus === 'paid' ? 0 : totalAmount,
       productId: saleData.productId,
-      productName: saleData.product
+      productName: saleData.product,
+      // Campos adicionales para la API
+      price: saleData.price,
+      quantity: saleData.quantity,
     };
 
     // 🔥 ACTUALIZACIÓN AUTOMÁTICA DE INVENTARIO

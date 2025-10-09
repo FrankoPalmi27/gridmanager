@@ -21,6 +21,7 @@ interface SalesFormProps {
 
 interface SalesFormData {
   client: string;
+  customerId: string; // ID del cliente para la API
   product: string;
   productId: string; // Nuevo campo requerido para inventario
   quantity: number;
@@ -109,6 +110,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
   
   const [formData, setFormData] = useState<SalesFormData>({
     client: '',
+    customerId: '', // ID del cliente
     product: '',
     productId: '', // Inicializar productId vacío
     quantity: 1,
@@ -123,6 +125,7 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
   const handleReset = useCallback(() => {
     setFormData({
       client: '',
+      customerId: '', // Reset customerId también
       product: '',
       productId: '', // Reset productId también
       quantity: 1,
@@ -404,7 +407,13 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
             }))}
             value={formData.client}
             onChange={(value) => {
-              setFormData(prev => ({ ...prev, client: value }));
+              // Encontrar el cliente seleccionado para obtener su ID
+              const selectedCustomer = activeCustomers.find(c => c.name === value);
+              setFormData(prev => ({
+                ...prev,
+                client: value,
+                customerId: selectedCustomer?.id || ''
+              }));
               if (errors.client) {
                 setErrors(prev => ({ ...prev, client: undefined }));
               }

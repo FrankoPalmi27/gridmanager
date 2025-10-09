@@ -58,6 +58,13 @@
 
 **Actualización 10-10-2025**
 - Se habilitaron los endpoints reales de `productsApi.delete`, `suppliersApi.delete` y `salesApi.update/delete`, y los stores ahora usan `deleteWithSync`/`updateWithSync` para mantener cache + broadcast sincronizados incluso offline.
+- ✅ **Migración `20251008_add_supplier_columns` aplicada exitosamente** (09-10-2025):
+  - **Método**: Ejecutada manualmente vía script local debido a timeouts de Railway CLI con PgBouncer.
+  - **Columnas agregadas**: `businessName`, `paymentTerms` (default 30), `creditLimit`, `totalPurchases` (default 0), `lastPurchaseDate`.
+  - **Verificación**: Todas las operaciones CRUD (crear, leer, actualizar, eliminar) probadas exitosamente con las nuevas columnas.
+  - **Schema Prisma**: Sincronizado con la base de datos de producción (columna `contactPerson` comentada temporalmente, pendiente de migración futura).
+  - **Prisma Client**: Regenerado con `npx prisma generate` para reconocer las nuevas columnas.
+  - **Nota técnica**: La tabla `_prisma_migrations` no existe en producción, indicando que las migraciones de Prisma nunca fueron inicializadas en el entorno Railway/Supabase. Futuras migraciones deberán ejecutarse manualmente o inicializar el sistema de migraciones primero.
 
 - `AccountsPage` (`apps/web/src/pages/AccountsPage.tsx`)
   - Los botones **“Nueva Cuenta”**, **“Editar”**, **“Eliminar”**, **“Nueva Transacción”** y **“Transferir”** cierran sus modales pero no persisten cambios. El handler delega en `setAccounts`/`setTransactions`, funciones locales vacías que quedaron como shims al migrar a `useAccountsStore`.

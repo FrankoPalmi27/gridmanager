@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   PlusOutlined,
   SearchOutlined,
@@ -68,16 +68,11 @@ export function SalesPage() {
   // Get real sales data from context
   const { sales, deleteSale, loadSales } = useSalesStore();
 
-  const hasRequestedInitialLoad = useRef(false);
-
+  // Cargar ventas solo al montar el componente
   useEffect(() => {
-    if (hasRequestedInitialLoad.current) {
-      return;
-    }
-
-    hasRequestedInitialLoad.current = true;
     void loadSales();
-  }, [loadSales]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   // Migrate existing sales to include new payment fields if missing
   const migratedSales = sales.map(sale => ({
@@ -143,6 +138,8 @@ export function SalesPage() {
   const handleCloseModal = () => {
     setIsNewSaleModalOpen(false);
     setEditingSale(null);
+    // Refrescar la lista de ventas al cerrar el modal
+    void loadSales();
   };
 
   // Scroll functions now provided by useTableScroll hook

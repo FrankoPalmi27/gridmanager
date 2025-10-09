@@ -58,6 +58,7 @@ interface AccountsStore {
   setAccounts: (accounts: Account[]) => void;
   getActiveAccounts: () => Account[];
   addTransaction: (transactionData: Omit<Transaction, 'id'>) => Transaction;
+  updateTransactionAccount: (transactionId: string, newAccountId: string) => boolean;
   getTransactionsByAccount: (accountId: string) => Transaction[];
   getAllTransactions: () => Transaction[];
   transferBetweenAccounts: (transfer: {
@@ -107,14 +108,16 @@ const accountsSyncConfig: SyncConfig<Account> = {
   },
 };
 
+type AccountsUpdatePayload = {
+  accounts: Account[];
+  transactions?: Transaction[];
+  syncMode?: 'online' | 'offline';
+};
+
 type BroadcastEvent =
   | {
       type: 'accounts/update';
-      payload: {
-        accounts: Account[];
-        transactions?: Transaction[];
-        syncMode?: 'online' | 'offline';
-      };
+      payload: AccountsUpdatePayload;
       source: string;
       timestamp: number;
     }
@@ -141,16 +144,34 @@ const broadcastChannel =
     ? new BroadcastChannel(BROADCAST_CHANNEL_NAME)
     : null;
 
-const broadcast = (event: Omit<BroadcastEvent, 'source' | 'timestamp'>) => {
+type BroadcastPayload =
+  | {
+      type: 'accounts/update';
+      payload: AccountsUpdatePayload;
+    }
+  | {
+      type: 'accounts/request-refresh';
+    };
+
+const broadcast = (event: BroadcastPayload) => {
   if (!broadcastChannel) {
     return;
   }
 
-  broadcastChannel.postMessage({
+  const message: BroadcastEvent = {
     ...event,
     source: tabId,
     timestamp: Date.now(),
-  } as BroadcastEvent);
+  };
+
+  broadcastChannel.postMessage(message);
+};
+
+const broadcastAccountsUpdate = (payload: AccountsUpdatePayload) => {
+  broadcast({
+    type: 'accounts/update',
+    payload,
+  });
 };
 
 let isBroadcastRegistered = false;
@@ -228,10 +249,7 @@ export const useAccountsStore = create<AccountsStore>()(
               transactions: state.transactions,
             }));
 
-            broadcast({
-              type: 'accounts/update',
-              payload: { accounts, syncMode: mode },
-            });
+            broadcastAccountsUpdate({ accounts, syncMode: mode });
           } catch (error) {
             console.error('[AccountsStore] ❌ Error loading accounts:', error);
             set((state) => ({
@@ -266,10 +284,7 @@ export const useAccountsStore = create<AccountsStore>()(
             set((state) => {
               const accounts = [createdAccount, ...state.accounts.filter((account) => account.id !== createdAccount.id)];
               console.log('[AccountsStore] 📝 State updated. Total accounts:', accounts.length);
-              broadcast({
-                type: 'accounts/update',
-                payload: { accounts },
-              });
+              broadcastAccountsUpdate({ accounts });
               return {
                 accounts,
                 syncMode: getSyncMode(),
@@ -282,10 +297,7 @@ export const useAccountsStore = create<AccountsStore>()(
             set((state) => {
               const accounts = [newAccount, ...state.accounts];
               console.log('[AccountsStore] 💾 Account saved offline. Total accounts:', accounts.length);
-              broadcast({
-                type: 'accounts/update',
-                payload: { accounts },
-              });
+              broadcastAccountsUpdate({ accounts });
               return {
                 accounts,
                 error: 'Cuenta guardada sin conexión. Se sincronizará cuando vuelva la conexión.',
@@ -308,10 +320,7 @@ export const useAccountsStore = create<AccountsStore>()(
               const accounts = state.accounts.map((account) =>
                 account.id === id ? { ...account, ...updatedData } : account,
               );
-              broadcast({
-                type: 'accounts/update',
-                payload: { accounts },
-              });
+              broadcastAccountsUpdate({ accounts });
               return { accounts, syncMode: getSyncMode() };
             });
           } catch (error) {
@@ -330,10 +339,7 @@ export const useAccountsStore = create<AccountsStore>()(
             set((state) => {
               const accounts = state.accounts.filter((account) => account.id !== id);
               const transactions = state.transactions.filter((transaction) => transaction.accountId !== id);
-              broadcast({
-                type: 'accounts/update',
-                payload: { accounts, transactions },
-              });
+              broadcastAccountsUpdate({ accounts, transactions });
               return { accounts, transactions, syncMode: getSyncMode() };
             });
           } catch (error) {
@@ -344,10 +350,7 @@ export const useAccountsStore = create<AccountsStore>()(
 
         setAccounts: (accounts) => {
           set({ accounts });
-          broadcast({
-            type: 'accounts/update',
-            payload: { accounts },
-          });
+          broadcastAccountsUpdate({ accounts });
         },
 
         getActiveAccounts: () => {
@@ -377,14 +380,61 @@ export const useAccountsStore = create<AccountsStore>()(
                 ? { ...account, balance: account.balance + balanceDelta }
                 : account,
             );
-            broadcast({
-              type: 'accounts/update',
-              payload: { accounts, transactions },
-            });
+            broadcastAccountsUpdate({ accounts, transactions });
             return { transactions, accounts };
           });
 
           return newTransaction;
+        },
+
+        updateTransactionAccount: (transactionId, newAccountId) => {
+          const state = get();
+          const targetTransaction = state.transactions.find((transaction) => transaction.id === transactionId);
+
+          if (!targetTransaction) {
+            set({ error: 'No se encontró el movimiento seleccionado.' });
+            return false;
+          }
+
+          if (targetTransaction.accountId === newAccountId) {
+            set({ error: null });
+            return true;
+          }
+
+          const newAccount = state.accounts.find((account) => account.id === newAccountId);
+
+          if (!newAccount) {
+            set({ error: 'La cuenta seleccionada no existe.' });
+            return false;
+          }
+
+          const amountEffect = targetTransaction.type === 'income' ? targetTransaction.amount : -targetTransaction.amount;
+
+          const updatedTransactions = state.transactions.map((transaction) =>
+            transaction.id === transactionId ? { ...transaction, accountId: newAccountId } : transaction,
+          );
+
+          const updatedAccounts = state.accounts.map((account) => {
+            if (account.id === targetTransaction.accountId) {
+              return { ...account, balance: account.balance - amountEffect };
+            }
+
+            if (account.id === newAccountId) {
+              return { ...account, balance: account.balance + amountEffect };
+            }
+
+            return account;
+          });
+
+          set({
+            transactions: updatedTransactions,
+            accounts: updatedAccounts,
+            error: null,
+          });
+
+          broadcastAccountsUpdate({ accounts: updatedAccounts, transactions: updatedTransactions });
+
+          return true;
         },
 
         getTransactionsByAccount: (accountId) => {
@@ -466,10 +516,7 @@ export const useAccountsStore = create<AccountsStore>()(
               return account;
             });
 
-            broadcast({
-              type: 'accounts/update',
-              payload: { accounts, transactions },
-            });
+            broadcastAccountsUpdate({ accounts, transactions });
 
             return { accounts, transactions };
           });
@@ -501,10 +548,7 @@ export const useAccountsStore = create<AccountsStore>()(
               account.id === accountId ? { ...account, balance: account.balance + amount } : account,
             );
 
-            broadcast({
-              type: 'accounts/update',
-              payload: { accounts: newAccounts, transactions: newTransactions },
-            });
+            broadcastAccountsUpdate({ accounts: newAccounts, transactions: newTransactions });
 
             return {
               transactions: newTransactions,
@@ -542,10 +586,7 @@ export const useAccountsStore = create<AccountsStore>()(
                 : account,
             );
 
-            broadcast({
-              type: 'accounts/update',
-              payload: { accounts: newAccounts, transactions: newTransactions },
-            });
+            broadcastAccountsUpdate({ accounts: newAccounts, transactions: newTransactions });
 
             return {
               transactions: newTransactions,

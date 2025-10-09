@@ -1131,24 +1131,29 @@ Este reporte fue generado automáticamente por Grid Manager el ${new Date().toLo
 
         {/* Tabs */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-8">
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6 overflow-x-auto" aria-label="Tabs">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="mr-2">
-                    {tab.icon}
-                  </span>
-                  {tab.label}
-                </button>
-              ))}
+          <div className="border-b border-gray-100 px-4 py-4 sm:px-6">
+            <nav
+              className="flex flex-wrap items-center justify-center gap-3 md:justify-between lg:justify-around"
+              aria-label="Tabs"
+            >
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    aria-pressed={isActive}
+                    className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 whitespace-nowrap ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-600 border-blue-300 shadow-blue-100'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
+                    }`}
+                  >
+                    <span className="text-base text-inherit">{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </nav>
           </div>
 

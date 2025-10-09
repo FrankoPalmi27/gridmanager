@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { ArrowLeftRight, Plus, RefreshCw, Search } from 'lucide-react';
+import { ArrowLeftRight, Check, Pencil, Plus, RefreshCw, Search, X } from 'lucide-react';
 
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -582,6 +582,7 @@ export function AccountsPage() {
     updateAccount,
     deleteAccount,
     addTransaction,
+    updateTransactionAccount,
     transferBetweenAccounts,
     setError,
   } = useAccountsStore((state) => ({
@@ -595,6 +596,7 @@ export function AccountsPage() {
     updateAccount: state.updateAccount,
     deleteAccount: state.deleteAccount,
     addTransaction: state.addTransaction,
+    updateTransactionAccount: state.updateTransactionAccount,
     transferBetweenAccounts: state.transferBetweenAccounts,
     setError: state.setError,
   }));
@@ -619,6 +621,9 @@ export function AccountsPage() {
   const [accountModalError, setAccountModalError] = useState<string | null>(null);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
+  const [pendingAccountId, setPendingAccountId] = useState<string>('');
+  const [isUpdatingTransactionAccount, setIsUpdatingTransactionAccount] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [transferError, setTransferError] = useState<string | null>(null);
   const [isProcessingTransfer, setIsProcessingTransfer] = useState(false);
@@ -722,6 +727,73 @@ export function AccountsPage() {
   const handleTransactionSaved = (transaction: TransactionFormValues) => {
     addTransaction(transaction);
     setFeedback({ type: 'success', message: 'Transacción registrada correctamente.' });
+  };
+
+  const beginTransactionAccountEdit = (transaction: Transaction) => {
+    setError(null);
+    const fallbackAccountId = accounts.some((account) => account.id === transaction.accountId)
+      ? transaction.accountId
+      : accounts[0]?.id ?? '';
+    setEditingTransactionId(transaction.id);
+    setPendingAccountId(fallbackAccountId);
+  };
+
+  const cancelTransactionAccountEdit = () => {
+    setEditingTransactionId(null);
+    setPendingAccountId('');
+    setIsUpdatingTransactionAccount(false);
+    setError(null);
+  };
+
+  const handleTransactionAccountSelection = (accountId: string) => {
+    setPendingAccountId(accountId);
+  };
+
+  const handleTransactionAccountSave = () => {
+    if (!editingTransactionId || !pendingAccountId) {
+      cancelTransactionAccountEdit();
+      return;
+    }
+
+    const transaction = transactions.find((item) => item.id === editingTransactionId);
+
+    if (!transaction) {
+      cancelTransactionAccountEdit();
+      return;
+    }
+
+    if (transaction.accountId === pendingAccountId) {
+      setFeedback({
+        type: 'warning',
+        message: 'Seleccioná una cuenta diferente para modificar el movimiento.',
+      });
+      cancelTransactionAccountEdit();
+      return;
+    }
+
+    setIsUpdatingTransactionAccount(true);
+    setError(null);
+
+    const success = updateTransactionAccount(editingTransactionId, pendingAccountId);
+    const latestError = useAccountsStore.getState().error;
+
+    if (!success || latestError) {
+      const message = latestError ?? 'No se pudo actualizar la cuenta del movimiento.';
+      setFeedback({
+        type: isOfflineMessage(message) ? 'warning' : 'error',
+        message,
+      });
+      setIsUpdatingTransactionAccount(false);
+      return;
+    }
+
+    setFeedback({
+      type: 'success',
+      message: 'La cuenta del movimiento se actualizó correctamente.',
+    });
+
+    setIsUpdatingTransactionAccount(false);
+    cancelTransactionAccountEdit();
   };
 
   const handleTransferCompleted = (transfer: {
@@ -1148,11 +1220,15 @@ export function AccountsPage() {
                     <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
                       Referencia
                     </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {sortedTransactions.map((transaction) => {
                     const account = accountLookup.get(transaction.accountId);
+                    const isEditing = editingTransactionId === transaction.id;
                     return (
                       <tr key={transaction.id} className="hover:bg-gray-50/80">
                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
@@ -1166,8 +1242,36 @@ export function AccountsPage() {
                             </p>
                           )}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
-                          {account ? account.name : 'Cuenta eliminada'}
+                        <td className="px-4 py-3 text-sm text-gray-500">
+                          {isEditing ? (
+                            accounts.length > 0 ? (
+                              <select
+                                className="w-full min-w-[180px] rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={pendingAccountId}
+                                onChange={(event) => handleTransactionAccountSelection(event.target.value)}
+                                disabled={isUpdatingTransactionAccount}
+                                aria-label="Seleccionar cuenta para el movimiento"
+                              >
+                                <option value="" disabled>
+                                  Seleccioná una cuenta
+                                </option>
+                                {accounts.map((option) => (
+                                  <option key={option.id} value={option.id}>
+                                    {option.name} ({option.bankName})
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span className="text-sm text-gray-400">No hay cuentas disponibles</span>
+                            )
+                          ) : account ? (
+                            <div className="flex flex-col">
+                              <span className="font-medium text-gray-900">{account.name}</span>
+                              <span className="text-xs text-gray-400">{account.bankName}</span>
+                            </div>
+                          ) : (
+                            <span className="italic text-gray-400">Cuenta eliminada</span>
+                          )}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-sm">
                           <StatusBadge variant={transaction.type === 'income' ? 'success' : 'danger'} dot>
@@ -1185,12 +1289,49 @@ export function AccountsPage() {
                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
                           {transaction.reference ?? '—'}
                         </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                          {isEditing ? (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="success"
+                                size="xs"
+                                onClick={handleTransactionAccountSave}
+                                loading={isUpdatingTransactionAccount}
+                                icon={<Check className="h-4 w-4" />}
+                              >
+                                Guardar
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="xs"
+                                onClick={cancelTransactionAccountEdit}
+                                disabled={isUpdatingTransactionAccount}
+                                icon={<X className="h-4 w-4" />}
+                              >
+                                Cancelar
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              icon={<Pencil className="h-4 w-4" />}
+                              onClick={() => beginTransactionAccountEdit(transaction)}
+                              disabled={
+                                accounts.length === 0 ||
+                                (editingTransactionId !== null && editingTransactionId !== transaction.id)
+                              }
+                            >
+                              Editar cuenta
+                            </Button>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
                   {sortedTransactions.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-6 text-center text-sm text-gray-500">
+                      <td colSpan={8} className="px-4 py-6 text-center text-sm text-gray-500">
                         No se encontraron transacciones con los filtros seleccionados.
                       </td>
                     </tr>

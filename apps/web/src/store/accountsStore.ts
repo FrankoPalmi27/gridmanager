@@ -193,11 +193,18 @@ export const useAccountsStore = create<AccountsStore>()(
         loadAccounts: async () => {
           const mode = getSyncMode();
           const currentAccounts = get().accounts;
+
+          console.log('[AccountsStore] 🔄 loadAccounts called');
+          console.log('[AccountsStore] 📊 Current accounts before load:', currentAccounts.length);
+          console.log('[AccountsStore] 🔌 Sync mode:', mode);
+
           set({ isLoading: true, syncMode: mode, error: null });
 
           try {
             // Usar las cuentas actuales como fallback en lugar de un array vacío
             const accounts = await loadWithSync<Account>(accountsSyncConfig, currentAccounts);
+
+            console.log('[AccountsStore] ✅ Accounts loaded from sync:', accounts.length);
 
             // Solo actualizar si realmente obtuvimos cuentas o si no teníamos ninguna
             set((state) => ({
@@ -213,7 +220,7 @@ export const useAccountsStore = create<AccountsStore>()(
               payload: { accounts, syncMode: mode },
             });
           } catch (error) {
-            console.error('[AccountsStore] Error loading accounts:', error);
+            console.error('[AccountsStore] ❌ Error loading accounts:', error);
             set((state) => ({
               isLoading: false,
               error: 'No se pudo actualizar la lista de cuentas. Se muestran los datos almacenados localmente.',
@@ -234,13 +241,18 @@ export const useAccountsStore = create<AccountsStore>()(
             createdDate: new Date().toISOString(),
           };
 
+          console.log('[AccountsStore] ➕ Adding new account:', newAccount.name, newAccount.id);
+
           set({ error: null });
 
           try {
             const createdAccount = await createWithSync<Account>(accountsSyncConfig, newAccount, get().accounts);
 
+            console.log('[AccountsStore] ✅ Account created successfully:', createdAccount.id);
+
             set((state) => {
               const accounts = [createdAccount, ...state.accounts.filter((account) => account.id !== createdAccount.id)];
+              console.log('[AccountsStore] 📝 State updated. Total accounts:', accounts.length);
               broadcast({
                 type: 'accounts/update',
                 payload: { accounts },
@@ -253,9 +265,10 @@ export const useAccountsStore = create<AccountsStore>()(
 
             return createdAccount;
           } catch (error) {
-            console.error('[AccountsStore] Error creating account:', error);
+            console.error('[AccountsStore] ❌ Error creating account:', error);
             set((state) => {
               const accounts = [newAccount, ...state.accounts];
+              console.log('[AccountsStore] 💾 Account saved offline. Total accounts:', accounts.length);
               broadcast({
                 type: 'accounts/update',
                 payload: { accounts },
@@ -548,9 +561,13 @@ export const useAccountsStore = create<AccountsStore>()(
         transactions: state.transactions,
         syncMode: state.syncMode,
       }),
-      onRehydrateStorage: () => (_state, error) => {
+      onRehydrateStorage: () => (state, error) => {
         if (error) {
-          console.error('[AccountsStore] Error rehydrating state', error);
+          console.error('[AccountsStore] ❌ Error rehydrating state', error);
+        } else if (state) {
+          console.log('[AccountsStore] 🔄 State rehydrated from localStorage');
+          console.log('[AccountsStore] 📊 Rehydrated accounts:', state.accounts?.length || 0);
+          console.log('[AccountsStore] 📊 Rehydrated transactions:', state.transactions?.length || 0);
         }
       },
     },

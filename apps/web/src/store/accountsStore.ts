@@ -44,6 +44,66 @@ const initialAccounts: Account[] = [];
 // No initial data - users start with empty list
 const initialTransactions: Transaction[] = [];
 
+const BALANCE_EPSILON = 0.005;
+
+const calculateTransactionImpact = (transactions: Transaction[]) => {
+  const impact = new Map<string, number>();
+
+  transactions.forEach((transaction) => {
+    const delta = transaction.type === 'income' ? transaction.amount : -transaction.amount;
+    impact.set(transaction.accountId, (impact.get(transaction.accountId) ?? 0) + delta);
+  });
+
+  return impact;
+};
+
+const reconcileAccountsWithTransactions = (
+  incomingAccounts: Account[],
+  previousAccounts: Account[],
+  transactions: Transaction[],
+) => {
+  if (incomingAccounts.length === 0) {
+    return previousAccounts;
+  }
+
+  const transactionImpact = calculateTransactionImpact(transactions);
+
+  return incomingAccounts.map((incomingAccount) => {
+    const previousAccount = previousAccounts.find((account) => account.id === incomingAccount.id);
+    const impact = transactionImpact.get(incomingAccount.id) ?? 0;
+
+    if (!previousAccount) {
+      if (Math.abs(impact) < BALANCE_EPSILON) {
+        return incomingAccount;
+      }
+
+      return {
+        ...incomingAccount,
+        balance: incomingAccount.balance + impact,
+      };
+    }
+
+    const previousBalance = previousAccount.balance;
+    const incomingBalance = incomingAccount.balance;
+    const balanceWithImpact = incomingBalance + impact;
+
+    const matchesPrevious = Math.abs(previousBalance - incomingBalance) < BALANCE_EPSILON;
+    const matchesPreviousAfterImpact = Math.abs(previousBalance - balanceWithImpact) < BALANCE_EPSILON;
+
+    if (matchesPrevious || matchesPreviousAfterImpact) {
+      return {
+        ...incomingAccount,
+        balance: previousBalance,
+      };
+    }
+
+    return {
+      ...incomingAccount,
+      balance: balanceWithImpact,
+    };
+  });
+};
+
 interface AccountsStore {
   accounts: Account[];
   transactions: Transaction[];
@@ -227,6 +287,7 @@ export const useAccountsStore = create<AccountsStore>()(
         loadAccounts: async () => {
           const mode = getSyncMode();
           const currentAccounts = get().accounts;
+          const currentTransactions = get().transactions;
 
           console.log('[AccountsStore] 🔄 loadAccounts called');
           console.log('[AccountsStore] 📊 Current accounts before load:', currentAccounts.length);
@@ -236,20 +297,25 @@ export const useAccountsStore = create<AccountsStore>()(
 
           try {
             // Usar las cuentas actuales como fallback en lugar de un array vacío
-            const accounts = await loadWithSync<Account>(accountsSyncConfig, currentAccounts);
+            const accountsFromSync = await loadWithSync<Account>(accountsSyncConfig, currentAccounts);
+            console.log('[AccountsStore] ✅ Accounts loaded from sync:', accountsFromSync.length);
 
-            console.log('[AccountsStore] ✅ Accounts loaded from sync:', accounts.length);
+            const reconciledAccounts = reconcileAccountsWithTransactions(
+              accountsFromSync,
+              currentAccounts,
+              currentTransactions,
+            );
 
             // Solo actualizar si realmente obtuvimos cuentas o si no teníamos ninguna
             set((state) => ({
-              accounts,
+              accounts: reconciledAccounts,
               isLoading: false,
               syncMode: mode,
               error: null,
               transactions: state.transactions,
             }));
 
-            broadcastAccountsUpdate({ accounts, syncMode: mode });
+            broadcastAccountsUpdate({ accounts: reconciledAccounts, syncMode: mode });
           } catch (error) {
             console.error('[AccountsStore] ❌ Error loading accounts:', error);
             set((state) => ({

@@ -102,38 +102,54 @@ export function PurchasesPage() {
   };
 
   const handleItemChange = (index: number, field: keyof PurchaseFormData['items'][0], value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      items: prev.items.map((item, i) => {
-        if (i !== index) return item;
+    console.log('[PurchasesPage] handleItemChange →', { index, field, value });
 
-        const updated = { ...item, [field]: value };
+    setFormData(prev => {
+      const newItems = [...prev.items]; // Create new array reference
+      const currentItem = newItems[index];
 
-        // 🔥 AUTO-FILL: Cuando selecciona un producto, autocompleta el costo
-        if (field === 'productId' && value) {
-          const product = products.find(p => p.id === value);
-          console.log('[PurchasesPage] Product selected:', {
-            productId: value,
-            product,
-            cost: product?.cost,
-            totalProducts: products.length
-          });
+      // Update the field
+      const updated = { ...currentItem, [field]: value };
 
-          if (product) {
-            if (product.cost > 0) {
-              console.log('[PurchasesPage] Setting unitCost to:', product.cost);
-              updated.unitCost = product.cost;
-            } else {
-              console.warn('[PurchasesPage] Product has no cost or cost is 0:', product.name);
-            }
+      // 🔥 AUTO-FILL: Cuando selecciona un producto, autocompleta el costo
+      if (field === 'productId' && value) {
+        const product = products.find(p => p.id === value);
+        console.log('[PurchasesPage] Product selected:', {
+          productId: value,
+          product,
+          productName: product?.name,
+          cost: product?.cost,
+          totalProducts: products.length,
+          allProducts: products.map(p => ({ id: p.id, name: p.name, cost: p.cost }))
+        });
+
+        if (product) {
+          if (product.cost && product.cost > 0) {
+            console.log('[PurchasesPage] ✅ Setting unitCost to:', product.cost);
+            updated.unitCost = product.cost;
           } else {
-            console.error('[PurchasesPage] Product not found in products array');
+            console.warn('[PurchasesPage] ⚠️ Product has no cost or cost is 0:', { name: product.name, cost: product.cost });
           }
+        } else {
+          console.error('[PurchasesPage] ❌ Product not found in products array');
         }
+      }
 
-        return updated;
-      })
-    }));
+      newItems[index] = updated;
+
+      const newFormData = {
+        ...prev,
+        items: newItems
+      };
+
+      console.log('[PurchasesPage] New form state →', {
+        itemIndex: index,
+        updatedItem: newItems[index],
+        totalItems: newItems.length
+      });
+
+      return newFormData;
+    });
   };
 
   const handleSubmitPurchase = async () => {
@@ -536,14 +552,24 @@ export function PurchasesPage() {
                     />
                   </div>
                   <div className="w-32">
-                    <label className="block text-xs text-gray-500 mb-1">Costo Unit.</label>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Costo Unit.
+                      {item.unitCost > 0 && item.productId && (
+                        <span className="ml-1 text-green-600" title="Autocompletado del producto">✓</span>
+                      )}
+                    </label>
                     <input
                       type="number"
-                      value={item.unitCost}
+                      value={item.unitCost || ''}
                       onChange={(e) => handleItemChange(index, 'unitCost', parseFloat(e.target.value) || 0)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        item.unitCost > 0 && item.productId
+                          ? 'border-green-300 bg-green-50'
+                          : 'border-gray-300'
+                      }`}
                       min="0"
                       step="0.01"
+                      placeholder="0.00"
                       required
                     />
                   </div>

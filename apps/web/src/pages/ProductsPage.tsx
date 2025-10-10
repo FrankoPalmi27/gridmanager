@@ -5,7 +5,6 @@ import { Input } from '@ui/Input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@ui/Tabs';
 import { Modal } from '@ui/Modal';
 import { ProductForm } from '@forms/ProductForm';
-import { CategoryModal } from '@forms/CategoryModal';
 import { CategoriesTable } from '@components/tables/CategoriesTable';
 import BulkProductImport from '@components/BulkProductImport';
 import { useProductsStore, Product } from '@store/productsStore';
@@ -50,7 +49,6 @@ export function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [activeTab, setActiveTab] = useState('productos');
@@ -301,7 +299,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
             <p className="text-sm sm:text-base text-gray-600">Gestiona tu catálogo de productos y stock</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            {activeTab === 'productos' ? (
+            {activeTab === 'productos' && (
               <>
                 <Button
                   onClick={handleExportToCSV}
@@ -330,16 +328,8 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                   + Nuevo Producto
                 </Button>
               </>
-            ) : (
-              <Button
-                onClick={() => setIsCategoryModalOpen(true)}
-                variant="primary"
-                size="sm"
-                className="w-full sm:w-auto"
-              >
-                + Nueva Categoría
-              </Button>
             )}
+            {/* La pestaña Categorías tiene su propio botón "+ Nueva Categoría" dentro de CategoriesTable */}
           </div>
         </div>
 
@@ -860,14 +850,6 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
         isOpen={isProductFormOpen} 
         onClose={handleCloseForm}
         editingProduct={editingProduct}
-      />
-
-      {/* Category Modal */}
-      <CategoryModal
-        isOpen={isCategoryModalOpen}
-        closeModal={() => setIsCategoryModalOpen(false)}
-        categories={categories}
-        onCategoriesUpdate={setCategories}
       />
 
       {/* Stock Movements Modal */}

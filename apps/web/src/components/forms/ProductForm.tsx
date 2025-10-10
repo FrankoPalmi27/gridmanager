@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { SearchableSelect } from '../ui/SearchableSelect';
 import { useProductsStore, Product } from '../../store/productsStore';
 import { useSuppliersStore } from '../../store/suppliersStore';
 import { calculateMargin, calculateProfit, calculatePriceFromMargin, evaluateMargin } from '../../lib/calculations';
@@ -26,7 +27,7 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
     stock: '',
     minStock: '',
     status: 'active' as 'active' | 'inactive',
-    supplier: ''
+    supplierId: '' // Cambiado de 'supplier' a 'supplierId'
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -57,7 +58,7 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
         stock: editingProduct.stock.toString(),
         minStock: editingProduct.minStock.toString(),
         status: editingProduct.status,
-        supplier: editingProduct.supplier || ''
+        supplierId: editingProduct.supplierId || editingProduct.supplier || '' // Soporte para ambos campos
       });
     } else if (isOpen && !editingProduct) {
       setFormData({
@@ -70,7 +71,7 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
         stock: '',
         minStock: '',
         status: 'active',
-        supplier: ''
+        supplierId: ''
       });
     }
     setErrors({});
@@ -153,7 +154,7 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
         stock: parseInt(formData.stock),
         minStock: formData.minStock ? parseInt(formData.minStock) : 0,
         status: formData.status,
-        supplier: formData.supplier.trim()
+        supplier: formData.supplierId.trim() // El store espera 'supplier' pero guardamos el ID
       };
 
       if (editingProduct) {
@@ -165,6 +166,18 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
       onClose();
     } catch (error) {
       console.error('Error saving product:', error);
+
+      // Mostrar error específico al usuario
+      const errorMessage = error instanceof Error ? error.message : 'Error al guardar el producto';
+      alert(`❌ ${errorMessage}`);
+
+      // Si es error de SKU duplicado, resaltar el campo nombre
+      if (errorMessage.includes('SKU duplicado')) {
+        setErrors(prev => ({
+          ...prev,
+          name: 'Este nombre genera un SKU que ya existe. Intenta con un nombre diferente.'
+        }));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -268,27 +281,24 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Proveedor
               </label>
-              <select
-                name="supplier"
-                value={formData.supplier}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                aria-label="Seleccionar proveedor"
-              >
-                <option value="">Sin proveedor asignado</option>
-                {activeSuppliers.length > 0 ? (
-                  activeSuppliers.map(supplier => (
-                    <option key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                      {supplier.businessName && supplier.businessName !== supplier.name
-                        ? ` (${supplier.businessName})`
-                        : ''}
-                    </option>
-                  ))
-                ) : (
-                  <option value="" disabled>No hay proveedores disponibles</option>
-                )}
-              </select>
+              <SearchableSelect
+                options={[
+                  { id: '', name: 'Sin proveedor asignado', value: '', subtitle: undefined },
+                  ...activeSuppliers.map(supplier => ({
+                    id: supplier.id,
+                    name: supplier.name,
+                    value: supplier.id,
+                    subtitle: supplier.businessName && supplier.businessName !== supplier.name
+                      ? supplier.businessName
+                      : undefined
+                  }))
+                ]}
+                value={formData.supplierId}
+                onChange={(value) => setFormData(prev => ({ ...prev, supplierId: value }))}
+                placeholder="Seleccionar proveedor..."
+                searchPlaceholder="Buscar proveedor..."
+                disabled={false}
+              />
               <p className="mt-1 text-xs text-gray-500">
                 {activeSuppliers.length === 0
                   ? 'Crea proveedores en el módulo de Proveedores para asignarlos aquí'

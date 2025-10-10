@@ -24,7 +24,8 @@ import {
   FileTextOutlined,
   RiseOutlined,
   BarChartOutlined,
-  InboxOutlined
+  InboxOutlined,
+  DownloadOutlined
 } from '@ant-design/icons';
 
 type SortField = 'name' | 'category' | 'brand' | 'price' | 'cost' | 'stock' | 'status';
@@ -66,6 +67,11 @@ export function ProductsPage() {
     return supplier ? supplier.name : supplierId; // Fallback to ID if supplier not found
   };
 
+  // Helper to get supplierId from product (supports both supplierId and legacy supplier field)
+  const getProductSupplierId = (product: Product): string | undefined => {
+    return product.supplierId || product.supplier;
+  };
+
   // Calculate products by category for the categories table
   const productsByCategory = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -94,7 +100,7 @@ export function ProductsPage() {
         product.brand.toLowerCase().includes(searchLower) ||
         product.category.toLowerCase().includes(searchLower) ||
         (product.description?.toLowerCase().includes(searchLower) || false) ||
-        (product.supplier && getSupplierName(product.supplier).toLowerCase().includes(searchLower));
+        (getProductSupplierId(product) && getSupplierName(getProductSupplierId(product)).toLowerCase().includes(searchLower));
 
       const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
       return matchesSearch && matchesCategory;
@@ -211,6 +217,78 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
     }
   };
 
+  // ✅ Función de exportación a CSV
+  const handleExportToCSV = () => {
+    try {
+      // Headers del CSV
+      const headers = [
+        'SKU',
+        'Nombre',
+        'Categoría',
+        'Marca',
+        'Descripción',
+        'Proveedor',
+        'Costo',
+        'Precio',
+        'Margen %',
+        'Stock',
+        'Stock Mínimo',
+        'Estado',
+        'Fecha Creación'
+      ];
+
+      // Convertir productos a filas CSV
+      const rows = sortedAndFilteredProducts.map(product => {
+        const margin = calculateMargin(product.price, product.cost);
+        const supplierName = getProductSupplierId(product)
+          ? getSupplierName(getProductSupplierId(product))
+          : 'Sin proveedor';
+
+        return [
+          product.sku,
+          `"${product.name}"`, // Entrecomillar por si tiene comas
+          `"${product.category}"`,
+          `"${product.brand}"`,
+          `"${product.description || ''}"`,
+          `"${supplierName}"`,
+          product.cost,
+          product.price,
+          margin.toFixed(2),
+          product.stock,
+          product.minStock,
+          product.status === 'active' ? 'Activo' : 'Inactivo',
+          new Date(product.createdAt).toLocaleDateString('es-AR')
+        ];
+      });
+
+      // Construir CSV
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+
+      // Crear blob y descargar
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `productos_${timestamp}_${sortedAndFilteredProducts.length}_items.csv`;
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      alert(`✅ Exportación exitosa: ${sortedAndFilteredProducts.length} productos exportados a ${filename}`);
+    } catch (error) {
+      console.error('Error exportando productos:', error);
+      alert('❌ Error al exportar productos');
+    }
+  };
+
   // Scroll functions now provided by useTableScroll hook
 
   return (
@@ -225,6 +303,16 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             {activeTab === 'productos' ? (
               <>
+                <Button
+                  onClick={handleExportToCSV}
+                  variant="outline"
+                  size="sm"
+                  className="text-green-600 border-green-600 hover:bg-green-50 w-full sm:w-auto"
+                  disabled={sortedAndFilteredProducts.length === 0}
+                >
+                  <DownloadOutlined className="w-4 h-4 mr-2" />
+                  Exportar CSV
+                </Button>
                 <Button
                   onClick={() => setShowBulkImport(true)}
                   variant="outline"
@@ -517,8 +605,8 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {product.supplier ? (
-                          getSupplierName(product.supplier) || <span className="text-gray-400 italic">Proveedor no encontrado</span>
+                        {getProductSupplierId(product) ? (
+                          getSupplierName(getProductSupplierId(product)) || <span className="text-gray-400 italic">Proveedor no encontrado</span>
                         ) : (
                           <span className="text-gray-400 italic">Sin proveedor</span>
                         )}

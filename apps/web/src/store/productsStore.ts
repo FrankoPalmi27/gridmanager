@@ -17,7 +17,8 @@ export interface Product {
   price: number;
   margin?: number;  // Calculated field: ((price - cost) / price) * 100
   suggestedPrice?: number; // Price suggestion based on cost + target margin
-  supplierId?: string; // ID del proveedor (FK)
+  supplierId?: string; // ID del proveedor (FK) - campo principal
+  supplier?: string; // DEPRECATED: usar supplierId
   imageUrl?: string; // URL de la imagen del producto
   stock: number;
   minStock: number;
@@ -45,6 +46,19 @@ export interface Category {
   name: string;
   description?: string;
   createdAt: string;
+}
+
+// Tipo para historial de precios
+export interface PriceHistory {
+  id: string;
+  productId: string;
+  previousCost: number;
+  newCost: number;
+  previousPrice: number;
+  newPrice: number;
+  changedAt: string;
+  changedBy?: string;
+  reason?: string;
 }
 
 // Tipos para alertas de stock
@@ -95,6 +109,7 @@ interface ProductsStore {
   products: Product[];
   categories: Category[];
   stockMovements: StockMovement[];
+  priceHistory: PriceHistory[]; // ✅ Nuevo: historial de precios
   isLoading: boolean;
   syncMode: 'online' | 'offline';
   loadProducts: () => Promise<void>;
@@ -145,6 +160,9 @@ interface ProductsStore {
   getProductById: (id: string) => Product | undefined;
   checkStockLevel: (product: Product) => StockAlertLevel;
   generateStockAlert: (product: Product) => StockAlert | null;
+  // Price history functions
+  addPriceHistory: (history: Omit<PriceHistory, 'id' | 'changedAt'>) => void;
+  getPriceHistoryByProduct: (productId: string) => PriceHistory[];
 }
 
 // Helper to map backend product to frontend format
@@ -164,7 +182,8 @@ const mapBackendToFrontend = (backendProduct: any): Product => {
     price, // Backend uses basePrice
     margin,
     suggestedPrice: price,
-    supplier: '', // Not stored in backend
+    supplierId: backendProduct.supplierId || undefined, // Backend supplier reference
+    supplier: backendProduct.supplierId || undefined, // Legacy support - será eliminado
     stock: backendProduct.currentStock || 0, // Backend uses currentStock
     minStock: backendProduct.minStock || 0,
     status: backendProduct.active ? 'active' : 'inactive', // Backend uses active boolean
@@ -184,6 +203,7 @@ const mapFrontendToBackendCreate = (frontendProduct: any) => ({
   taxRate: 0,
   minStock: frontendProduct.minStock || 0,
   unit: 'UNIT',
+  supplierId: frontendProduct.supplierId || frontendProduct.supplier || undefined,
   // Note: currentStock is NOT set on create - it starts at 0
   // Stock adjustments should be done via stock movements
 });
@@ -202,6 +222,9 @@ const mapFrontendToBackendUpdate = (frontendProduct: any) => {
   if (frontendProduct.minStock !== undefined) updateData.minStock = frontendProduct.minStock;
   if (frontendProduct.stock !== undefined) updateData.currentStock = frontendProduct.stock;
   if (frontendProduct.status !== undefined) updateData.active = frontendProduct.status === 'active';
+  if (frontendProduct.supplierId !== undefined || frontendProduct.supplier !== undefined) {
+    updateData.supplierId = frontendProduct.supplierId || frontendProduct.supplier || null;
+  }
 
   return updateData;
 };
@@ -246,6 +269,7 @@ type ProductsBroadcastEvent =
         products: Product[];
         categories: Category[];
         stockMovements: StockMovement[];
+        priceHistory: PriceHistory[]; // ✅ Agregar historial de precios
         syncMode?: 'online' | 'offline';
       };
       source: string;
@@ -300,11 +324,12 @@ const registerBroadcastListener = (
     }
 
     if (data.type === 'products/update') {
-      const { products, categories, stockMovements, syncMode } = data.payload;
+      const { products, categories, stockMovements, priceHistory, syncMode } = data.payload;
       set((state) => ({
         products,
         categories,
         stockMovements,
+        priceHistory,
         syncMode: syncMode ?? state.syncMode,
       }));
     }
@@ -330,6 +355,7 @@ export const useProductsStore = create<ProductsStore>()(
         products?: Product[];
         categories?: Category[];
         stockMovements?: StockMovement[];
+        priceHistory?: PriceHistory[];
         syncMode?: 'online' | 'offline';
       }) => {
         const state = get();
@@ -339,6 +365,7 @@ export const useProductsStore = create<ProductsStore>()(
             products: overrides?.products ?? state.products,
             categories: overrides?.categories ?? state.categories,
             stockMovements: overrides?.stockMovements ?? state.stockMovements,
+            priceHistory: overrides?.priceHistory ?? state.priceHistory,
             syncMode: overrides?.syncMode ?? state.syncMode,
           },
           source: tabId,
@@ -350,6 +377,7 @@ export const useProductsStore = create<ProductsStore>()(
   products: initialProducts,
   categories: [],
   stockMovements: [],
+  priceHistory: [], // ✅ Inicializar historial de precios vacío
   isLoading: false,
   syncMode: getSyncMode(),
 
@@ -374,9 +402,18 @@ export const useProductsStore = create<ProductsStore>()(
     // Calculate suggested price if not provided (using 30% margin as default)
     const calculatedSuggestedPrice = productData.suggestedPrice || calculatePriceFromMargin(productData.cost, 30);
 
+    // Generate SKU
+    const generatedSku = generateSKU(productData.category, productData.name);
+
+    // ✅ Validación de SKU único
+    const existingProductWithSku = state.products.find(p => p.sku === generatedSku);
+    if (existingProductWithSku) {
+      throw new Error(`SKU duplicado: ${generatedSku}. Ya existe un producto con este SKU.`);
+    }
+
     // Don't include ID - backend will generate it
     const dataToSend = {
-      sku: generateSKU(productData.category, productData.name),
+      sku: generatedSku,
       name: productData.name,
       category: productData.category,
       brand: productData.brand,
@@ -385,7 +422,8 @@ export const useProductsStore = create<ProductsStore>()(
       price: productData.price,
       margin: calculatedMargin,
       suggestedPrice: calculatedSuggestedPrice,
-      supplier: productData.supplier || '',
+      supplierId: productData.supplier || undefined, // Usar supplier del form que viene como ID
+      supplier: productData.supplier || undefined, // Legacy support
       stock: productData.stock,
       minStock: productData.minStock,
       status: productData.status || 'active',
@@ -441,6 +479,27 @@ export const useProductsStore = create<ProductsStore>()(
 
   updateProduct: async (id, updatedData) => {
     const state = get();
+
+    // ✅ Guardar historial de precios antes de actualizar
+    const existingProduct = state.products.find(p => p.id === id);
+    if (existingProduct && (updatedData.cost !== undefined || updatedData.price !== undefined)) {
+      const newCost = updatedData.cost !== undefined ? updatedData.cost : existingProduct.cost;
+      const newPrice = updatedData.price !== undefined ? updatedData.price : existingProduct.price;
+
+      // Solo guardar si cambió el costo o el precio
+      if (newCost !== existingProduct.cost || newPrice !== existingProduct.price) {
+        get().addPriceHistory({
+          productId: id,
+          previousCost: existingProduct.cost,
+          newCost: newCost,
+          previousPrice: existingProduct.price,
+          newPrice: newPrice,
+          changedBy: 'Usuario',
+          reason: 'Actualización manual de producto'
+        });
+      }
+    }
+
     try {
       // Update with API sync first
       await updateWithSync<Product>(syncConfig, id, updatedData, state.products);
@@ -655,6 +714,28 @@ export const useProductsStore = create<ProductsStore>()(
       totalValue: state.products.reduce((sum, p) => sum + (p.cost * p.stock), 0),
       categories: getAllCategories(state.products, state.categories)
     };
+  },
+
+  // ✅ Price history functions
+  addPriceHistory: (history) => {
+    const newHistory: PriceHistory = {
+      id: Date.now().toString(),
+      changedAt: new Date().toISOString(),
+      ...history
+    };
+
+    set((state) => {
+      const newPriceHistory = [newHistory, ...state.priceHistory];
+      return { priceHistory: newPriceHistory };
+    });
+    broadcastState();
+  },
+
+  getPriceHistoryByProduct: (productId) => {
+    const state = get();
+    return state.priceHistory
+      .filter(history => history.productId === productId)
+      .sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime());
   }
       };
     },

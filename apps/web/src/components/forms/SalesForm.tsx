@@ -70,12 +70,28 @@ const PAYMENT_STATUS = [
 
 export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess, editingSale }) => {
   const { addSale, updateSale, validateStock } = useSalesStore();
-  const { products } = useProductsStore();
-  const { accounts, getActiveAccounts } = useAccountsStore();
-  const { customers } = useCustomersStore();
+  const { products, loadProducts } = useProductsStore();
+  const { accounts, getActiveAccounts, loadAccounts } = useAccountsStore();
+  const { customers, loadCustomers } = useCustomersStore();
   const { toggleNegativeStock, isNegativeStockAllowed } = useSystemConfigStore();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<SalesFormErrors>({});
+
+  // ✅ Precargar datos necesarios cuando se abre el formulario
+  useEffect(() => {
+    if (isOpen) {
+      // Cargar datos solo si no están cargados
+      if (customers.length === 0) {
+        void loadCustomers();
+      }
+      if (products.length === 0) {
+        void loadProducts();
+      }
+      if (accounts.length === 0) {
+        void loadAccounts();
+      }
+    }
+  }, [isOpen, customers.length, products.length, accounts.length, loadCustomers, loadProducts, loadAccounts]);
 
   // Ensure stores return arrays - with extra safety
   const safeProducts = useMemo(() => {

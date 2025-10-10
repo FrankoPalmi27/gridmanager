@@ -172,8 +172,10 @@ const normalizeNumber = (value: unknown, fallback = 0): number => {
 
 const normalizeApiSale = (rawSale: any): Sale => {
   if (!rawSale || typeof rawSale !== 'object') {
+    console.error('[SalesStore] normalizeApiSale → invalid payload:', rawSale);
     throw new Error('normalizeApiSale received invalid sale payload');
   }
+  console.log('[SalesStore] normalizeApiSale → input:', rawSale);
 
   const clientName = rawSale.client?.name
     || rawSale.customer?.name
@@ -219,7 +221,7 @@ const normalizeApiSale = (rawSale: any): Sale => {
 
   const saleId = rawSale.id ?? rawSale.saleId ?? `temp-${Date.now()}`;
 
-  return {
+  const normalized = {
     id: saleId,
     number: rawSale.number ?? rawSale.code ?? `VTA-${String(Date.now()).slice(-6)}`,
     client: {
@@ -249,6 +251,9 @@ const normalizeApiSale = (rawSale: any): Sale => {
       ?? firstItem?.productName
       ?? rawSale.product?.name,
   };
+
+  console.log('[SalesStore] normalizeApiSale → output:', normalized);
+  return normalized;
 };
 
 const normalizeApiSalesArray = (raw: any): Sale[] => {
@@ -295,9 +300,29 @@ const syncConfig: SyncConfig<Sale> = {
   apiUpdate: (id: number | string, data: Partial<Sale>) => salesApi.update(id, data),
   apiDelete: (id: number | string) => salesApi.delete(id),
   extractData: (response: any) => {
+    console.log('[SalesStore] extractData → raw response:', response);
     const responseData = response?.data?.data ?? response?.data;
+
+    // Manejar respuesta de CREATE/UPDATE que retorna un objeto single
+    if (responseData && !Array.isArray(responseData)) {
+      // Si es { sale: {...} } → extraer sale
+      if (responseData.sale) {
+        const normalized = normalizeApiSale(responseData.sale);
+        console.log('[SalesStore] extractData → single sale from CREATE:', normalized);
+        return [normalized];
+      }
+      // Si ya es el objeto de venta directamente
+      if (responseData.id || responseData.number) {
+        const normalized = normalizeApiSale(responseData);
+        console.log('[SalesStore] extractData → direct sale object:', normalized);
+        return [normalized];
+      }
+    }
+
+    // Manejar respuesta de GET (arrays)
     const mapped = normalizeApiSalesArray(responseData);
-    if (mapped.length === 0) {
+    console.log('[SalesStore] extractData → array result:', mapped.length, 'items');
+    if (mapped.length === 0 && responseData) {
       console.warn('⚠️ Unexpected sales response structure:', responseData);
     }
     return mapped;

@@ -286,24 +286,31 @@ export const useAccountsStore = create<AccountsStore>()(
 
         loadAccounts: async () => {
           const mode = getSyncMode();
-          const currentAccounts = get().accounts;
-          const currentTransactions = get().transactions;
+
+          const snapshotBeforeLoad = get();
+          const snapshotAccounts = snapshotBeforeLoad.accounts;
+          const snapshotTransactions = snapshotBeforeLoad.transactions;
 
           console.log('[AccountsStore] 🔄 loadAccounts called');
-          console.log('[AccountsStore] 📊 Current accounts before load:', currentAccounts.length);
+          console.log('[AccountsStore] 📊 Current accounts before load:', snapshotAccounts.length);
           console.log('[AccountsStore] 🔌 Sync mode:', mode);
 
           set({ isLoading: true, syncMode: mode, error: null });
 
           try {
             // Usar las cuentas actuales como fallback en lugar de un array vacío
-            const accountsFromSync = await loadWithSync<Account>(accountsSyncConfig, currentAccounts);
+            const accountsFromSync = await loadWithSync<Account>(accountsSyncConfig, snapshotAccounts);
             console.log('[AccountsStore] ✅ Accounts loaded from sync:', accountsFromSync.length);
+
+            const { accounts: latestAccounts, transactions: latestTransactions } = get();
+
+            const accountsForReconcile = latestAccounts.length ? latestAccounts : snapshotAccounts;
+            const transactionsForReconcile = latestTransactions.length ? latestTransactions : snapshotTransactions;
 
             const reconciledAccounts = reconcileAccountsWithTransactions(
               accountsFromSync,
-              currentAccounts,
-              currentTransactions,
+              accountsForReconcile,
+              transactionsForReconcile,
             );
 
             // Solo actualizar si realmente obtuvimos cuentas o si no teníamos ninguna

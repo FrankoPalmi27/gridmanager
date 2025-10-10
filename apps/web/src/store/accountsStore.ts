@@ -104,6 +104,42 @@ const reconcileAccountsWithTransactions = (
   });
 };
 
+const summarizeTransactionsByAccount = (transactions: Transaction[]) => {
+  const summary = new Map<string, { income: number; expense: number }>();
+
+  transactions.forEach((transaction) => {
+    const existing = summary.get(transaction.accountId) ?? { income: 0, expense: 0 };
+
+    if (transaction.type === 'income') {
+      existing.income += transaction.amount;
+    } else if (transaction.type === 'expense') {
+      existing.expense += transaction.amount;
+    }
+
+    summary.set(transaction.accountId, existing);
+  });
+
+  return summary;
+};
+
+const applyDerivedBalances = (accounts: Account[], transactions: Transaction[]) => {
+  if (!accounts.length) {
+    return accounts;
+  }
+
+  const summary = summarizeTransactionsByAccount(transactions);
+
+  return accounts.map((account) => {
+    const totals = summary.get(account.id);
+    const derivedBalance = totals ? totals.income - totals.expense : 0;
+
+    return {
+      ...account,
+      balance: derivedBalance,
+    };
+  });
+};
+
 interface AccountsStore {
   accounts: Account[];
   transactions: Transaction[];
@@ -313,16 +349,18 @@ export const useAccountsStore = create<AccountsStore>()(
               transactionsForReconcile,
             );
 
+            const accountsWithDerivedBalances = applyDerivedBalances(reconciledAccounts, transactionsForReconcile);
+
             // Solo actualizar si realmente obtuvimos cuentas o si no teníamos ninguna
             set((state) => ({
-              accounts: reconciledAccounts,
+              accounts: accountsWithDerivedBalances,
               isLoading: false,
               syncMode: mode,
               error: null,
               transactions: state.transactions,
             }));
 
-            broadcastAccountsUpdate({ accounts: reconciledAccounts, syncMode: mode });
+            broadcastAccountsUpdate({ accounts: accountsWithDerivedBalances, syncMode: mode });
           } catch (error) {
             console.error('[AccountsStore] ❌ Error loading accounts:', error);
             set((state) => ({
@@ -356,10 +394,11 @@ export const useAccountsStore = create<AccountsStore>()(
 
             set((state) => {
               const accounts = [createdAccount, ...state.accounts.filter((account) => account.id !== createdAccount.id)];
-              console.log('[AccountsStore] 📝 State updated. Total accounts:', accounts.length);
-              broadcastAccountsUpdate({ accounts });
+              const accountsWithDerived = applyDerivedBalances(accounts, state.transactions);
+              console.log('[AccountsStore] 📝 State updated. Total accounts:', accountsWithDerived.length);
+              broadcastAccountsUpdate({ accounts: accountsWithDerived });
               return {
-                accounts,
+                accounts: accountsWithDerived,
                 syncMode: getSyncMode(),
               };
             });
@@ -369,10 +408,11 @@ export const useAccountsStore = create<AccountsStore>()(
             console.error('[AccountsStore] ❌ Error creating account:', error);
             set((state) => {
               const accounts = [newAccount, ...state.accounts];
-              console.log('[AccountsStore] 💾 Account saved offline. Total accounts:', accounts.length);
-              broadcastAccountsUpdate({ accounts });
+              const accountsWithDerived = applyDerivedBalances(accounts, state.transactions);
+              console.log('[AccountsStore] 💾 Account saved offline. Total accounts:', accountsWithDerived.length);
+              broadcastAccountsUpdate({ accounts: accountsWithDerived });
               return {
-                accounts,
+                accounts: accountsWithDerived,
                 error: 'Cuenta guardada sin conexión. Se sincronizará cuando vuelva la conexión.',
                 syncMode: getSyncMode(),
               };
@@ -393,8 +433,9 @@ export const useAccountsStore = create<AccountsStore>()(
               const accounts = state.accounts.map((account) =>
                 account.id === id ? { ...account, ...updatedData } : account,
               );
-              broadcastAccountsUpdate({ accounts });
-              return { accounts, syncMode: getSyncMode() };
+              const accountsWithDerived = applyDerivedBalances(accounts, state.transactions);
+              broadcastAccountsUpdate({ accounts: accountsWithDerived });
+              return { accounts: accountsWithDerived, syncMode: getSyncMode() };
             });
           } catch (error) {
             console.error('[AccountsStore] Error updating account:', error);
@@ -412,8 +453,9 @@ export const useAccountsStore = create<AccountsStore>()(
             set((state) => {
               const accounts = state.accounts.filter((account) => account.id !== id);
               const transactions = state.transactions.filter((transaction) => transaction.accountId !== id);
-              broadcastAccountsUpdate({ accounts, transactions });
-              return { accounts, transactions, syncMode: getSyncMode() };
+              const accountsWithDerived = applyDerivedBalances(accounts, transactions);
+              broadcastAccountsUpdate({ accounts: accountsWithDerived, transactions });
+              return { accounts: accountsWithDerived, transactions, syncMode: getSyncMode() };
             });
           } catch (error) {
             console.error('[AccountsStore] Error deleting account:', error);
@@ -422,8 +464,10 @@ export const useAccountsStore = create<AccountsStore>()(
         },
 
         setAccounts: (accounts) => {
-          set({ accounts });
-          broadcastAccountsUpdate({ accounts });
+          const transactions = get().transactions;
+          const accountsWithDerived = applyDerivedBalances(accounts, transactions);
+          set({ accounts: accountsWithDerived });
+          broadcastAccountsUpdate({ accounts: accountsWithDerived });
         },
 
         getActiveAccounts: () => {
@@ -441,18 +485,7 @@ export const useAccountsStore = create<AccountsStore>()(
 
           set((state) => {
             const transactions = [newTransaction, ...state.transactions];
-            const balanceDelta =
-              newTransaction.type === 'income'
-                ? newTransaction.amount
-                : newTransaction.type === 'expense'
-                  ? -newTransaction.amount
-                  : 0;
-
-            const accounts = state.accounts.map((account) =>
-              account.id === newTransaction.accountId
-                ? { ...account, balance: account.balance + balanceDelta }
-                : account,
-            );
+            const accounts = applyDerivedBalances(state.accounts, transactions);
             broadcastAccountsUpdate({ accounts, transactions });
             return { transactions, accounts };
           });
@@ -481,23 +514,11 @@ export const useAccountsStore = create<AccountsStore>()(
             return false;
           }
 
-          const amountEffect = targetTransaction.type === 'income' ? targetTransaction.amount : -targetTransaction.amount;
-
           const updatedTransactions = state.transactions.map((transaction) =>
             transaction.id === transactionId ? { ...transaction, accountId: newAccountId } : transaction,
           );
 
-          const updatedAccounts = state.accounts.map((account) => {
-            if (account.id === targetTransaction.accountId) {
-              return { ...account, balance: account.balance - amountEffect };
-            }
-
-            if (account.id === newAccountId) {
-              return { ...account, balance: account.balance + amountEffect };
-            }
-
-            return account;
-          });
+          const updatedAccounts = applyDerivedBalances(state.accounts, updatedTransactions);
 
           set({
             transactions: updatedTransactions,
@@ -577,17 +598,7 @@ export const useAccountsStore = create<AccountsStore>()(
 
           set((state) => {
             const transactions = [incomingTransaction, outgoingTransaction, ...state.transactions];
-            const accounts = state.accounts.map((account) => {
-              if (account.id === fromAccountId) {
-                return { ...account, balance: account.balance - amount };
-              }
-
-              if (account.id === toAccountId) {
-                return { ...account, balance: account.balance + amount };
-              }
-
-              return account;
-            });
+            const accounts = applyDerivedBalances(state.accounts, transactions);
 
             broadcastAccountsUpdate({ accounts, transactions });
 
@@ -616,10 +627,7 @@ export const useAccountsStore = create<AccountsStore>()(
           set((state) => {
             const newTransactions = [newTransaction, ...state.transactions];
 
-            // Actualizar balance de la cuenta
-            const newAccounts = state.accounts.map((account) =>
-              account.id === accountId ? { ...account, balance: account.balance + amount } : account,
-            );
+            const newAccounts = applyDerivedBalances(state.accounts, newTransactions);
 
             broadcastAccountsUpdate({ accounts: newAccounts, transactions: newTransactions });
 
@@ -634,30 +642,13 @@ export const useAccountsStore = create<AccountsStore>()(
 
         removeLinkedTransactions: (linkedType, linkedId) => {
           set((state) => {
-            // Encontrar transacciones enlazadas
-            const linkedTransactions = state.transactions.filter(
-              (transaction) =>
-                transaction.linkedTo?.type === linkedType && transaction.linkedTo?.id === linkedId,
-            );
-
-            // Calcular el balance a revertir por cuenta
-            const balanceChanges: { [accountId: string]: number } = {};
-            linkedTransactions.forEach((transaction) => {
-              const balanceChange = transaction.type === 'income' ? -transaction.amount : transaction.amount;
-              balanceChanges[transaction.accountId] = (balanceChanges[transaction.accountId] || 0) + balanceChange;
-            });
-
             // Remover transacciones enlazadas
             const newTransactions = state.transactions.filter(
               (transaction) => !(transaction.linkedTo?.type === linkedType && transaction.linkedTo?.id === linkedId),
             );
 
             // Actualizar balances de las cuentas afectadas
-            const newAccounts = state.accounts.map((account) =>
-              balanceChanges[account.id]
-                ? { ...account, balance: account.balance + balanceChanges[account.id] }
-                : account,
-            );
+            const newAccounts = applyDerivedBalances(state.accounts, newTransactions);
 
             broadcastAccountsUpdate({ accounts: newAccounts, transactions: newTransactions });
 

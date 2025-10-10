@@ -885,10 +885,10 @@ export function AccountsPage() {
   );
 
   const transactionsByAccount = useMemo(() => {
-    const summary = new Map<string, { income: number; expense: number }>();
+    const summary = new Map<string, { income: number; expense: number; balance: number }>();
 
     accounts.forEach((account) => {
-      summary.set(account.id, { income: 0, expense: 0 });
+      summary.set(account.id, { income: 0, expense: 0, balance: 0 });
     });
 
     transactions.forEach((transaction) => {
@@ -902,6 +902,12 @@ export function AccountsPage() {
       } else {
         entry.expense += transaction.amount;
       }
+
+      entry.balance = entry.income - entry.expense;
+    });
+
+    summary.forEach((entry) => {
+      entry.balance = entry.income - entry.expense;
     });
 
     return summary;
@@ -911,8 +917,12 @@ export function AccountsPage() {
     () =>
       accounts
         .filter((account) => account.active)
-        .reduce((total, account) => total + convertToArs(account.balance, account.currency), 0),
-    [accounts],
+        .reduce((total, account) => {
+          const summary = transactionsByAccount.get(account.id);
+          const balance = summary ? summary.balance : 0;
+          return total + convertToArs(balance, account.currency);
+        }, 0),
+    [accounts, transactionsByAccount],
   );
 
   const totalIncome = useMemo(
@@ -1058,7 +1068,8 @@ export function AccountsPage() {
           ) : (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
               {accounts.map((account) => {
-                const summary = transactionsByAccount.get(account.id) ?? { income: 0, expense: 0 };
+                const summary = transactionsByAccount.get(account.id) ?? { income: 0, expense: 0, balance: 0 };
+                const accountBalance = summary.balance;
                 return (
                   <div
                     key={account.id}
@@ -1087,8 +1098,8 @@ export function AccountsPage() {
                       </div>
                       <div className="flex justify-between text-gray-500">
                         <span>Saldo</span>
-                        <span className={`font-semibold ${account.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatCurrency(account.balance, account.currency)}
+                        <span className={`font-semibold ${accountBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatCurrency(accountBalance, account.currency)}
                         </span>
                       </div>
                       <div className="flex justify-between text-gray-500">

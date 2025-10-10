@@ -35,19 +35,19 @@ const paymentStatusConfig = {
 };
 
 export function PurchasesPage() {
-  const { 
-    purchases, 
-    dashboardStats, 
-    addPurchase, 
-    markAsReceived, 
-    updatePaymentStatus, 
-    deletePurchase 
+  const {
+    purchases,
+    dashboardStats,
+    addPurchase,
+    markAsReceived,
+    updatePaymentStatus,
+    deletePurchase
   } = usePurchasesStore();
-  
-  const { suppliers } = useSuppliersStore();
-  const { products } = useProductsStore();
-  const { accounts } = useAccountsStore();
-  
+
+  const { suppliers, loadSuppliers } = useSuppliersStore();
+  const { products, loadProducts } = useProductsStore();
+  const { accounts, loadAccounts } = useAccountsStore();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,6 +64,15 @@ export function PurchasesPage() {
     reference: '',
     notes: ''
   });
+
+  // ✅ Precargar datos necesarios al abrir el modal
+  React.useEffect(() => {
+    if (isModalOpen) {
+      if (suppliers.length === 0) void loadSuppliers();
+      if (products.length === 0) void loadProducts();
+      if (accounts.length === 0) void loadAccounts();
+    }
+  }, [isModalOpen, suppliers.length, products.length, accounts.length, loadSuppliers, loadProducts, loadAccounts]);
 
   const filteredPurchases = purchases.filter(purchase => {
     const matchesSearch = purchase.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -95,9 +104,21 @@ export function PurchasesPage() {
   const handleItemChange = (index: number, field: keyof PurchaseFormData['items'][0], value: string | number) => {
     setFormData(prev => ({
       ...prev,
-      items: prev.items.map((item, i) => 
-        i === index ? { ...item, [field]: value } : item
-      )
+      items: prev.items.map((item, i) => {
+        if (i !== index) return item;
+
+        const updated = { ...item, [field]: value };
+
+        // 🔥 AUTO-FILL: Cuando selecciona un producto, autocompleta el costo
+        if (field === 'productId' && value) {
+          const product = products.find(p => p.id === value);
+          if (product && product.cost > 0) {
+            updated.unitCost = product.cost;
+          }
+        }
+
+        return updated;
+      })
     }));
   };
 

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { useProductsStore } from './productsStore';
 import { useSuppliersStore } from './suppliersStore';
 import { useAccountsStore } from './accountsStore';
@@ -79,16 +80,25 @@ interface PurchasesStore {
   updateSupplierBalance: (supplierId: string, amount: number, operation: 'add' | 'subtract') => void;
 }
 
-export const usePurchasesStore = create<PurchasesStore>((set, get) => ({
-  purchases: [],
-  dashboardStats: initialPurchaseStats,
+const storage = typeof window !== 'undefined'
+  ? createJSONStorage<PurchasesStore>(() => window.localStorage)
+  : undefined;
 
-  addPurchase: (purchaseData) => {
+export const usePurchasesStore = create<PurchasesStore>()(
+  persist(
+    (set, get) => ({
+      purchases: [],
+      dashboardStats: initialPurchaseStats,
+
+      addPurchase: (purchaseData) => {
+    console.log('[PurchasesStore] addPurchase → input:', purchaseData);
+
     // Get supplier information
     const { getSupplierById } = useSuppliersStore.getState();
     const supplier = getSupplierById(purchaseData.supplierId);
-    
+
     if (!supplier) {
+      console.error('[PurchasesStore] Proveedor no encontrado:', purchaseData.supplierId);
       throw new Error('Proveedor no encontrado');
     }
 
@@ -117,7 +127,10 @@ export const usePurchasesStore = create<PurchasesStore>((set, get) => ({
       });
     }
 
-    const tax = subtotal * 0.21; // 21% IVA by default
+    // 🔥 IVA configurable - Por defecto 21% (Argentina)
+    // TODO: Hacer esto configurable desde settings
+    const taxRate = 0.21;
+    const tax = subtotal * taxRate;
     const total = subtotal + tax;
 
     const currentPurchases = get().purchases;
@@ -146,6 +159,7 @@ export const usePurchasesStore = create<PurchasesStore>((set, get) => ({
     // Add purchase to store
     set((state) => {
       const newPurchases = [newPurchase, ...state.purchases];
+      console.log('[PurchasesStore] Purchase added successfully:', newPurchase.number, 'Total purchases:', newPurchases.length);
       return { purchases: newPurchases };
     });
 
@@ -371,4 +385,10 @@ export const usePurchasesStore = create<PurchasesStore>((set, get) => ({
       return { dashboardStats: updatedStats };
     });
   }
-}));
+    }),
+    {
+      name: 'grid-manager:purchases-store',
+      storage,
+    }
+  )
+);

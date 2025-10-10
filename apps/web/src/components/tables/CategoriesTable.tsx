@@ -134,6 +134,9 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
   };
 
   const handleAddNewCategory = () => {
+    console.log('🔵 handleAddNewCategory llamado');
+    console.log('📊 Categories actuales:', categories);
+
     const newCategory: Category = {
       id: Date.now().toString(),
       name: 'Nueva Categoría',
@@ -142,12 +145,17 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
     };
 
     const updatedCategories = [...categories, newCategory];
+    console.log('✅ Categorías actualizadas:', updatedCategories);
+    console.log('🔧 onCategoriesUpdate type:', typeof onCategoriesUpdate);
+
     onCategoriesUpdate(updatedCategories);
-    
+
     // Immediately edit the new category
     setEditingCategory(newCategory);
     setEditName('Nueva Categoría');
     setEditDescription('');
+
+    console.log('✨ Estado de edición establecido');
   };
 
   const toggleCategoryExpansion = (categoryName: string) => {
@@ -182,7 +190,10 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
           />
         </div>
         <Button
-          onClick={handleAddNewCategory}
+          onClick={() => {
+            console.log('🟢 Botón "+ Nueva Categoría" clickeado');
+            handleAddNewCategory();
+          }}
           variant="primary"
         >
           + Nueva Categoría
@@ -362,19 +373,25 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="text-blue-600 hover:text-blue-900 mr-1 px-2 py-1"
-                          onClick={() => handleEditCategory(category)}
+                          onClick={() => {
+                            console.log('🔵 Botón Editar clickeado para:', category.name);
+                            handleEditCategory(category);
+                          }}
                         >
                           Editar
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="text-red-600 hover:text-red-900 px-2 py-1"
-                          onClick={() => handleDeleteCategory(category.id, category.name)}
+                          onClick={() => {
+                            console.log('🔴 Botón Eliminar clickeado para:', category.name);
+                            handleDeleteCategory(category.id, category.name);
+                          }}
                         >
                           Eliminar
                         </Button>

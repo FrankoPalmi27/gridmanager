@@ -112,8 +112,22 @@ export function PurchasesPage() {
         // 🔥 AUTO-FILL: Cuando selecciona un producto, autocompleta el costo
         if (field === 'productId' && value) {
           const product = products.find(p => p.id === value);
-          if (product && product.cost > 0) {
-            updated.unitCost = product.cost;
+          console.log('[PurchasesPage] Product selected:', {
+            productId: value,
+            product,
+            cost: product?.cost,
+            totalProducts: products.length
+          });
+
+          if (product) {
+            if (product.cost > 0) {
+              console.log('[PurchasesPage] Setting unitCost to:', product.cost);
+              updated.unitCost = product.cost;
+            } else {
+              console.warn('[PurchasesPage] Product has no cost or cost is 0:', product.name);
+            }
+          } else {
+            console.error('[PurchasesPage] Product not found in products array');
           }
         }
 

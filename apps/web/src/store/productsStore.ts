@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { StoreApi } from 'zustand';
 import { productsApi } from '../lib/api';
 import { loadWithSync, getSyncMode, SyncConfig, updateWithSync, createWithSync, deleteWithSync } from '../lib/syncStorage';
+import { calculateMargin, calculatePriceFromMargin } from '../lib/calculations';
 
 // Tipo para los productos
 export interface Product {
@@ -14,9 +15,10 @@ export interface Product {
   description?: string;
   cost: number;
   price: number;
-  margin?: number;  // Calculated field: ((price - cost) / cost) * 100
+  margin?: number;  // Calculated field: ((price - cost) / price) * 100
   suggestedPrice?: number; // Price suggestion based on cost + target margin
-  supplier?: string; // Supplier name
+  supplierId?: string; // ID del proveedor (FK)
+  imageUrl?: string; // URL de la imagen del producto
   stock: number;
   minStock: number;
   status: 'active' | 'inactive';
@@ -149,7 +151,7 @@ interface ProductsStore {
 const mapBackendToFrontend = (backendProduct: any): Product => {
   const cost = Number(backendProduct.cost);
   const price = Number(backendProduct.basePrice);
-  const margin = cost > 0 ? ((price - cost) / cost) * 100 : 0;
+  const margin = calculateMargin(price, cost);
 
   return {
     id: backendProduct.id,
@@ -367,12 +369,10 @@ export const useProductsStore = create<ProductsStore>()(
   addProduct: async (productData) => {
     const state = get();
     // Calculate margin if not provided
-    const calculatedMargin = productData.margin ||
-      (productData.cost > 0 ? ((productData.price - productData.cost) / productData.cost) * 100 : 0);
+    const calculatedMargin = productData.margin || calculateMargin(productData.price, productData.cost);
 
-    // Calculate suggested price if not provided (using 50% margin as default)
-    const calculatedSuggestedPrice = productData.suggestedPrice ||
-      (productData.cost * 1.5);
+    // Calculate suggested price if not provided (using 30% margin as default)
+    const calculatedSuggestedPrice = productData.suggestedPrice || calculatePriceFromMargin(productData.cost, 30);
 
     // Don't include ID - backend will generate it
     const dataToSend = {

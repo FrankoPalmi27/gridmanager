@@ -9,7 +9,9 @@ import { CategoryModal } from '@forms/CategoryModal';
 import { CategoriesTable } from '@components/tables/CategoriesTable';
 import BulkProductImport from '@components/BulkProductImport';
 import { useProductsStore, Product } from '@store/productsStore';
+import { useSuppliersStore } from '@store/suppliersStore';
 import { formatCurrency } from '@lib/formatters';
+import { calculateMargin } from '@lib/calculations';
 import { useTableScroll } from '@hooks/useTableScroll';
 import {
   CloseOutlined,
@@ -30,6 +32,7 @@ type SortOrder = 'asc' | 'desc';
 
 export function ProductsPage() {
   const { products, stats, updateProduct, deleteProduct, categories, setCategories, getStockMovementsByProduct, addStockMovement, loadProducts } = useProductsStore();
+  const { suppliers, getSupplierById } = useSuppliersStore();
 
   const hasRequestedInitialLoad = useRef(false);
 
@@ -56,6 +59,13 @@ export function ProductsPage() {
 
   const allCategories = ['all', ...stats.categories];
 
+  // Helper function to get supplier name from ID
+  const getSupplierName = (supplierId?: string): string => {
+    if (!supplierId) return '';
+    const supplier = getSupplierById(supplierId);
+    return supplier ? supplier.name : supplierId; // Fallback to ID if supplier not found
+  };
+
   // Calculate products by category for the categories table
   const productsByCategory = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -76,8 +86,16 @@ export function ProductsPage() {
 
   const sortedAndFilteredProducts = products
     .filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch =
+        searchTerm === '' ||
+        product.name.toLowerCase().includes(searchLower) ||
+        product.sku.toLowerCase().includes(searchLower) ||
+        product.brand.toLowerCase().includes(searchLower) ||
+        product.category.toLowerCase().includes(searchLower) ||
+        (product.description?.toLowerCase().includes(searchLower) || false) ||
+        (product.supplier && getSupplierName(product.supplier).toLowerCase().includes(searchLower));
+
       const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
       return matchesSearch && matchesCategory;
     })
@@ -339,7 +357,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
           <div className="relative flex-1">
             <Input
               type="text"
-              placeholder="Buscar productos por nombre o SKU..."
+              placeholder="Buscar por nombre, SKU, marca, categoría, descripción o proveedor..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               icon={<SearchOutlined className="h-5 w-5" />}
@@ -499,7 +517,11 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {product.supplier || <span className="text-gray-400 italic">Sin proveedor</span>}
+                        {product.supplier ? (
+                          getSupplierName(product.supplier) || <span className="text-gray-400 italic">Proveedor no encontrado</span>
+                        ) : (
+                          <span className="text-gray-400 italic">Sin proveedor</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -520,17 +542,23 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className={`text-sm font-semibold ${
-                        product.price > 0 && product.cost > 0
-                          ? ((product.price - product.cost) / product.price * 100 >= 30 ? 'text-green-600' :
-                             (product.price - product.cost) / product.price * 100 >= 15 ? 'text-yellow-600' : 'text-red-600')
-                          : 'text-gray-400'
-                      }`}>
-                        {product.price > 0 && product.cost > 0
-                          ? `${((product.price - product.cost) / product.price * 100).toFixed(1)}%`
-                          : '-'
-                        }
-                      </div>
+                      {(() => {
+                        const margin = calculateMargin(product.price, product.cost);
+                        return (
+                          <div className={`text-sm font-semibold ${
+                            product.price > 0 && product.cost > 0
+                              ? (margin >= 30 ? 'text-green-600' :
+                                 margin >= 20 ? 'text-blue-600' :
+                                 margin >= 10 ? 'text-yellow-600' : 'text-red-600')
+                              : 'text-gray-400'
+                          }`}>
+                            {product.price > 0 && product.cost > 0
+                              ? `${margin.toFixed(1)}%`
+                              : '-'
+                            }
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className={`text-sm font-medium ${
@@ -614,11 +642,10 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
           <div className="lg:hidden p-4 space-y-4">
             {sortedAndFilteredProducts.length > 0 ? (
               sortedAndFilteredProducts.map((product) => {
-                const margin = product.price > 0 && product.cost > 0
-                  ? ((product.price - product.cost) / product.price * 100).toFixed(1)
-                  : '0';
-                const marginColor = parseFloat(margin) >= 30 ? 'text-green-600'
-                  : parseFloat(margin) >= 15 ? 'text-yellow-600'
+                const margin = calculateMargin(product.price, product.cost);
+                const marginColor = margin >= 30 ? 'text-green-600'
+                  : margin >= 20 ? 'text-blue-600'
+                  : margin >= 10 ? 'text-yellow-600'
                   : 'text-red-600';
 
                 return (
@@ -665,7 +692,7 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">Margen</p>
-                        <p className={`text-sm font-bold ${marginColor}`}>{margin}%</p>
+                        <p className={`text-sm font-bold ${marginColor}`}>{margin.toFixed(1)}%</p>
                       </div>
                     </div>
 

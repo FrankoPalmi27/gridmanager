@@ -3,6 +3,8 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useProductsStore, Product } from '../../store/productsStore';
+import { useSuppliersStore } from '../../store/suppliersStore';
+import { calculateMargin, calculateProfit, calculatePriceFromMargin, evaluateMargin } from '../../lib/calculations';
 
 interface ProductFormProps {
   isOpen: boolean;
@@ -12,6 +14,7 @@ interface ProductFormProps {
 
 export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProps) {
   const { addProduct, updateProduct, stats, categories } = useProductsStore();
+  const { suppliers, loadSuppliers } = useSuppliersStore();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -30,6 +33,16 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Removed predefined categories - only show custom and existing categories
+
+  // Load suppliers when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      loadSuppliers();
+    }
+  }, [isOpen, loadSuppliers]);
+
+  // Get active suppliers for dropdown
+  const activeSuppliers = suppliers.filter(s => s.active);
 
   // Reset form when modal opens/closes or editing product changes
   useEffect(() => {
@@ -160,18 +173,17 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
   const calculations = () => {
     const cost = parseFloat(formData.cost) || 0;
     const price = parseFloat(formData.price) || 0;
-    const profitAmount = price - cost;
-    const margin = cost > 0 ? (profitAmount / cost) * 100 : 0;
-    
-    // Calculate suggested price with a standard 30% margin
-    const targetMargin = 30;
-    const suggestedPrice = cost > 0 ? cost * (1 + targetMargin / 100) : 0;
-    
-    return { 
-      profitAmount, 
+    const profitAmount = calculateProfit(price, cost);
+    const margin = calculateMargin(price, cost);
+    const suggestedPrice = calculatePriceFromMargin(cost, 30); // 30% target margin
+    const marginEval = evaluateMargin(margin);
+
+    return {
+      profitAmount,
       margin,
       suggestedPrice,
-      isGoodMargin: margin >= 20
+      isGoodMargin: margin >= 20,
+      marginEval
     };
   };
 
@@ -253,13 +265,36 @@ export function ProductForm({ isOpen, onClose, editingProduct }: ProductFormProp
             </div>
 
             <div>
-              <Input
-                label="Proveedor"
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Proveedor
+              </label>
+              <select
                 name="supplier"
                 value={formData.supplier}
                 onChange={handleInputChange}
-                placeholder="Ej: Distribuidora XYZ"
-              />
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                aria-label="Seleccionar proveedor"
+              >
+                <option value="">Sin proveedor asignado</option>
+                {activeSuppliers.length > 0 ? (
+                  activeSuppliers.map(supplier => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                      {supplier.businessName && supplier.businessName !== supplier.name
+                        ? ` (${supplier.businessName})`
+                        : ''}
+                    </option>
+                  ))
+                ) : (
+                  <option value="" disabled>No hay proveedores disponibles</option>
+                )}
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                {activeSuppliers.length === 0
+                  ? 'Crea proveedores en el módulo de Proveedores para asignarlos aquí'
+                  : `${activeSuppliers.length} proveedor${activeSuppliers.length !== 1 ? 'es' : ''} disponible${activeSuppliers.length !== 1 ? 's' : ''}`
+                }
+              </p>
             </div>
 
             <div>

@@ -291,4 +291,68 @@ router.get('/brands', authenticate, allRoles, async (req: AuthenticatedRequest, 
   }
 });
 
+router.delete('/:id', authenticate, allRoles, validateParams(IdParamSchema), async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Verify product exists and belongs to tenant
+    const existingProduct = await prisma.product.findFirst({
+      where: {
+        id,
+        tenantId: req.user!.tenantId,
+      },
+    });
+
+    if (!existingProduct) {
+      throw createError('Product not found', 404);
+    }
+
+    // Check if product has been used in sales (optional - depends on business rules)
+    // Uncomment if you want to prevent deletion of products with sales history
+    /*
+    const salesWithProduct = await prisma.saleItem.count({
+      where: { productId: id },
+    });
+
+    if (salesWithProduct > 0) {
+      throw createError(
+        'Cannot delete product: it has been used in sales. Consider marking it as inactive instead.',
+        400
+      );
+    }
+    */
+
+    // Delete product
+    await prisma.product.delete({
+      where: { id },
+    });
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: req.user!.id,
+        action: 'DELETE',
+        resource: 'PRODUCT',
+        resourceId: id,
+        oldValues: existingProduct,
+      },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Product deleted successfully',
+        product: {
+          ...existingProduct,
+          cost: Number(existingProduct.cost),
+          basePrice: Number(existingProduct.basePrice),
+          taxRate: Number(existingProduct.taxRate),
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export { router as productRoutes };

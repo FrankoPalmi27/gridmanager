@@ -32,7 +32,7 @@ type SortOrder = 'asc' | 'desc';
 
 export function ProductsPage() {
   const { products, stats, updateProduct, deleteProduct, categories, setCategories, getStockMovementsByProduct, addStockMovement, loadProducts } = useProductsStore();
-  const { suppliers, getSupplierById } = useSuppliersStore();
+  const { getSupplierById } = useSuppliersStore();
 
   const hasRequestedInitialLoad = useRef(false);
 

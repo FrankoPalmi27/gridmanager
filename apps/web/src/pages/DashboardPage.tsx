@@ -1,13 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSalesStore } from '../store/salesStore';
 import { useProductsStore } from '../store/productsStore';
 import { useCustomersStore } from '../store/customersStore';
+import { useAccountsStore } from '../store/accountsStore';
+import { useSuppliersStore } from '../store/suppliersStore';
 import { useMetrics } from '../hooks/useMetrics';
+import { useExchangeRate } from '../hooks/useExchangeRate';
 import { SalesForm } from '../components/forms/SalesForm';
 import { ProductForm } from '../components/forms/ProductForm';
 import { CustomerModal } from '../components/forms/CustomerModal';
 import { Button } from '../components/ui/Button';
-import { formatCurrency } from '../lib/formatters';
+import { formatCurrency, formatPercentage } from '../lib/formatters';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   DollarOutlined,
@@ -24,101 +27,188 @@ interface DashboardPageProps {
   onNavigate?: (page: string) => void;
 }
 
-interface ExchangeRate {
-  compra: number;
-  venta: number;
-  fecha: string;
-  hora: string;
-}
+const formatDateKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseSaleDateToLocal = (value?: string | null): Date | null => {
+  if (!value) {
+    return null;
+  }
+
+  const parts = value.split('T')[0]?.split('-');
+  if (parts && parts.length >= 3) {
+    const [year, month, day] = parts.map((part) => Number.parseInt(part, 10));
+    if (!Number.isNaN(year) && !Number.isNaN(month) && !Number.isNaN(day)) {
+      return new Date(year, month - 1, day);
+    }
+  }
+
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  }
+
+  return null;
+};
+
+const relativeTimeFromNow = (timestamp: number): string => {
+  const diffSeconds = Math.round((timestamp - Date.now()) / 1000);
+  const divisions: Array<{ amount: number; unit: Intl.RelativeTimeFormatUnit }> = [
+    { amount: 60, unit: 'second' },
+    { amount: 60, unit: 'minute' },
+    { amount: 24, unit: 'hour' },
+    { amount: 7, unit: 'day' },
+    { amount: 4.34524, unit: 'week' },
+    { amount: 12, unit: 'month' },
+    { amount: Number.POSITIVE_INFINITY, unit: 'year' }
+  ];
+
+  let duration = diffSeconds;
+  for (const division of divisions) {
+    if (Math.abs(duration) < division.amount) {
+      const formatter = new Intl.RelativeTimeFormat('es-AR', { numeric: 'auto' });
+      return formatter.format(Math.round(duration), division.unit);
+    }
+    duration /= division.amount;
+  }
+
+  const formatter = new Intl.RelativeTimeFormat('es-AR', { numeric: 'auto' });
+  return formatter.format(Math.round(duration), 'year');
+};
 
 export function DashboardPage({ onNavigate }: DashboardPageProps) {
   const [showNewSaleModal, setShowNewSaleModal] = useState(false);
   const [showNewProductModal, setShowNewProductModal] = useState(false);
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
-  const [exchangeRate, setExchangeRate] = useState<ExchangeRate | null>(null);
 
   // ✅ SOLUCIÓN: Usar hook centralizado en lugar de estado local desincronizado
   const metrics = useMetrics(); // Sin período = datos globales
-  const { sales } = useSalesStore();
-  const { products } = useProductsStore();
-  const { customers } = useCustomersStore();
+
+  const { sales, loadSales } = useSalesStore((state) => ({
+    sales: state.sales,
+    loadSales: state.loadSales
+  }));
+
+  const { products, loadProducts } = useProductsStore((state) => ({
+    products: state.products,
+    loadProducts: state.loadProducts
+  }));
+
+  const { customers, loadCustomers } = useCustomersStore((state) => ({
+    customers: state.customers,
+    loadCustomers: state.loadCustomers
+  }));
+
+  const { accounts, loadAccounts, loadTransactions } = useAccountsStore((state) => ({
+    accounts: state.accounts,
+    loadAccounts: state.loadAccounts,
+    loadTransactions: state.loadTransactions
+  }));
+
+  const { suppliers, loadSuppliers } = useSuppliersStore((state) => ({
+    suppliers: state.suppliers,
+    loadSuppliers: state.loadSuppliers
+  }));
+
+  const { data: exchangeRate, status: exchangeStatus, refresh: refreshExchangeRate, error: exchangeError } = useExchangeRate();
 
   // Defensive: asegurar que las colecciones sean arreglos para evitar errores en filtros/map
   const safeSales = useMemo(() => (Array.isArray(sales) ? sales : []), [sales]);
   const safeProducts = useMemo(() => (Array.isArray(products) ? products : []), [products]);
   const safeCustomers = useMemo(() => (Array.isArray(customers) ? customers : []), [customers]);
+  const safeAccounts = useMemo(() => (Array.isArray(accounts) ? accounts : []), [accounts]);
+  const safeSuppliers = useMemo(() => (Array.isArray(suppliers) ? suppliers : []), [suppliers]);
+
+  const bootstrappedRef = useRef(false);
+
+  const bootstrapData = useCallback(() => {
+    if (bootstrappedRef.current) {
+      return;
+    }
+
+    bootstrappedRef.current = true;
+
+    void Promise.allSettled([
+      loadSales(),
+      loadProducts(),
+      loadCustomers(),
+      loadAccounts(),
+      loadTransactions(),
+      loadSuppliers()
+    ]);
+  }, [loadAccounts, loadCustomers, loadProducts, loadSales, loadSuppliers, loadTransactions]);
+
+  useEffect(() => {
+    if (bootstrappedRef.current) {
+      return;
+    }
+
+    const hasData =
+      safeSales.length > 0 ||
+      safeProducts.length > 0 ||
+      safeCustomers.length > 0 ||
+      safeAccounts.length > 0 ||
+      safeSuppliers.length > 0;
+
+    if (!hasData) {
+      bootstrapData();
+    } else {
+      bootstrappedRef.current = true;
+    }
+  }, [bootstrapData, safeAccounts.length, safeCustomers.length, safeProducts.length, safeSales.length, safeSuppliers.length]);
+
+  const salesAggregatedByDate = useMemo(() => {
+    const map = new Map<string, { facturado: number; cantidad: number; ventas: number }>();
+
+    safeSales.forEach((sale) => {
+      const parsedDate = parseSaleDateToLocal(sale.date);
+      if (!parsedDate) {
+        return;
+      }
+
+      const key = formatDateKey(parsedDate);
+      const current = map.get(key) ?? { facturado: 0, cantidad: 0, ventas: 0 };
+
+      current.facturado += Number.isFinite(sale.amount) ? sale.amount : 0;
+      current.cantidad += Number.isFinite(sale.items) ? sale.items : 0;
+      current.ventas += 1;
+
+      map.set(key, current);
+    });
+
+    return map;
+  }, [safeSales]);
 
   // Generate sales evolution data
   const salesEvolutionData = useMemo(() => {
-    const last30Days = Array.from({ length: 30 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (29 - i));
-      return date;
-    });
+    const days: Array<{ date: string; facturado: number; cantidad: number; ventas: number }> = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    return last30Days.map(date => {
-      const dayStart = new Date(date);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(date);
-      dayEnd.setHours(23, 59, 59, 999);
+    for (let index = 0; index < 30; index += 1) {
+      const currentDay = new Date(today);
+      currentDay.setDate(today.getDate() - (29 - index));
+      const key = formatDateKey(currentDay);
+      const aggregate = salesAggregatedByDate.get(key) ?? { facturado: 0, cantidad: 0, ventas: 0 };
 
-      const daySales = safeSales.filter(sale => {
-        const saleDate = new Date(sale.date);
-        return saleDate >= dayStart && saleDate <= dayEnd;
+      days.push({
+        date: currentDay.toLocaleDateString('es-AR', { month: 'short', day: 'numeric' }),
+        facturado: aggregate.facturado,
+        cantidad: aggregate.cantidad,
+        ventas: aggregate.ventas
       });
+    }
 
-      const totalAmount = daySales.reduce((sum, sale) => sum + sale.amount, 0);
-      const totalQuantity = daySales.reduce((sum, sale) => sum + sale.items, 0);
-
-      return {
-        date: date.toLocaleDateString('es-AR', { month: 'short', day: 'numeric' }),
-        facturado: totalAmount,
-        cantidad: totalQuantity,
-        ventas: daySales.length
-      };
-    });
-  }, [safeSales]);
+    return days;
+  }, [salesAggregatedByDate]);
 
   // ✅ Get low stock products usando métricas centralizadas
   const lowStockProducts = metrics.lowStockProducts;
   const outOfStockProducts = safeProducts.filter(p => p.stock === 0 && p.status === 'active');
-
-  // Fetch exchange rate from Banco Nación
-  useEffect(() => {
-    const fetchExchangeRate = async () => {
-      try {
-        const response = await fetch('https://api.bluelytics.com.ar/v2/latest');
-        const data = await response.json();
-        if (data.oficial) {
-          const now = new Date();
-          setExchangeRate({
-            compra: data.oficial.value_buy,
-            venta: data.oficial.value_sell,
-            fecha: now.toLocaleDateString(),
-            hora: now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching exchange rate:', error);
-        // Fallback data
-        const now = new Date();
-        setExchangeRate({
-          compra: 920.00,
-          venta: 940.00,
-          fecha: now.toLocaleDateString(),
-          hora: now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
-        });
-      }
-    };
-
-    fetchExchangeRate();
-    // Update every 30 minutes
-    const interval = setInterval(fetchExchangeRate, 30 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // ✅ ELIMINADO: Polling manual cada 5 segundos
-  // Ahora los datos se actualizan automáticamente vía useMetrics reactivo
 
   const handleModuleClick = (path: string) => {
     if (onNavigate) {
@@ -127,49 +217,138 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
   };
 
   // ✅ Enhanced stats usando métricas centralizadas - se actualiza automáticamente
-  const enhancedStats = [
-    {
-      name: 'Total Disponible',
-      value: formatCurrency(metrics.totalAvailable),
-      rawValue: metrics.totalAvailable,
-      icon: '💰',
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      borderColor: 'border-green-200',
-      change: metrics.totalAvailable > 100000 ? '+12.5%' : '+5.2%',
-      description: 'Total en cuentas activas'
-    },
-    {
-      name: 'Cuentas',
-      value: metrics.accountsCount.toString(),
-      rawValue: metrics.accountsCount,
-      icon: '💳',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200',
-      description: 'Cuentas registradas'
-    },
-    {
-      name: 'Deudas Clientes',
-      value: formatCurrency(metrics.clientDebts),
-      rawValue: metrics.clientDebts,
-      icon: '👥',
-      color: metrics.clientDebts > 0 ? 'text-orange-600' : 'text-green-600',
-      bgColor: metrics.clientDebts > 0 ? 'bg-orange-50' : 'bg-green-50',
-      borderColor: metrics.clientDebts > 0 ? 'border-orange-200' : 'border-green-200',
-      description: 'Pagos pendientes'
-    },
-    {
-      name: 'Deudas Proveedores',
-      value: formatCurrency(metrics.supplierDebts),
-      rawValue: metrics.supplierDebts,
-      icon: '🏢',
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-200',
-      description: 'Pagos a proveedores'
+  const enhancedStats = useMemo(() => {
+    const normalizeChange = (value?: number) => {
+      if (typeof value !== 'number' || Number.isNaN(value)) {
+        return undefined;
+      }
+      if (!Number.isFinite(value)) {
+        return value > 0 ? 100 : value < 0 ? -100 : 0;
+      }
+      return value;
+    };
+
+    return [
+      {
+        name: 'Total Disponible',
+        value: formatCurrency(metrics.totalAvailable),
+        rawValue: metrics.totalAvailable,
+        icon: '💰',
+        color: metrics.totalAvailable >= 0 ? 'text-green-600' : 'text-red-600',
+        bgColor: metrics.totalAvailable >= 0 ? 'bg-green-50' : 'bg-red-50',
+        borderColor: metrics.totalAvailable >= 0 ? 'border-green-200' : 'border-red-200',
+        change: normalizeChange(metrics.incomeGrowth),
+        description: 'Total en cuentas activas',
+        navigateTo: 'accounts' as const
+      },
+      {
+        name: 'Cuentas',
+        value: metrics.accountsCount.toString(),
+        rawValue: metrics.accountsCount,
+        icon: '💳',
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50',
+        borderColor: 'border-blue-200',
+        change: normalizeChange(metrics.transactionsGrowth),
+        description: 'Cuentas registradas',
+        navigateTo: 'accounts' as const
+      },
+      {
+        name: 'Deudas Clientes',
+        value: formatCurrency(metrics.clientDebts),
+        rawValue: metrics.clientDebts,
+        icon: '👥',
+        color: metrics.clientDebts > 0 ? 'text-orange-600' : 'text-green-600',
+        bgColor: metrics.clientDebts > 0 ? 'bg-orange-50' : 'bg-green-50',
+        borderColor: metrics.clientDebts > 0 ? 'border-orange-200' : 'border-green-200',
+        change: normalizeChange(metrics.salesGrowth),
+        description: 'Pagos pendientes',
+        navigateTo: 'customers' as const
+      },
+      {
+        name: 'Deudas Proveedores',
+        value: formatCurrency(metrics.supplierDebts),
+        rawValue: metrics.supplierDebts,
+        icon: '🏢',
+        color: metrics.supplierDebts > 0 ? 'text-red-600' : 'text-green-600',
+        bgColor: metrics.supplierDebts > 0 ? 'bg-red-50' : 'bg-green-50',
+        borderColor: metrics.supplierDebts > 0 ? 'border-red-200' : 'border-green-200',
+        change: normalizeChange(metrics.expensesGrowth),
+        description: 'Pagos a proveedores',
+        navigateTo: 'suppliers' as const
+      }
+    ];
+  }, [metrics]);
+
+  const recentActivityItems = useMemo(() => {
+    type ActivityItem = {
+      id: string;
+      title: string;
+      description: string;
+      timestamp: number;
+      accentClass: string;
+    };
+
+    const events: ActivityItem[] = [];
+
+    safeSales.forEach((sale) => {
+      const saleDate = parseSaleDateToLocal(sale.date);
+      const timestamp = saleDate ? saleDate.getTime() : Date.now();
+      events.push({
+        id: `sale-${sale.id}`,
+        title: 'Nueva venta registrada',
+        description: `${sale.client?.name ?? 'Cliente'} · ${formatCurrency(sale.amount ?? 0)}`,
+        timestamp,
+        accentClass: 'bg-green-500'
+      });
+    });
+
+    safeCustomers.forEach((customer) => {
+      const createdAt = customer?.createdAt ? new Date(customer.createdAt) : null;
+      const timestamp = createdAt && !Number.isNaN(createdAt.getTime())
+        ? createdAt.getTime()
+        : Date.now();
+      events.push({
+        id: `customer-${customer.id}`,
+        title: 'Nuevo cliente',
+        description: customer.name,
+        timestamp,
+        accentClass: 'bg-blue-500'
+      });
+    });
+
+    lowStockProducts.slice(0, 5).forEach((product, index) => {
+      events.push({
+        id: `stock-${product.id}`,
+        title: 'Stock bajo detectado',
+        description: `${product.name} · ${product.stock} unidades`,
+        timestamp: Date.now() - index * 1000,
+        accentClass: 'bg-orange-500'
+      });
+    });
+
+    return events
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 6);
+  }, [lowStockProducts, safeCustomers, safeSales]);
+
+  const exchangeRateMetadata = useMemo(() => {
+    if (!exchangeRate) {
+      return null;
     }
-  ];
+
+    const updatedAt = new Date(exchangeRate.fetchedAt);
+    if (Number.isNaN(updatedAt.getTime())) {
+      return null;
+    }
+
+    return {
+      date: updatedAt.toLocaleDateString('es-AR'),
+      time: updatedAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+    };
+  }, [exchangeRate]);
+
+  const isExchangeLoading = exchangeStatus === 'loading';
 
   const moduleCards = [
     {
@@ -234,22 +413,57 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
         </div>
 
         {/* Exchange Rate - Moved to top */}
-        {exchangeRate && (
+        {(exchangeRate || isExchangeLoading) && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 sm:p-6 rounded-2xl border border-blue-200 shadow-sm mb-6 sm:mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">💵 Tipo de Cambio USD - Banco Nación</h3>
-                <p className="text-xs sm:text-sm text-gray-600">Actualizado: {exchangeRate.fecha} a las {exchangeRate.hora}</p>
+              <div className="space-y-1">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                  {exchangeRate?.isFallback ? '💵 Tipo de Cambio (datos de respaldo)' : '💵 Tipo de Cambio USD - Banco Nación'}
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-600">
+                  {exchangeRateMetadata
+                    ? `Actualizado: ${exchangeRateMetadata.date} a las ${exchangeRateMetadata.time}`
+                    : isExchangeLoading
+                      ? 'Actualizando cotización...'
+                      : 'Sin datos disponibles'}
+                </p>
+                {exchangeRate?.isFallback && (
+                  <p className="text-xs text-orange-600">
+                    Mostrando valores de respaldo. Reintenta la actualización cuando tengas conexión.
+                  </p>
+                )}
+                {exchangeError && (
+                  <p className="text-xs text-red-600">
+                    No se pudo actualizar: {exchangeError.message}
+                  </p>
+                )}
               </div>
-              <div className="flex gap-4 sm:gap-6">
-                <div className="text-center">
-                  <p className="text-xs sm:text-sm text-gray-600">Compra</p>
-                  <p className="text-xl sm:text-2xl font-bold text-green-600">${exchangeRate.compra.toFixed(2)}</p>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-6">
+                <div className="flex gap-4 sm:gap-6">
+                  <div className="text-center">
+                    <p className="text-xs sm:text-sm text-gray-600">Compra</p>
+                    <p className="text-xl sm:text-2xl font-bold text-green-600">
+                      {exchangeRate ? `$${exchangeRate.compra.toFixed(2)}` : '—'}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs sm:text-sm text-gray-600">Venta</p>
+                    <p className="text-xl sm:text-2xl font-bold text-blue-600">
+                      {exchangeRate ? `$${exchangeRate.venta.toFixed(2)}` : '—'}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-xs sm:text-sm text-gray-600">Venta</p>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-600">${exchangeRate.venta.toFixed(2)}</p>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={isExchangeLoading}
+                  onClick={() => {
+                    void refreshExchangeRate();
+                  }}
+                  className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                >
+                  Actualizar
+                </Button>
               </div>
             </div>
           </div>
@@ -258,42 +472,39 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
         {/* Enhanced Stats Cards - Responsive Fixed Layout */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 mb-6 sm:mb-8">
           {enhancedStats.map((stat) => {
-            // Determine click handler and styling based on card name
-            let clickHandler, cursorStyle;
+            const isNavigable = Boolean(stat.navigateTo);
+            const cursorStyle = isNavigable
+              ? 'cursor-pointer hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+              : '';
+            const onCardClick = isNavigable
+              ? () => stat.navigateTo && handleModuleClick(stat.navigateTo)
+              : undefined;
 
-            switch(stat.name) {
-              case 'Total Disponible':
-              case 'Cuentas':
-                clickHandler = () => handleModuleClick('accounts');
-                cursorStyle = 'cursor-pointer hover:scale-105';
-                break;
-              case 'Deudas Clientes':
-                clickHandler = () => handleModuleClick('customers');
-                cursorStyle = 'cursor-pointer hover:scale-105';
-                break;
-              case 'Deudas Proveedores':
-                clickHandler = () => handleModuleClick('suppliers');
-                cursorStyle = 'cursor-pointer hover:scale-105';
-                break;
-              default:
-                clickHandler = undefined;
-                cursorStyle = '';
-            }
+            const hasChange = typeof stat.change === 'number' && !Number.isNaN(stat.change);
+            const isPositive = hasChange && stat.change! > 0;
+            const isNegative = hasChange && stat.change! < 0;
+            const trendClass = isPositive
+              ? 'bg-green-100 text-green-800'
+              : isNegative
+                ? 'bg-red-100 text-red-800'
+                : 'bg-gray-100 text-gray-600';
+            const trendIcon = isPositive ? '↗' : isNegative ? '↘' : '→';
+            const trendValue = hasChange ? formatPercentage(Math.abs(stat.change!), 1) : null;
 
             return (
               <div
                 key={stat.name}
                 className={`bg-white p-4 lg:p-6 rounded-2xl border-2 ${stat.borderColor} shadow-sm hover:shadow-md transition-all ${cursorStyle} min-w-0`}
-                onClick={clickHandler}
+                onClick={onCardClick}
               >
                 <div className="flex items-start justify-between mb-3 lg:mb-4">
                   <div className={`p-2 lg:p-3 rounded-xl ${stat.bgColor} flex-shrink-0`}>
                     <span className="text-xl lg:text-2xl">{stat.icon}</span>
                   </div>
-                  {stat.change && (
+                  {hasChange && trendValue && (
                     <div className="text-right flex-shrink-0">
-                      <div className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
-                        ↗ {stat.change}
+                      <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${trendClass}`}>
+                        {trendIcon} {trendValue}
                       </div>
                     </div>
                   )}
@@ -524,7 +735,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           </div>
           <div className="space-y-4">
             {/* ✅ MOSTRAR ACTIVIDAD REAL O ESTADO VACIO */}
-            {safeSales.length === 0 && safeProducts.length === 0 && safeCustomers.length === 0 ? (
+            {recentActivityItems.length === 0 ? (
               <div className="text-center py-8">
                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <span className="text-2xl">📊</span>
@@ -533,31 +744,16 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
                 <p className="text-xs text-gray-400 mt-1">La actividad aparecerá aquí cuando comiences a usar el sistema</p>
               </div>
             ) : (
-              <>
-                {/* Mostrar ventas recientes */}
-                {safeSales.slice(0, 2).map((sale) => (
-                  <div key={sale.id} className="flex items-center p-3 bg-green-50 rounded-lg">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">Nueva venta registrada</p>
-                      <p className="text-xs text-gray-500">Cliente: {sale.client.name} - {formatCurrency(sale.amount)}</p>
-                    </div>
-                    <span className="text-xs text-gray-400">{new Date(sale.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
+              recentActivityItems.map((item) => (
+                <div key={item.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                  <div className={`w-2 h-2 rounded-full mr-3 ${item.accentClass}`}></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">{item.title}</p>
+                    <p className="text-xs text-gray-500">{item.description}</p>
                   </div>
-                ))}
-
-                {/* Mostrar productos con stock bajo */}
-                {lowStockProducts.slice(0, 1).map((product) => (
-                  <div key={product.id} className="flex items-center p-3 bg-orange-50 rounded-lg">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">Stock bajo detectado</p>
-                      <p className="text-xs text-gray-500">{product.name} - Solo quedan {product.stock} unidades</p>
-                    </div>
-                    <span className="text-xs text-gray-400">Ahora</span>
-                  </div>
-                ))}
-              </>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">{relativeTimeFromNow(item.timestamp)}</span>
+                </div>
+              ))
             )}
           </div>
         </div>

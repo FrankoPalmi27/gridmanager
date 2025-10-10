@@ -42,7 +42,7 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, loading = false, icon, iconPosition = 'left', children, disabled, ...props }, ref) => {
+  ({ className, variant, size, loading = false, icon, iconPosition = 'left', children, disabled, type = 'button', ...props }, ref) => {
     const isDisabled = disabled || loading;
 
     return (
@@ -50,6 +50,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={isDisabled}
+        type={type}
         {...props}
       >
         {loading && (

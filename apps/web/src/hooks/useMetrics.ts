@@ -84,7 +84,12 @@ export const useMetrics = (period?: string) => {
     // Cálculo de deudas de clientes (ventas pendientes/parciales)
     const clientDebts = safeSales
       .filter(sale => sale.paymentStatus === 'pending' || sale.paymentStatus === 'partial')
-      .reduce((sum, sale) => sum + sale.amount, 0);
+      .reduce((sum, sale) => {
+        const outstanding = typeof sale.aCobrar === 'number'
+          ? sale.aCobrar
+          : Math.max((sale.amount ?? 0) - (sale.cobrado ?? 0), 0);
+        return sum + outstanding;
+      }, 0);
 
     // Total disponible (suma de balances de cuentas activas)
     const totalAvailable = safeAccounts

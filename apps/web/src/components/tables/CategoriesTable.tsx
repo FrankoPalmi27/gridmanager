@@ -52,6 +52,13 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
     (category.description && category.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // 🔍 DEBUG: Log para verificar datos
+  console.log('[CategoriesTable] Render:', {
+    categoriesProp: categories.length,
+    allCategories: allCategories.length,
+    filtered: filteredCategories.length
+  });
+
   const validateCategoryName = (name: string, excludeId?: string) => {
     const trimmedName = name.trim();
     if (!trimmedName) {
@@ -134,6 +141,9 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
   };
 
   const handleAddNewCategory = () => {
+    console.log('[handleAddNewCategory] Iniciando...');
+    console.log('[handleAddNewCategory] Categories actuales:', categories);
+
     const newCategory: Category = {
       id: Date.now().toString(),
       name: 'Nueva Categoría',
@@ -142,12 +152,16 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
     };
 
     const updatedCategories = [...categories, newCategory];
+    console.log('[handleAddNewCategory] Categorías actualizadas:', updatedCategories);
+
     onCategoriesUpdate(updatedCategories);
+    console.log('[handleAddNewCategory] onCategoriesUpdate llamado');
 
     // Immediately edit the new category
     setEditingCategory(newCategory);
     setEditName('Nueva Categoría');
     setEditDescription('');
+    console.log('[handleAddNewCategory] Estado de edición establecido');
   };
 
   const toggleCategoryExpansion = (categoryName: string) => {

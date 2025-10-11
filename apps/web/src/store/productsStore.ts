@@ -558,8 +558,14 @@ export const useProductsStore = create<ProductsStore>()(
   },
 
   setCategories: (categories) => {
-    set({ categories });
-    broadcastState({ categories });
+    console.log('[setCategories] Recibido:', categories);
+    // ✅ Forzar actualización creando nuevo array
+    const newCategories = [...categories];
+    console.log('[setCategories] Actualizando store con:', newCategories);
+    set({ categories: newCategories });
+    console.log('[setCategories] Store actualizado. Verificando:', get().categories);
+    broadcastState({ categories: newCategories });
+    console.log('[setCategories] Broadcast enviado');
   },
 
   resetToInitialProducts: () => {

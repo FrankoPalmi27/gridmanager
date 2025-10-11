@@ -31,7 +31,9 @@ type SortField = 'name' | 'category' | 'brand' | 'price' | 'cost' | 'stock' | 's
 type SortOrder = 'asc' | 'desc';
 
 export function ProductsPage() {
-  const { products, stats, updateProduct, deleteProduct, categories, setCategories, getStockMovementsByProduct, addStockMovement, loadProducts } = useProductsStore();
+  const { products, stats, updateProduct, deleteProduct, setCategories, getStockMovementsByProduct, addStockMovement, loadProducts } = useProductsStore();
+  // ✅ Selector específico para categories para forzar re-render
+  const categories = useProductsStore((state) => state.categories);
   const { getSupplierById } = useSuppliersStore();
 
   const hasRequestedInitialLoad = useRef(false);

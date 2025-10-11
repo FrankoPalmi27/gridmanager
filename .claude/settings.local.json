@@ -16,7 +16,8 @@
       "Bash(git merge:*)",
       "Bash(npm run type-check:*)",
       "Bash(npm run:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "Bash(del DEBUG_CATEGORIAS.md)"
     ],
     "deny": [],
     "ask": []

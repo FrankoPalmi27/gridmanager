@@ -558,12 +558,8 @@ export const useProductsStore = create<ProductsStore>()(
   },
 
   setCategories: (categories) => {
-    console.log('🔴 setCategories llamado desde store');
-    console.log('📦 Nuevas categorías recibidas:', categories);
     set({ categories });
-    console.log('✅ Estado actualizado en store');
     broadcastState({ categories });
-    console.log('📡 Broadcast enviado');
   },
 
   resetToInitialProducts: () => {

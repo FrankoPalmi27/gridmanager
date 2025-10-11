@@ -134,9 +134,6 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
   };
 
   const handleAddNewCategory = () => {
-    console.log('🔵 handleAddNewCategory llamado');
-    console.log('📊 Categories actuales:', categories);
-
     const newCategory: Category = {
       id: Date.now().toString(),
       name: 'Nueva Categoría',
@@ -145,17 +142,12 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
     };
 
     const updatedCategories = [...categories, newCategory];
-    console.log('✅ Categorías actualizadas:', updatedCategories);
-    console.log('🔧 onCategoriesUpdate type:', typeof onCategoriesUpdate);
-
     onCategoriesUpdate(updatedCategories);
 
     // Immediately edit the new category
     setEditingCategory(newCategory);
     setEditName('Nueva Categoría');
     setEditDescription('');
-
-    console.log('✨ Estado de edición establecido');
   };
 
   const toggleCategoryExpansion = (categoryName: string) => {
@@ -190,10 +182,7 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
           />
         </div>
         <Button
-          onClick={() => {
-            console.log('🟢 Botón "+ Nueva Categoría" clickeado');
-            handleAddNewCategory();
-          }}
+          onClick={handleAddNewCategory}
           variant="primary"
         >
           + Nueva Categoría
@@ -377,10 +366,7 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
                           variant="ghost"
                           size="sm"
                           className="text-blue-600 hover:text-blue-900 mr-1 px-2 py-1"
-                          onClick={() => {
-                            console.log('🔵 Botón Editar clickeado para:', category.name);
-                            handleEditCategory(category);
-                          }}
+                          onClick={() => handleEditCategory(category)}
                         >
                           Editar
                         </Button>
@@ -388,10 +374,7 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
                           variant="ghost"
                           size="sm"
                           className="text-red-600 hover:text-red-900 px-2 py-1"
-                          onClick={() => {
-                            console.log('🔴 Botón Eliminar clickeado para:', category.name);
-                            handleDeleteCategory(category.id, category.name);
-                          }}
+                          onClick={() => handleDeleteCategory(category.id, category.name)}
                         >
                           Eliminar
                         </Button>

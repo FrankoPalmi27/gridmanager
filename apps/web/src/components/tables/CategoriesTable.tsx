@@ -8,12 +8,13 @@ import { formatDate, formatCurrency } from '../../lib/formatters';
 interface CategoriesTableProps {
   categories: Category[];
   onCategoriesUpdate: (categories: Category[]) => void;
+  onRequestAddCategory: () => void;
   productsByCategory: Record<string, number>;
   allCategoryNames: string[];
   products: Product[]; // Add products array to show category details
 }
 
-export function CategoriesTable({ categories, onCategoriesUpdate, productsByCategory, allCategoryNames, products }: CategoriesTableProps) {
+export function CategoriesTable({ categories, onCategoriesUpdate, onRequestAddCategory, productsByCategory, allCategoryNames, products }: CategoriesTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editName, setEditName] = useState('');
@@ -51,13 +52,6 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
     category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (category.description && category.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
-
-  // 🔍 DEBUG: Log para verificar datos
-  console.log('[CategoriesTable] Render:', {
-    categoriesProp: categories.length,
-    allCategories: allCategories.length,
-    filtered: filteredCategories.length
-  });
 
   const validateCategoryName = (name: string, excludeId?: string) => {
     const trimmedName = name.trim();
@@ -140,30 +134,6 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
     }
   };
 
-  const handleAddNewCategory = () => {
-    console.log('[handleAddNewCategory] Iniciando...');
-    console.log('[handleAddNewCategory] Categories actuales:', categories);
-
-    const newCategory: Category = {
-      id: Date.now().toString(),
-      name: 'Nueva Categoría',
-      description: '',
-      createdAt: new Date().toISOString()
-    };
-
-    const updatedCategories = [...categories, newCategory];
-    console.log('[handleAddNewCategory] Categorías actualizadas:', updatedCategories);
-
-    onCategoriesUpdate(updatedCategories);
-    console.log('[handleAddNewCategory] onCategoriesUpdate llamado');
-
-    // Immediately edit the new category
-    setEditingCategory(newCategory);
-    setEditName('Nueva Categoría');
-    setEditDescription('');
-    console.log('[handleAddNewCategory] Estado de edición establecido');
-  };
-
   const toggleCategoryExpansion = (categoryName: string) => {
     const newExpanded = new Set(expandedCategories);
     if (newExpanded.has(categoryName)) {
@@ -196,7 +166,7 @@ export function CategoriesTable({ categories, onCategoriesUpdate, productsByCate
           />
         </div>
         <Button
-          onClick={handleAddNewCategory}
+          onClick={onRequestAddCategory}
           variant="primary"
         >
           + Nueva Categoría

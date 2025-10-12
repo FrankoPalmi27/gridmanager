@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@ui/Tabs';
 import { Modal } from '@ui/Modal';
 import { ProductForm } from '@forms/ProductForm';
 import { CategoriesTable } from '@components/tables/CategoriesTable';
+import { CategoryModal } from '@forms/CategoryModal';
 import BulkProductImport from '@components/BulkProductImport';
 import { useProductsStore, Product } from '@store/productsStore';
 import { useSuppliersStore } from '@store/suppliersStore';
@@ -59,6 +60,7 @@ export function ProductsPage() {
   const [activeTab, setActiveTab] = useState('productos');
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [stockMovementsModal, setStockMovementsModal] = useState<{ isOpen: boolean; product: Product | null }>({ isOpen: false, product: null });
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const { tableScrollRef } = useTableScroll();
 
   const allCategories = ['all', ...stats.categories];
@@ -147,6 +149,18 @@ export function ProductsPage() {
 
   const handleCloseStockMovements = () => {
     setStockMovementsModal({ isOpen: false, product: null });
+  };
+
+  const handleCategoriesUpdate = (nextCategories: typeof categories) => {
+    setCategories(nextCategories);
+  };
+
+  const handleOpenCategoryModal = () => {
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleCloseCategoryModal = () => {
+    setIsCategoryModalOpen(false);
   };
 
   const handleStockAdjustment = async (product: Product) => {
@@ -362,8 +376,10 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
               <div className="flex justify-between items-center p-6 border-b border-gray-200">
                 <h2 className="text-xl font-bold text-gray-900">Importación Masiva de Productos</h2>
                 <button
+                  type="button"
                   onClick={() => setShowBulkImport(false)}
                   className="text-gray-500 hover:text-gray-700"
+                  aria-label="Cerrar importación masiva"
                 >
                   <CloseOutlined className="w-6 h-6" />
                 </button>
@@ -835,7 +851,8 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
         <TabsContent value="categorias">
           <CategoriesTable
             categories={categories}
-            onCategoriesUpdate={setCategories}
+            onCategoriesUpdate={handleCategoriesUpdate}
+            onRequestAddCategory={handleOpenCategoryModal}
             productsByCategory={productsByCategory}
             allCategoryNames={stats.categories}
             products={products}
@@ -1027,6 +1044,13 @@ Escribe exactamente "ELIMINAR" para confirmar la eliminación de "${product.name
           </div>
         </Modal>
       )}
+
+      <CategoryModal
+        isOpen={isCategoryModalOpen}
+        closeModal={handleCloseCategoryModal}
+        categories={categories}
+        onCategoriesUpdate={handleCategoriesUpdate}
+      />
     </div>
   );
 }

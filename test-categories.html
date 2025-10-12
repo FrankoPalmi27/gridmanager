@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Categorías</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px 0; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de Categorías - localStorage</h1>
+
+    <button onclick="testRead()">1. Leer Store</button>
+    <button onclick="testCreate()">2. Crear Categoría</button>
+    <button onclick="testClear()">3. Limpiar Todo</button>
+
+    <h2>Resultado:</h2>
+    <pre id="output"></pre>
+
+    <script>
+        const STORE_KEY = 'grid-manager:products-store';
+
+        function log(msg) {
+            const output = document.getElementById('output');
+            output.textContent += msg + '\n';
+            console.log(msg);
+        }
+
+        function testRead() {
+            document.getElementById('output').textContent = '';
+            log('📖 Leyendo store...');
+
+            const raw = localStorage.getItem(STORE_KEY);
+            if (!raw) {
+                log('❌ Store no existe');
+                return;
+            }
+
+            const store = JSON.parse(raw);
+            log('✅ Store encontrado');
+            log('📦 Keys: ' + Object.keys(store.state).join(', '));
+            log('📂 Categories: ' + (store.state.categories?.length || 0));
+            log('📄 Productos: ' + (store.state.products?.length || 0));
+            log('\n📋 Categorías actuales:');
+            log(JSON.stringify(store.state.categories, null, 2));
+        }
+
+        function testCreate() {
+            document.getElementById('output').textContent = '';
+            log('➕ Creando categoría de prueba...');
+
+            const raw = localStorage.getItem(STORE_KEY);
+            if (!raw) {
+                log('❌ Store no existe. Creando...');
+                const newStore = {
+                    state: {
+                        products: [],
+                        categories: [],
+                        stockMovements: [],
+                        priceHistory: [],
+                        isLoading: false,
+                        syncMode: 'offline'
+                    },
+                    version: 0
+                };
+                localStorage.setItem(STORE_KEY, JSON.stringify(newStore));
+            }
+
+            const store = JSON.parse(localStorage.getItem(STORE_KEY));
+
+            const newCategory = {
+                id: Date.now().toString(),
+                name: 'Test Categoría ' + Date.now(),
+                description: 'Categoría de prueba',
+                createdAt: new Date().toISOString()
+            };
+
+            store.state.categories.push(newCategory);
+            localStorage.setItem(STORE_KEY, JSON.stringify(store));
+
+            log('✅ Categoría creada:');
+            log(JSON.stringify(newCategory, null, 2));
+            log('\n📊 Total categorías: ' + store.state.categories.length);
+        }
+
+        function testClear() {
+            if (confirm('¿Limpiar TODO el localStorage?')) {
+                localStorage.clear();
+                document.getElementById('output').textContent = '🗑️ localStorage limpiado';
+            }
+        }
+
+        // Auto-ejecutar al cargar
+        testRead();
+    </script>
+</body>
+</html>

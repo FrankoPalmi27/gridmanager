@@ -11,6 +11,7 @@ import {
   CreditCardIcon,
   DocumentChartBarIcon,
   UserGroupIcon,
+  Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '@/store/authStore';
 
@@ -31,6 +32,7 @@ const navigation = [
   { key: 'accounts', name: 'Cuentas', href: '/accounts', icon: CreditCardIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST'] },
   { key: 'reports', name: 'Informes', href: '/reports', icon: DocumentChartBarIcon, roles: ['ADMIN', 'MANAGER', 'ANALYST'] },
   { key: 'users', name: 'Usuarios', href: '/users', icon: UserGroupIcon, roles: ['ADMIN', 'MANAGER'] },
+  { key: 'settings', name: 'Configuración', href: '/settings', icon: Cog6ToothIcon, roles: ['ADMIN', 'MANAGER'] },
 ];
 
 export function Sidebar({ open, setOpen, onNavigate, activeItem }: SidebarProps) {

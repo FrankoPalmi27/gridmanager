@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { StoreApi } from 'zustand';
 import { useAccountsStore } from './accountsStore';
@@ -33,7 +33,7 @@ export interface Sale {
   salesChannel?: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
   paymentStatus?: 'paid' | 'pending' | 'partial';
   // paymentMethod se obtiene ahora desde la cuenta asociada
-  accountId?: string; // ID de la cuenta donde se registró el pago (la cuenta define el método de pago)
+  accountId?: string; // ID de la cuenta donde se registr├│ el pago (la cuenta define el m├®todo de pago)
   // Payment tracking
   cobrado: number; // Monto cobrado
   aCobrar: number; // Monto pendiente de cobro
@@ -66,7 +66,7 @@ interface AddSaleData {
   price: number;
   salesChannel?: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
   paymentStatus?: 'paid' | 'pending' | 'partial';
-  accountId?: string; // La cuenta define el método de pago
+  accountId?: string; // La cuenta define el m├®todo de pago
 }
 
 interface UpdateSaleData {
@@ -76,7 +76,7 @@ interface UpdateSaleData {
   price: number;
   salesChannel?: 'store' | 'online' | 'phone' | 'whatsapp' | 'other';
   paymentStatus?: 'paid' | 'pending' | 'partial';
-  accountId?: string; // La cuenta define el método de pago
+  accountId?: string; // La cuenta define el m├®todo de pago
 }
 
 interface SalesStore {
@@ -172,10 +172,10 @@ const normalizeNumber = (value: unknown, fallback = 0): number => {
 
 const normalizeApiSale = (rawSale: any): Sale => {
   if (!rawSale || typeof rawSale !== 'object') {
-    console.error('[SalesStore] normalizeApiSale → invalid payload:', rawSale);
+    console.error('[SalesStore] normalizeApiSale ÔåÆ invalid payload:', rawSale);
     throw new Error('normalizeApiSale received invalid sale payload');
   }
-  console.log('[SalesStore] normalizeApiSale → input:', rawSale);
+  console.log('[SalesStore] normalizeApiSale ÔåÆ input:', rawSale);
 
   const clientName = rawSale.client?.name
     || rawSale.customer?.name
@@ -252,7 +252,7 @@ const normalizeApiSale = (rawSale: any): Sale => {
       ?? rawSale.product?.name,
   };
 
-  console.log('[SalesStore] normalizeApiSale → output:', normalized);
+  console.log('[SalesStore] normalizeApiSale ÔåÆ output:', normalized);
   return normalized;
 };
 
@@ -285,7 +285,7 @@ const normalizeApiSalesArray = (raw: any): Sale[] => {
     return normalizeApiSalesArray(raw.data);
   }
 
-  console.warn('[SalesStore] ⚠️ Unexpected sales payload shape. Returning empty array.', raw);
+  console.warn('[SalesStore] ÔÜá´©Å Unexpected sales payload shape. Returning empty array.', raw);
   return [];
 };
 
@@ -300,30 +300,30 @@ const syncConfig: SyncConfig<Sale> = {
   apiUpdate: (id: number | string, data: Partial<Sale>) => salesApi.update(id, data),
   apiDelete: (id: number | string) => salesApi.delete(id),
   extractData: (response: any) => {
-    console.log('[SalesStore] extractData → raw response:', response);
+    console.log('[SalesStore] extractData ÔåÆ raw response:', response);
     const responseData = response?.data?.data ?? response?.data;
 
     // Manejar respuesta de CREATE/UPDATE que retorna un objeto single
     if (responseData && !Array.isArray(responseData)) {
-      // Si es { sale: {...} } → extraer sale
+      // Si es { sale: {...} } ÔåÆ extraer sale
       if (responseData.sale) {
         const normalized = normalizeApiSale(responseData.sale);
-        console.log('[SalesStore] extractData → single sale from CREATE:', normalized);
+        console.log('[SalesStore] extractData ÔåÆ single sale from CREATE:', normalized);
         return [normalized];
       }
       // Si ya es el objeto de venta directamente
       if (responseData.id || responseData.number) {
         const normalized = normalizeApiSale(responseData);
-        console.log('[SalesStore] extractData → direct sale object:', normalized);
+        console.log('[SalesStore] extractData ÔåÆ direct sale object:', normalized);
         return [normalized];
       }
     }
 
     // Manejar respuesta de GET (arrays)
     const mapped = normalizeApiSalesArray(responseData);
-    console.log('[SalesStore] extractData → array result:', mapped.length, 'items');
+    console.log('[SalesStore] extractData ÔåÆ array result:', mapped.length, 'items');
     if (mapped.length === 0 && responseData) {
-      console.warn('⚠️ Unexpected sales response structure:', responseData);
+      console.warn('ÔÜá´©Å Unexpected sales response structure:', responseData);
     }
     return mapped;
   },
@@ -340,7 +340,7 @@ const persistSalesCache = (sales: Sale[]) => {
     const normalized = Array.isArray(sales) ? sales : [];
     window.localStorage.setItem(SALES_SYNC_CACHE_KEY, JSON.stringify(normalized));
   } catch (error) {
-    console.warn('[SalesStore] ⚠️ No se pudo persistir el cache local de ventas:', error);
+    console.warn('[SalesStore] ÔÜá´©Å No se pudo persistir el cache local de ventas:', error);
   }
 };
 
@@ -467,18 +467,18 @@ export const useSalesStore = create<SalesStore>()(
 
   loadSales: async () => {
     const mode = getSyncMode();
-    console.log('[SalesStore] loadSales → syncMode:', mode);
+    console.log('[SalesStore] loadSales ÔåÆ syncMode:', mode);
     set({ isLoading: true, syncMode: mode });
     const fallbackSales = get().sales;
     try {
       const sales = await loadWithSync<Sale>(syncConfig, fallbackSales);
-      console.log('[SalesStore] loadSales → received', sales.length, 'items');
+      console.log('[SalesStore] loadSales ÔåÆ received', sales.length, 'items');
       set({ sales, isLoading: false, syncMode: mode });
       persistSalesCache(sales);
       broadcastState({ sales, syncMode: mode });
     } catch (error) {
       console.error('[SalesStore] Error loading sales:', error);
-      // ✅ Preservar datos locales cuando falla la sincronización
+      // Ô£à Preservar datos locales cuando falla la sincronizaci├│n
       set((state) => ({
         isLoading: false,
         sales: state.sales,
@@ -518,19 +518,19 @@ export const useSalesStore = create<SalesStore>()(
 
     // Si NO hay stock suficiente
     if (!negativeStockAllowed) {
-      // Configuración NO permite stock negativo - BLOQUEAR
+      // Configuraci├│n NO permite stock negativo - BLOQUEAR
       return {
         valid: false,
-        message: `❌ STOCK INSUFICIENTE\n\nDisponible: ${product.stock}\nSolicitado: ${quantity}\nFaltante: ${Math.abs(stockDifference)}\n\n⚙️ El sistema está configurado para NO permitir stock negativo.`,
+        message: `ÔØî STOCK INSUFICIENTE\n\nDisponible: ${product.stock}\nSolicitado: ${quantity}\nFaltante: ${Math.abs(stockDifference)}\n\nÔÜÖ´©Å El sistema est├í configurado para NO permitir stock negativo.`,
         currentStock: product.stock,
         allowNegative: false,
         severity: 'error'
       };
     } else {
-      // Configuración SÍ permite stock negativo - PERMITIR CON WARNING
+      // Configuraci├│n S├ì permite stock negativo - PERMITIR CON WARNING
       return {
         valid: true,
-        message: `⚠️ STOCK NEGATIVO DETECTADO\n\nDisponible: ${product.stock}\nSolicitado: ${quantity}\nStock resultante: ${stockDifference}\n\n✅ El sistema permite stock negativo. La venta se procesará normalmente.`,
+        message: `ÔÜá´©Å STOCK NEGATIVO DETECTADO\n\nDisponible: ${product.stock}\nSolicitado: ${quantity}\nStock resultante: ${stockDifference}\n\nÔ£à El sistema permite stock negativo. La venta se procesar├í normalmente.`,
         currentStock: product.stock,
         allowNegative: true,
         severity: 'warning'
@@ -548,10 +548,10 @@ export const useSalesStore = create<SalesStore>()(
     const { addLinkedTransaction } = useAccountsStore.getState();
     const { getCustomerByName, updateCustomerBalance } = useCustomersStore.getState();
 
-    // ✅ VALIDACIÓN CRÍTICA DE STOCK
+    // Ô£à VALIDACI├ôN CR├ìTICA DE STOCK
     const stockValidation = validateStock(saleData.productId, saleData.quantity);
 
-    // Log de auditoría
+    // Log de auditor├¡a
     console.log('Stock validation result:', {
       productId: saleData.productId,
       quantity: saleData.quantity,
@@ -586,7 +586,7 @@ export const useSalesStore = create<SalesStore>()(
       sparkline: [50, 80, 120, 150, totalAmount / 100],
       salesChannel: saleData.salesChannel || 'store',
       paymentStatus: saleData.paymentStatus || 'pending',
-      accountId: saleData.accountId, // El método de pago se obtiene de la cuenta
+      accountId: saleData.accountId, // El m├®todo de pago se obtiene de la cuenta
       cobrado: saleData.paymentStatus === 'paid' ? totalAmount : 0,
       aCobrar: saleData.paymentStatus === 'paid' ? 0 : totalAmount,
       productId: saleData.productId,
@@ -596,7 +596,7 @@ export const useSalesStore = create<SalesStore>()(
       quantity: saleData.quantity,
     };
 
-    // 🔥 ACTUALIZACIÓN AUTOMÁTICA DE INVENTARIO
+    // ­ƒöÑ ACTUALIZACI├ôN AUTOM├üTICA DE INVENTARIO
     try {
       updateStockWithMovement(
         saleData.productId,
@@ -610,7 +610,7 @@ export const useSalesStore = create<SalesStore>()(
 
     // Intentar sincronizar con API
     try {
-      console.log('[SalesStore] addSale → attempting API create', { syncMode: getSyncMode(), payload: { client: saleData.client, productId: saleData.productId, quantity: saleData.quantity } });
+      console.log('[SalesStore] addSale ÔåÆ attempting API create', { syncMode: getSyncMode(), payload: { client: saleData.client, productId: saleData.productId, quantity: saleData.quantity } });
       const createdSale = await createWithSync(syncConfig, newSale, state.sales);
 
       // Actualizar state con respuesta del servidor
@@ -630,7 +630,7 @@ export const useSalesStore = create<SalesStore>()(
       });
       persistSalesCache(nextSales);
       broadcastState({ sales: nextSales, dashboardStats: newStats, syncMode: nextSyncMode });
-      console.log('[SalesStore] addSale → API success', createdSale?.id);
+      console.log('[SalesStore] addSale ÔåÆ API success', createdSale?.id);
     } catch (error) {
       console.error('[SalesStore] Error syncing sale:', error);
 
@@ -652,22 +652,22 @@ export const useSalesStore = create<SalesStore>()(
       broadcastState({ sales: newSales, dashboardStats: newStats, syncMode: nextSyncMode });
     }
 
-    // 🔥 INTEGRACIÓN: Actualizar balance del cliente (cuenta corriente)
+    // ­ƒöÑ INTEGRACI├ôN: Actualizar balance del cliente (cuenta corriente)
     try {
       const customer = getCustomerByName(saleData.client);
       if (customer) {
-        // Si la venta está pendiente o parcial, aumenta la deuda del cliente (balance negativo)
+        // Si la venta est├í pendiente o parcial, aumenta la deuda del cliente (balance negativo)
         if (saleData.paymentStatus === 'pending' || saleData.paymentStatus === 'partial') {
           updateCustomerBalance(customer.id, -totalAmount); // Balance negativo = debe al negocio
         }
-        // Si está pagado, no afecta el balance (ya fue cobrado)
+        // Si est├í pagado, no afecta el balance (ya fue cobrado)
       }
     } catch (error) {
       console.error('Error actualizando balance de cliente:', error);
       // No lanzar error para no bloquear la venta
     }
 
-    // Si el pago está marcado como pagado, crear transacción enlazada
+    // Si el pago est├í marcado como pagado, crear transacci├│n enlazada
     if (saleData.paymentStatus === 'paid' && saleData.accountId) {
       addLinkedTransaction(
         saleData.accountId,
@@ -705,7 +705,7 @@ export const useSalesStore = create<SalesStore>()(
     if (sale.productId && netQuantityChange > 0) {
       const stockValidation = state.validateStock(sale.productId, netQuantityChange);
       if (!stockValidation.valid) {
-        throw new Error(stockValidation.message || 'Stock insuficiente para la actualización de la venta');
+        throw new Error(stockValidation.message || 'Stock insuficiente para la actualizaci├│n de la venta');
       }
     }
 
@@ -842,7 +842,7 @@ export const useSalesStore = create<SalesStore>()(
       updateStockWithMovement(
         sale.productId,
         targetStock,
-        `Actualización venta ${sale.number} - Cliente: ${updatedData.client}`,
+        `Actualizaci├│n venta ${sale.number} - Cliente: ${updatedData.client}`,
         sale.number
       );
     }
@@ -878,7 +878,7 @@ export const useSalesStore = create<SalesStore>()(
       return;
     }
 
-    // 🔥 REVERSIÓN AUTOMÁTICA DE INVENTARIO
+    // ­ƒöÑ REVERSI├ôN AUTOM├üTICA DE INVENTARIO
     if (saleToDelete.productId) {
       try {
         const currentProduct = getProductById(saleToDelete.productId);
@@ -886,7 +886,7 @@ export const useSalesStore = create<SalesStore>()(
           updateStockWithMovement(
             saleToDelete.productId,
             currentProduct.stock + saleToDelete.items,
-            `Eliminación venta ${saleToDelete.number} - Cliente: ${saleToDelete.client.name}`,
+            `Eliminaci├│n venta ${saleToDelete.number} - Cliente: ${saleToDelete.client.name}`,
             `CANCEL-${saleToDelete.number}`
           );
         }

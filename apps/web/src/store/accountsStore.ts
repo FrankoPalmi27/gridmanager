@@ -114,31 +114,6 @@ const mapBackendToFrontend = (backendAccount: any): Account => ({
 // BALANCE CALCULATION HELPERS
 // ============================================
 
-const applyDerivedBalances = (accounts: Account[], transactions: Transaction[]) => {
-  if (!accounts.length) return accounts;
-
-  const summary = new Map<string, { income: number; expense: number }>();
-
-  transactions.forEach((transaction) => {
-    const existing = summary.get(transaction.accountId) ?? { income: 0, expense: 0 };
-    if (transaction.type === 'income') {
-      existing.income += transaction.amount;
-    } else if (transaction.type === 'expense') {
-      existing.expense += transaction.amount;
-    }
-    summary.set(transaction.accountId, existing);
-  });
-
-  return accounts.map((account) => {
-    const totals = summary.get(account.id);
-    const derivedBalance = totals ? totals.income - totals.expense : 0;
-    return {
-      ...account,
-      balance: derivedBalance,
-    };
-  });
-};
-
 // ============================================
 // STORE
 // ============================================
@@ -170,10 +145,8 @@ export const useAccountsStore = create<AccountsStore>()(
           }
 
           const accounts = items.map(mapBackendToFrontend);
-          const accountsWithBalances = applyDerivedBalances(accounts, get().transactions);
-
           console.log(`[AccountsStore] ✅ Loaded ${accounts.length} accounts`);
-          set({ accounts: accountsWithBalances, isLoading: false });
+          set({ accounts, isLoading: false });
         } catch (error: any) {
           console.error('[AccountsStore] ❌ Error loading accounts:', error);
           set({
@@ -198,9 +171,7 @@ export const useAccountsStore = create<AccountsStore>()(
 
           // Update local state
           set((state) => {
-            const accounts = [createdAccount, ...state.accounts];
-            const accountsWithBalances = applyDerivedBalances(accounts, state.transactions);
-            return { accounts: accountsWithBalances };
+             return { accounts: [createdAccount, ...state.accounts] };
           });
 
           console.log('[AccountsStore] ✅ Account created:', createdAccount.id);
@@ -224,13 +195,11 @@ export const useAccountsStore = create<AccountsStore>()(
           await accountsApi.update(id, updatedData);
 
           // Update local state
-          set((state) => {
-            const accounts = state.accounts.map((account) =>
-              account.id === id ? { ...account, ...updatedData } : account
-            );
-            const accountsWithBalances = applyDerivedBalances(accounts, state.transactions);
-            return { accounts: accountsWithBalances };
-          });
+           set((state) => ({
+             accounts: state.accounts.map((account) =>
+               account.id === id ? { ...account, ...updatedData } : account
+             ),
+           }));
 
           console.log('[AccountsStore] ✅ Account updated:', id);
         } catch (error: any) {
@@ -252,12 +221,10 @@ export const useAccountsStore = create<AccountsStore>()(
           await accountsApi.delete(id);
 
           // Update local state
-          set((state) => {
-            const accounts = state.accounts.filter((account) => account.id !== id);
-            const transactions = state.transactions.filter((t) => t.accountId !== id);
-            const accountsWithBalances = applyDerivedBalances(accounts, transactions);
-            return { accounts: accountsWithBalances, transactions };
-          });
+           set((state) => ({
+             accounts: state.accounts.filter((account) => account.id !== id),
+             transactions: state.transactions.filter((t) => t.accountId !== id),
+           }));
 
           console.log('[AccountsStore] ✅ Account deleted:', id);
         } catch (error: any) {
@@ -271,11 +238,9 @@ export const useAccountsStore = create<AccountsStore>()(
       // ============================================
       // HELPERS
       // ============================================
-      setAccounts: (accounts) => {
-        const transactions = get().transactions;
-        const accountsWithBalances = applyDerivedBalances(accounts, transactions);
-        set({ accounts: accountsWithBalances });
-      },
+        setAccounts: (accounts) => {
+         set({ accounts });
+       },
 
       getActiveAccounts: () => {
         return get().accounts.filter((account) => account.active);
@@ -290,11 +255,9 @@ export const useAccountsStore = create<AccountsStore>()(
           id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(),
         };
 
-        set((state) => {
-          const transactions = [newTransaction, ...state.transactions];
-          const accounts = applyDerivedBalances(state.accounts, transactions);
-          return { transactions, accounts };
-        });
+         set((state) => ({
+           transactions: [newTransaction, ...state.transactions],
+         }));
 
         return newTransaction;
       },
@@ -312,23 +275,19 @@ export const useAccountsStore = create<AccountsStore>()(
           linkedTo,
         };
 
-        set((state) => {
-          const transactions = [newTransaction, ...state.transactions];
-          const accounts = applyDerivedBalances(state.accounts, transactions);
-          return { transactions, accounts };
-        });
+         set((state) => ({
+           transactions: [newTransaction, ...state.transactions],
+         }));
 
         return newTransaction;
       },
 
       removeLinkedTransactions: (linkedType, linkedId) => {
-        set((state) => {
-          const transactions = state.transactions.filter(
-            (t) => !(t.linkedTo?.type === linkedType && t.linkedTo?.id === linkedId)
-          );
-          const accounts = applyDerivedBalances(state.accounts, transactions);
-          return { transactions, accounts };
-        });
+         set((state) => ({
+           transactions: state.transactions.filter(
+             (t) => !(t.linkedTo?.type === linkedType && t.linkedTo?.id === linkedId)
+           ),
+         }));
       },
 
       getLinkedTransactions: (linkedType, linkedId) => {
@@ -363,12 +322,11 @@ export const useAccountsStore = create<AccountsStore>()(
           return false;
         }
 
-        const transactions = state.transactions.map((t) =>
-          t.id === transactionId ? { ...t, accountId: newAccountId } : t
-        );
-        const accounts = applyDerivedBalances(state.accounts, transactions);
+         const transactions = state.transactions.map((t) =>
+           t.id === transactionId ? { ...t, accountId: newAccountId } : t
+         );
 
-        set({ transactions, accounts, error: null });
+         set({ transactions, error: null });
         return true;
       },
 
@@ -422,11 +380,10 @@ export const useAccountsStore = create<AccountsStore>()(
           reference,
         };
 
-        set((state) => {
-          const transactions = [incomingTransaction, outgoingTransaction, ...state.transactions];
-          const accounts = applyDerivedBalances(state.accounts, transactions);
-          return { accounts, transactions, error: null };
-        });
+         set((state) => ({
+           transactions: [incomingTransaction, outgoingTransaction, ...state.transactions],
+           error: null,
+         }));
 
         return true;
       },

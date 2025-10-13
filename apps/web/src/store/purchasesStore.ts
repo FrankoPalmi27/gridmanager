@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useProductsStore } from './productsStore';
 import { useSuppliersStore } from './suppliersStore';
@@ -91,7 +91,7 @@ export const usePurchasesStore = create<PurchasesStore>()(
       dashboardStats: initialPurchaseStats,
 
       addPurchase: (purchaseData) => {
-    console.log('[PurchasesStore] addPurchase → input:', purchaseData);
+    console.log('[PurchasesStore] addPurchase ÔåÆ input:', purchaseData);
 
     // Get supplier information
     const { getSupplierById } = useSuppliersStore.getState();
@@ -127,7 +127,7 @@ export const usePurchasesStore = create<PurchasesStore>()(
       });
     }
 
-    // 🔥 IVA configurable - Por defecto 21% (Argentina)
+    // ­ƒöÑ IVA configurable - Por defecto 21% (Argentina)
     // TODO: Hacer esto configurable desde settings
     const taxRate = 0.21;
     const tax = subtotal * taxRate;
@@ -175,14 +175,14 @@ export const usePurchasesStore = create<PurchasesStore>()(
       return { dashboardStats: newStats };
     });
 
-    // 🔥 INTEGRATION: Update supplier balance (debt)
+    // ­ƒöÑ INTEGRATION: Update supplier balance (debt)
     try {
       get().updateSupplierBalance(purchaseData.supplierId, total, 'add');
     } catch (error) {
       console.error('Error updating supplier balance:', error);
     }
 
-    // 🔥 INTEGRATION: If payment is made, create transaction
+    // ­ƒöÑ INTEGRATION: If payment is made, create transaction
     if (purchaseData.paymentStatus === 'paid' && purchaseData.accountId) {
       try {
         const { addLinkedTransaction } = useAccountsStore.getState();
@@ -259,7 +259,7 @@ export const usePurchasesStore = create<PurchasesStore>()(
     const purchase = get().purchases.find(p => p.id === purchaseId);
     if (!purchase || purchase.status === 'received') return;
 
-    // 🔥 INTEGRATION: Automatically update inventory when items are received
+    // ­ƒöÑ INTEGRATION: Automatically update inventory when items are received
     get().processStockIncrease(purchase);
 
     // Update purchase status
@@ -323,7 +323,7 @@ export const usePurchasesStore = create<PurchasesStore>()(
             purchase.number
           );
 
-          // 🔥 UPDATE PRODUCT COST WITH COST AVERAGING
+          // ­ƒöÑ UPDATE PRODUCT COST WITH COST AVERAGING
           try {
             const { updateProduct } = useProductsStore.getState();
             const totalCurrentValue = product.cost * product.stock;

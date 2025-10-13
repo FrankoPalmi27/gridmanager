@@ -49,7 +49,7 @@ export function TenantLoginPage({ onNavigate }: { onNavigate: (page: string) => 
     setError('');
 
     try {
-  const apiBaseUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001/api';
+  const apiBaseUrl = (import.meta as any).env?.VITE_API_URL || 'https://gridmanager-production.up.railway.app/api';
   const response = await fetch(`${apiBaseUrl}/tenant/login`, {
         method: 'POST',
         headers: {

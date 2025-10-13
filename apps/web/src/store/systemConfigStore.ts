@@ -1,9 +1,10 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { systemConfigApi } from '@/lib/api';
 
-// Configuraciones del sistema
 export interface SystemConfig {
   allowNegativeStock: boolean;
-  stockWarningThreshold: number; // Porcentaje del minStock para mostrar warnings
+  stockWarningThreshold: number;
   defaultCurrency: string;
   dateFormat: string;
   autoBackup: boolean;
@@ -12,10 +13,9 @@ export interface SystemConfig {
   debugMode: boolean;
 }
 
-// Configuración por defecto del sistema
-const defaultSystemConfig: SystemConfig = {
-  allowNegativeStock: false, // 🚨 CRITICO: Por defecto NO permitir stock negativo
-  stockWarningThreshold: 120, // Mostrar warning cuando stock <= minStock * 1.2
+export const DEFAULT_SYSTEM_CONFIG: SystemConfig = {
+  allowNegativeStock: false,
+  stockWarningThreshold: 120,
   defaultCurrency: 'ARS',
   dateFormat: 'DD/MM/YYYY',
   autoBackup: true,
@@ -26,61 +26,129 @@ const defaultSystemConfig: SystemConfig = {
 
 interface SystemConfigStore {
   config: SystemConfig;
-  updateConfig: (updates: Partial<SystemConfig>) => void;
-  resetConfig: () => void;
+  isLoading: boolean;
+  error: string | null;
+  hasLoaded: boolean;
+  loadConfig: () => Promise<SystemConfig>;
+  updateConfig: (updates: Partial<SystemConfig>) => Promise<SystemConfig>;
+  resetConfig: () => Promise<SystemConfig>;
   toggleNegativeStock: () => void;
   isNegativeStockAllowed: () => boolean;
   getStockWarningThreshold: () => number;
 }
 
-export const useSystemConfigStore = create<SystemConfigStore>((set, get) => ({
-  config: defaultSystemConfig,
+const normalizeConfig = (incoming: unknown): SystemConfig => {
+  if (!incoming || typeof incoming !== 'object') {
+    return { ...DEFAULT_SYSTEM_CONFIG };
+  }
 
-  updateConfig: (updates) => {
-    set((state) => {
-      const newConfig = { ...state.config, ...updates };
-      // Log para auditoría
-      if (state.config.enableAuditLog) {
-        console.log('System config updated:', {
-          changes: updates,
-          timestamp: new Date().toISOString(),
-          previousConfig: state.config,
-          newConfig
-        });
-      }
+  const raw = incoming as Partial<SystemConfig>;
+  return {
+    allowNegativeStock: typeof raw.allowNegativeStock === 'boolean'
+      ? raw.allowNegativeStock
+      : DEFAULT_SYSTEM_CONFIG.allowNegativeStock,
+    stockWarningThreshold: typeof raw.stockWarningThreshold === 'number'
+      ? raw.stockWarningThreshold
+      : DEFAULT_SYSTEM_CONFIG.stockWarningThreshold,
+    defaultCurrency: typeof raw.defaultCurrency === 'string' && raw.defaultCurrency.trim().length > 0
+      ? raw.defaultCurrency
+      : DEFAULT_SYSTEM_CONFIG.defaultCurrency,
+    dateFormat: typeof raw.dateFormat === 'string' && raw.dateFormat.trim().length > 0
+      ? raw.dateFormat
+      : DEFAULT_SYSTEM_CONFIG.dateFormat,
+    autoBackup: typeof raw.autoBackup === 'boolean'
+      ? raw.autoBackup
+      : DEFAULT_SYSTEM_CONFIG.autoBackup,
+    enableAuditLog: typeof raw.enableAuditLog === 'boolean'
+      ? raw.enableAuditLog
+      : DEFAULT_SYSTEM_CONFIG.enableAuditLog,
+    maxStockAlerts: typeof raw.maxStockAlerts === 'number'
+      ? raw.maxStockAlerts
+      : DEFAULT_SYSTEM_CONFIG.maxStockAlerts,
+    debugMode: typeof raw.debugMode === 'boolean'
+      ? raw.debugMode
+      : DEFAULT_SYSTEM_CONFIG.debugMode,
+  };
+};
 
-      return { config: newConfig };
-    });
-  },
+export const useSystemConfigStore = create<SystemConfigStore>()(
+  persist(
+    (set, get) => ({
+      config: DEFAULT_SYSTEM_CONFIG,
+      isLoading: false,
+      error: null,
+      hasLoaded: false,
 
-  resetConfig: () => {
-    set({ config: defaultSystemConfig });
-    console.log('System config reset to defaults');
-  },
+      loadConfig: async () => {
+        if (get().isLoading) {
+          return get().config;
+        }
 
-  toggleNegativeStock: () => {
-    const currentConfig = get().config;
-    const newValue = !currentConfig.allowNegativeStock;
+        set({ isLoading: true, error: null });
 
-    get().updateConfig({ allowNegativeStock: newValue });
+        try {
+          const response = await systemConfigApi.get();
+          const payload = response.data?.data ?? response.data;
+          const config = normalizeConfig(payload);
 
-    console.log(`Negative stock ${newValue ? 'ENABLED' : 'DISABLED'}`, {
-      timestamp: new Date().toISOString(),
-      previousValue: currentConfig.allowNegativeStock,
-      newValue
-    });
-  },
+          set({ config, isLoading: false, hasLoaded: true });
+          return config;
+        } catch (error: any) {
+          const message = error?.response?.data?.error || 'Error al cargar configuración del sistema';
+          set({ isLoading: false, error: message });
+          throw new Error(message);
+        }
+      },
 
-  isNegativeStockAllowed: () => {
-    return get().config.allowNegativeStock;
-  },
+      updateConfig: async (updates) => {
+        set({ isLoading: true, error: null });
 
-  getStockWarningThreshold: () => {
-    return get().config.stockWarningThreshold;
-  },
-}));
+        try {
+          const response = await systemConfigApi.update(updates);
+          const payload = response.data?.data ?? response.data;
+          const config = normalizeConfig(payload);
 
-// Helper functions para fácil acceso desde otros módulos
+          set({ config, isLoading: false, hasLoaded: true });
+          return config;
+        } catch (error: any) {
+          const message = error?.response?.data?.error || 'Error al actualizar configuración del sistema';
+          set({ isLoading: false, error: message });
+          throw new Error(message);
+        }
+      },
+
+      resetConfig: async () => {
+        return get().updateConfig(DEFAULT_SYSTEM_CONFIG);
+      },
+
+      toggleNegativeStock: () => {
+        const current = get().config.allowNegativeStock;
+        void get()
+          .updateConfig({ allowNegativeStock: !current })
+          .catch((error) => {
+            console.error('[SystemConfigStore] No se pudo actualizar allowNegativeStock', error);
+          });
+      },
+
+      isNegativeStockAllowed: () => {
+        return get().config.allowNegativeStock;
+      },
+
+      getStockWarningThreshold: () => {
+        return get().config.stockWarningThreshold;
+      },
+    }),
+    {
+      name: 'grid-manager:system-config',
+      storage: typeof window !== 'undefined' ? createJSONStorage(() => window.localStorage) : undefined,
+      partialize: (state) => ({
+        config: state.config,
+        hasLoaded: state.hasLoaded,
+      }),
+    }
+  )
+);
+
 export const isNegativeStockAllowed = () => {
   return useSystemConfigStore.getState().isNegativeStockAllowed();
 };

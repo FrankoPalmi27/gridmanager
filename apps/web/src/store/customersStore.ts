@@ -1,16 +1,13 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { StoreApi } from 'zustand';
 import { customersApi } from '../lib/api';
-import { loadWithSync, createWithSync, updateWithSync, deleteWithSync, getSyncMode, SyncConfig } from '../lib/syncStorage';
 
-// Customer interface
 export interface Customer {
   id: string;
   name: string;
   email: string;
-  phone: string; // Keep for compatibility, will be migrated to celular
-  celular?: string; // New field for mobile phone
+  phone: string;
+  celular?: string;
   balance: number;
   status: 'active' | 'inactive';
   createdAt: string;
@@ -18,19 +15,19 @@ export interface Customer {
   notes?: string;
 }
 
-// No initial customers - users start with empty customer list
-const initialCustomers: Customer[] = [];
-
 interface CustomersStore {
   customers: Customer[];
   isLoading: boolean;
-  syncMode: 'online' | 'offline';
+  error: string | null;
   loadCustomers: () => Promise<void>;
   addCustomer: (customerData: Omit<Customer, 'id' | 'createdAt'>) => Promise<Customer>;
   updateCustomer: (id: string, updatedData: Partial<Customer>) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
   updateCustomerBalance: (id: string, amount: number) => void;
   resetCustomer: (id: string) => void;
+  getCustomerById: (id: string) => Customer | undefined;
+  getCustomerByName: (name: string) => Customer | undefined;
+  resetStore: () => void;
   stats: {
     total: number;
     active: number;
@@ -38,323 +35,185 @@ interface CustomersStore {
     totalPositiveBalance: number;
     totalNegativeBalance: number;
   };
-  getCustomerById: (id: string) => Customer | undefined;
-  getCustomerByName: (name: string) => Customer | undefined;
-  resetStore: () => void;
 }
 
-// Helper to map backend customer to frontend format
 const mapBackendToFrontend = (backendCustomer: any): Customer => ({
   id: backendCustomer.id,
   name: backendCustomer.name,
   email: backendCustomer.email || '',
   phone: backendCustomer.phone || '',
   celular: backendCustomer.phone || '',
-  balance: Number(backendCustomer.currentBalance || 0),
+  balance: Number(backendCustomer.currentBalance ?? 0),
   status: backendCustomer.active ? 'active' : 'inactive',
   createdAt: backendCustomer.createdAt,
   address: backendCustomer.address || '',
   notes: backendCustomer.notes || '',
 });
 
-// Sync configuration
-const syncConfig: SyncConfig<Customer> = {
-  storageKey: 'customers',
-  apiGet: () => customersApi.getAll(),
-  apiCreate: (data: any) => customersApi.create(data),
-  apiUpdate: (id: string, data: Partial<Customer>) => customersApi.update(id, data),
-  extractData: (response: any) => {
-    const responseData = response.data.data || response.data;
+const mapFrontendToBackend = (data: Partial<Customer>) => {
+  const payload: Record<string, unknown> = {};
 
-    // Handle single customer response (from create/update)
-    if (responseData.customer) {
-      return [mapBackendToFrontend(responseData.customer)];
-    }
-
-    // Handle paginated response (from list)
-    // Backend returns { data: [...], total, page, limit, totalPages }
-    const items = responseData.data || responseData.items || responseData;
-    if (Array.isArray(items)) {
-      return items.map(mapBackendToFrontend);
-    }
-
-    console.warn('⚠️ Unexpected customers response structure:', responseData);
-    return [];
-  },
-};
-
-type CustomersBroadcastEvent =
-  | {
-      type: 'customers/update';
-      payload: {
-        customers: Customer[];
-        syncMode?: 'online' | 'offline';
-      };
-      source: string;
-      timestamp: number;
-    }
-  | {
-      type: 'customers/request-refresh';
-      source: string;
-      timestamp: number;
-    };
-
-const BROADCAST_CHANNEL_NAME = 'grid-manager:customers';
-
-const createTabId = () => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
+  if (data.name !== undefined) payload.name = data.name;
+  if (data.email !== undefined) payload.email = data.email || null;
+  if (data.celular !== undefined || data.phone !== undefined) {
+    payload.phone = (data.celular ?? data.phone) || null;
   }
+  if (data.address !== undefined) payload.address = data.address || null;
+  if (data.notes !== undefined) payload.notes = data.notes || null;
+  if (data.balance !== undefined) payload.creditLimit = Number(data.balance);
+  if (data.status !== undefined) payload.active = data.status === 'active';
 
-  return `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  return payload;
 };
 
-const tabId = createTabId();
-
-const broadcastChannel =
-  typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
-    ? new BroadcastChannel(BROADCAST_CHANNEL_NAME)
-    : null;
-
-const broadcast = (event: CustomersBroadcastEvent) => {
-  if (!broadcastChannel) {
-    return;
-  }
-
-  broadcastChannel.postMessage(event);
+const extractList = (response: any): any[] => {
+  const responseData = response.data?.data ?? response.data;
+  const items = responseData?.data ?? responseData?.items ?? responseData;
+  return Array.isArray(items) ? items : [];
 };
-
-let isBroadcastRegistered = false;
-
-const registerBroadcastListener = (
-  set: StoreApi<CustomersStore>['setState'],
-  get: StoreApi<CustomersStore>['getState'],
-) => {
-  if (!broadcastChannel || isBroadcastRegistered) {
-    return;
-  }
-
-  broadcastChannel.addEventListener('message', (event: MessageEvent<CustomersBroadcastEvent>) => {
-    const data = event.data;
-
-    if (!data || data.source === tabId) {
-      return;
-    }
-
-    if (data.type === 'customers/update') {
-      const { customers, syncMode } = data.payload;
-      set((state) => ({
-        customers,
-        syncMode: syncMode ?? state.syncMode,
-      }));
-    }
-
-    if (data.type === 'customers/request-refresh') {
-      void get().loadCustomers();
-    }
-  });
-
-  isBroadcastRegistered = true;
-};
-
-const storage = typeof window !== 'undefined'
-  ? createJSONStorage<CustomersStore>(() => window.localStorage)
-  : undefined;
 
 export const useCustomersStore = create<CustomersStore>()(
   persist(
-    (set, get) => {
-      registerBroadcastListener(set, get);
+    (set, get) => ({
+      customers: [],
+      isLoading: false,
+      error: null,
 
-      const broadcastState = (nextCustomers?: Customer[], nextSyncMode?: 'online' | 'offline') => {
+      loadCustomers: async () => {
+        set({ isLoading: true, error: null });
+
+        try {
+          const response = await customersApi.getAll();
+          const customers = extractList(response).map(mapBackendToFrontend);
+          set({ customers, isLoading: false });
+        } catch (error: any) {
+          console.error('[CustomersStore] Error loading customers:', error);
+          set({
+            isLoading: false,
+            error: error.response?.data?.message || 'Error al cargar clientes',
+          });
+        }
+      },
+
+      addCustomer: async (customerData) => {
+        set({ error: null });
+
+        try {
+          const payload = mapFrontendToBackend(customerData);
+          const response = await customersApi.create(payload);
+          const responseData = response.data?.data ?? response.data;
+          const createdCustomer = mapBackendToFrontend(responseData.customer ?? responseData);
+
+          set((state) => ({ customers: [createdCustomer, ...state.customers] }));
+          return createdCustomer;
+        } catch (error: any) {
+          console.error('[CustomersStore] Error creating customer:', error);
+          const message = error.response?.data?.message || 'Error al crear cliente';
+          set({ error: message });
+          throw new Error(message);
+        }
+      },
+
+      updateCustomer: async (id, updatedData) => {
+        set({ error: null });
+
+        try {
+          const payload = mapFrontendToBackend(updatedData);
+          await customersApi.update(id, payload);
+
+          set((state) => ({
+            customers: state.customers.map((customer) =>
+              customer.id === id ? { ...customer, ...updatedData } : customer,
+            ),
+          }));
+        } catch (error: any) {
+          console.error('[CustomersStore] Error updating customer:', error);
+          const message = error.response?.data?.message || 'Error al actualizar cliente';
+          set({ error: message });
+          throw new Error(message);
+        }
+      },
+
+      deleteCustomer: async (id) => {
+        set({ error: null });
+
+        try {
+          await customersApi.update(id, mapFrontendToBackend({ status: 'inactive' }));
+          set((state) => ({
+            customers: state.customers.filter((customer) => customer.id !== id),
+          }));
+        } catch (error: any) {
+          console.error('[CustomersStore] Error deleting customer:', error);
+          const message = error.response?.data?.message || 'Error al eliminar cliente';
+          set({ error: message });
+          throw new Error(message);
+        }
+      },
+
+      updateCustomerBalance: (id, amount) => {
         const state = get();
-        broadcast({
-          type: 'customers/update',
-          payload: {
-            customers: nextCustomers ?? state.customers,
-            syncMode: nextSyncMode ?? state.syncMode,
-          },
-          source: tabId,
-          timestamp: Date.now(),
-        });
-      };
+        const target = state.customers.find((customer) => customer.id === id);
 
-      return {
-  customers: initialCustomers,
-  isLoading: false,
-  syncMode: getSyncMode(),
+        if (!target) {
+          return;
+        }
 
-  // Load customers with API sync
-  loadCustomers: async () => {
-    console.log('[CustomersStore] Starting loadCustomers...');
-    set({ isLoading: true, syncMode: getSyncMode() });
-    try {
-      console.log('[CustomersStore] Calling loadWithSync...');
-  const customers = await loadWithSync<Customer>(syncConfig, initialCustomers);
-  console.log('[CustomersStore] Loaded customers:', customers.length, customers);
-  const nextSyncMode = getSyncMode();
-  set({ customers, isLoading: false, syncMode: nextSyncMode });
-  broadcastState(customers, nextSyncMode);
-    } catch (error) {
-      console.error('[CustomersStore] Error loading customers:', error);
-      set({ isLoading: false });
-    }
-  },
+        const nextBalance = target.balance + amount;
 
-  addCustomer: async (customerData) => {
-    const state = get();
+        set((current) => ({
+          customers: current.customers.map((customer) =>
+            customer.id === id ? { ...customer, balance: nextBalance } : customer,
+          ),
+        }));
+      },
 
-    // Map frontend data to backend schema - only send fields that backend accepts
-    const dataToSend: any = {
-      name: customerData.name,
-      email: customerData.email || undefined,
-      phone: customerData.phone || undefined,
-      address: customerData.address || undefined,
-      taxId: undefined, // Not provided in frontend form yet
-      birthday: undefined, // Not provided in frontend form yet
-      creditLimit: customerData.balance ? Number(customerData.balance) : undefined,
-    };
+      resetCustomer: (id) => {
+        const state = get();
+        const target = state.customers.find((customer) => customer.id === id);
 
-    try {
-      // Try to create with API sync
-      const createdCustomer = await createWithSync<Customer>(syncConfig, dataToSend, state.customers);
-      const nextCustomers = [createdCustomer, ...state.customers];
-      const nextSyncMode = getSyncMode();
-      set({ customers: nextCustomers, syncMode: nextSyncMode });
-      broadcastState(nextCustomers, nextSyncMode);
-      return createdCustomer;
-    } catch (error) {
-      // Fallback already handled by createWithSync
-      console.error('Error creating customer:', error);
-      throw error;
-    }
-  },
+        if (!target) {
+          return;
+        }
 
-  updateCustomer: async (id, updatedData) => {
-    const state = get();
+        set((current) => ({
+          customers: current.customers.map((customer) =>
+            customer.id === id ? { ...customer, balance: 0 } : customer,
+          ),
+        }));
+      },
 
-    try {
-      // Try to update with API sync
-      await updateWithSync<Customer>(syncConfig, id, updatedData, state.customers);
+      getCustomerById: (id) => get().customers.find((customer) => customer.id === id),
 
-      // Update local state
-      const newCustomers = state.customers.map(customer =>
-        customer.id === id ? { ...customer, ...updatedData } : customer
-      );
-      const nextSyncMode = getSyncMode();
-      set({ customers: newCustomers, syncMode: nextSyncMode });
-      broadcastState(newCustomers, nextSyncMode);
-    } catch (error) {
-      // Fallback already handled by updateWithSync
-      console.error('Error updating customer:', error);
-    }
-  },
+      getCustomerByName: (name: string) =>
+        get().customers.find((customer) => customer.name.toLowerCase() === name.toLowerCase()),
 
-  deleteCustomer: async (id) => {
-    const state = get();
+      resetStore: () => {
+        set({ customers: [] });
+      },
 
-    try {
-      // Try to delete with API sync
-      await deleteWithSync<Customer>(syncConfig, id, state.customers);
+      get stats() {
+        const customers = get().customers;
+        const totalBalance = customers.reduce((sum, customer) => sum + customer.balance, 0);
+        const totalPositiveBalance = customers
+          .filter((customer) => customer.balance > 0)
+          .reduce((sum, customer) => sum + customer.balance, 0);
+        const totalNegativeBalance = customers
+          .filter((customer) => customer.balance < 0)
+          .reduce((sum, customer) => sum + customer.balance, 0);
 
-      // Update local state
-      const newCustomers = state.customers.filter(customer => customer.id !== id);
-      const nextSyncMode = getSyncMode();
-      set({ customers: newCustomers, syncMode: nextSyncMode });
-      broadcastState(newCustomers, nextSyncMode);
-    } catch (error) {
-      // Fallback already handled by deleteWithSync
-      console.error('Error deleting customer:', error);
-    }
-  },
-
-  updateCustomerBalance: (id, amount) => {
-    const state = get();
-    const target = state.customers.find(customer => customer.id === id);
-
-    if (!target) {
-      return;
-    }
-
-    const updatedBalance = target.balance + amount;
-
-    set((current) => {
-      const newCustomers = current.customers.map(customer =>
-        customer.id === id
-          ? { ...customer, balance: updatedBalance }
-          : customer
-      );
-
-      return { customers: newCustomers };
-    });
-
-    updateWithSync<Customer>(syncConfig, id, { balance: updatedBalance }, state.customers)
-      .catch((error) => console.error('Error syncing customer balance:', error));
-
-    broadcastState();
-  },
-
-  resetCustomer: (id) => {
-    const state = get();
-    const target = state.customers.find(customer => customer.id === id);
-
-    if (!target) {
-      return;
-    }
-
-    set((current) => {
-      const newCustomers = current.customers.map(customer =>
-        customer.id === id
-          ? { ...customer, balance: 0 }
-          : customer
-      );
-      return { customers: newCustomers };
-    });
-
-    updateWithSync<Customer>(syncConfig, id, { balance: 0 }, state.customers)
-      .catch((error) => console.error('Error resetting customer balance:', error));
-
-    broadcastState();
-  },
-
-  getCustomerById: (id) => {
-    return get().customers.find(customer => customer.id === id);
-  },
-
-  getCustomerByName: (name: string) => {
-    return get().customers.find(customer =>
-      customer.name.toLowerCase() === name.toLowerCase()
-    );
-  },
-
-  resetStore: () => {
-    set({ customers: [] });
-    broadcastState([]);
-  },
-
-  get stats() {
-    const customers = get().customers;
-    const totalBalance = customers.reduce((sum, customer) => sum + customer.balance, 0);
-    const totalPositiveBalance = customers
-      .filter(customer => customer.balance > 0)
-      .reduce((sum, customer) => sum + customer.balance, 0);
-    const totalNegativeBalance = customers
-      .filter(customer => customer.balance < 0)
-      .reduce((sum, customer) => sum + customer.balance, 0);
-
-    return {
-      total: customers.length,
-      active: customers.filter(customer => customer.status === 'active').length,
-      totalBalance,
-      totalPositiveBalance,
-      totalNegativeBalance
-    };
-  }
-      };
-    },
+        return {
+          total: customers.length,
+          active: customers.filter((customer) => customer.status === 'active').length,
+          totalBalance,
+          totalPositiveBalance,
+          totalNegativeBalance,
+        };
+      },
+    }),
     {
-      name: 'grid-manager:customers-store',
-      storage,
+      name: 'grid-manager:customers-cache',
+      storage: typeof window !== 'undefined' ? createJSONStorage(() => window.localStorage) : undefined,
+      partialize: (state) => ({ customers: state.customers }),
     },
   ),
 );

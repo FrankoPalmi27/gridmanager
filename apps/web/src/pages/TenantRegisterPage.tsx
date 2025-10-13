@@ -132,7 +132,7 @@ export function TenantRegisterPage({ onNavigate }: { onNavigate?: (page: string)
     setRegistrationResult(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1'}/auth/register-tenant`, {
+  const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://gridmanager-production.up.railway.app/api/v1'}/auth/register-tenant`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

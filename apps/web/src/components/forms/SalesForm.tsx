@@ -73,7 +73,21 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
   const { products, loadProducts } = useProductsStore();
   const { accounts, getActiveAccounts, loadAccounts } = useAccountsStore();
   const { customers, loadCustomers } = useCustomersStore();
-  const { toggleNegativeStock, isNegativeStockAllowed } = useSystemConfigStore();
+  const {
+    toggleNegativeStock,
+    isNegativeStockAllowed,
+    loadConfig: loadSystemConfig,
+    hasLoaded: hasLoadedSystemConfig,
+    isLoading: isLoadingSystemConfig,
+    error: systemConfigError,
+  } = useSystemConfigStore((state) => ({
+    toggleNegativeStock: state.toggleNegativeStock,
+    isNegativeStockAllowed: state.isNegativeStockAllowed,
+    loadConfig: state.loadConfig,
+    hasLoaded: state.hasLoaded,
+    isLoading: state.isLoading,
+    error: state.error,
+  }));
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<SalesFormErrors>({});
 
@@ -92,6 +106,16 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
       }
     }
   }, [isOpen, customers.length, products.length, accounts.length, loadCustomers, loadProducts, loadAccounts]);
+
+  useEffect(() => {
+    if (!isOpen || hasLoadedSystemConfig || isLoadingSystemConfig) {
+      return;
+    }
+
+    void loadSystemConfig().catch((error) => {
+      console.error('[SalesForm] Error al cargar configuración del sistema:', error);
+    });
+  }, [isOpen, hasLoadedSystemConfig, isLoadingSystemConfig, loadSystemConfig]);
 
   // Ensure stores return arrays - with extra safety
   const safeProducts = useMemo(() => {
@@ -161,9 +185,11 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
       // Find the product name from the sale amount/quantity
       const unitPrice = editingSale.amount / editingSale.items;
       const matchingProduct = activeProducts.find(p => p.price === unitPrice);
+      const editingCustomerId = (editingSale as EditableSale & { customerId?: string }).customerId ?? '';
       
       setFormData({
         client: editingSale.client.name,
+        customerId: editingCustomerId,
         product: matchingProduct?.name || '',
         productId: editingSale.productId || matchingProduct?.id || '',
         quantity: editingSale.items,
@@ -408,6 +434,17 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
       footer={footer}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {isLoadingSystemConfig && !hasLoadedSystemConfig && (
+          <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+            Cargando configuración del sistema para validar stock...
+          </div>
+        )}
+        {systemConfigError && !isLoadingSystemConfig && !hasLoadedSystemConfig && (
+          <div className="rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-700">
+            No se pudo sincronizar la configuración del sistema. Se usará la configuración por defecto hasta reintentar.
+          </div>
+        )}
+
         {/* Cliente */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -528,7 +565,8 @@ export const SalesForm: React.FC<SalesFormProps> = ({ isOpen, onClose, onSuccess
                       <button
                         type="button"
                         onClick={toggleNegativeStock}
-                        className="text-xs underline hover:no-underline"
+                        className="text-xs underline hover:no-underline disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isLoadingSystemConfig}
                       >
                         🔧 Permitir stock negativo en configuración del sistema
                       </button>

@@ -8,6 +8,7 @@ import { PurchasesPage } from './pages/PurchasesPage';
 import { AccountsPage } from './pages/AccountsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { UsersPage } from './pages/UsersPage';
+import { SystemSettingsPage } from './pages/SystemSettingsPage';
 import { CalculatorPage } from './pages/CalculatorPage';
 import { HomePage } from './pages/HomePage';
 import { TenantRegisterPage } from './pages/TenantRegisterPage';
@@ -18,11 +19,14 @@ import { useAuthStore } from './store/authStore';
 import { runAutoCleanup, hasLegacyData } from './lib/dataCleanup';
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
+import { useSystemConfigStore } from './store/systemConfigStore';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, tokens } = useAuthStore();
+  const loadSystemConfig = useSystemConfigStore((state) => state.loadConfig);
+  const hasLoadedSystemConfig = useSystemConfigStore((state) => state.hasLoaded);
   const isAuthenticated = !!(user && tokens);
 
   // Emergency detection with immediate check
@@ -115,6 +119,12 @@ function App() {
     setSidebarOpen(false);
   }, [currentPage]);
 
+  useEffect(() => {
+    if (isAuthenticated && !hasLoadedSystemConfig) {
+      void loadSystemConfig();
+    }
+  }, [isAuthenticated, hasLoadedSystemConfig, loadSystemConfig]);
+
   const renderCurrentPage = () => {
     // Public pages (no authentication required)
     if (!isAuthenticated) {
@@ -158,6 +168,8 @@ function App() {
         return <CalculatorPage />;
       case 'users':
         return <UsersPage />;
+      case 'settings':
+        return <SystemSettingsPage />;
       default:
         return <DashboardPage onNavigate={setCurrentPage} />;
     }

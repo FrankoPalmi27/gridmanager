@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { StoreApi } from 'zustand';
 import { suppliersApi } from '../lib/api';
-import { loadWithSync, createWithSync, updateWithSync, deleteWithSync, getSyncMode, SyncConfig } from '../lib/syncStorage';
 
 export interface Supplier {
   id: string;
@@ -21,13 +19,10 @@ export interface Supplier {
   totalPurchases: number;
 }
 
-// No initial suppliers - users start with empty supplier list
-const initialSuppliers: Supplier[] = [];
-
 interface SuppliersState {
   suppliers: Supplier[];
   isLoading: boolean;
-  syncMode: 'online' | 'offline';
+  error: string | null;
   loadSuppliers: () => Promise<void>;
   getSuppliers: () => Supplier[];
   addSupplier: (supplier: Omit<Supplier, 'id'>) => Promise<Supplier>;
@@ -44,7 +39,6 @@ interface SuppliersState {
   };
 }
 
-// Helper to map backend supplier to frontend format
 const mapBackendToFrontend = (backendSupplier: any): Supplier => ({
   id: backendSupplier.id,
   name: backendSupplier.name,
@@ -56,273 +50,173 @@ const mapBackendToFrontend = (backendSupplier: any): Supplier => ({
   contactPerson: backendSupplier.contactPerson || '',
   paymentTerms: backendSupplier.paymentTerms || 0,
   currentBalance: Number(backendSupplier.currentBalance || 0),
-  creditLimit: backendSupplier.creditLimit,
+  creditLimit: backendSupplier.creditLimit ? Number(backendSupplier.creditLimit) : undefined,
   active: backendSupplier.active !== false,
   lastPurchaseDate: backendSupplier.lastPurchaseDate || undefined,
   totalPurchases: Number(backendSupplier.totalPurchases || 0),
 });
+const mapFrontendToBackend = (data: Partial<Supplier>) => {
+  const payload: Record<string, unknown> = {};
 
-const syncConfig: SyncConfig<Supplier> = {
-  storageKey: 'suppliers',
-  apiGet: () => suppliersApi.getAll(),
-  apiCreate: (data: any) => suppliersApi.create(data),
-  apiUpdate: (id: string, data: Partial<Supplier>) => suppliersApi.update(id, data),
-  apiDelete: (id: string) => suppliersApi.delete(id),
-  extractData: (response: any) => {
-    const responseData = response.data.data || response.data;
+  if (data.name !== undefined) payload.name = data.name;
+  if (data.businessName !== undefined) payload.businessName = data.businessName || null;
+  if (data.email !== undefined) payload.email = data.email || null;
+  if (data.phone !== undefined) payload.phone = data.phone || null;
+  if (data.address !== undefined) payload.address = data.address || null;
+  if (data.taxId !== undefined) payload.taxId = data.taxId || null;
+  if (data.contactPerson !== undefined) payload.contactPerson = data.contactPerson || null;
+  if (data.paymentTerms !== undefined) payload.paymentTerms = Number(data.paymentTerms);
+  if (data.creditLimit !== undefined) payload.creditLimit = data.creditLimit == null ? null : Number(data.creditLimit);
+  if (data.currentBalance !== undefined) payload.currentBalance = Number(data.currentBalance);
+  if (data.totalPurchases !== undefined) payload.totalPurchases = Number(data.totalPurchases);
+  if (data.lastPurchaseDate !== undefined) payload.lastPurchaseDate = data.lastPurchaseDate || null;
+  if (data.active !== undefined) payload.active = data.active;
 
-    // Handle single supplier response (from create/update)
-    if (responseData.supplier) {
-      return [mapBackendToFrontend(responseData.supplier)];
-    }
-
-    // Handle paginated response (from list)
-    // Backend returns { data: [...], total, page, limit, totalPages }
-    const items = responseData.data || responseData.items || responseData;
-    if (Array.isArray(items)) {
-      return items.map(mapBackendToFrontend);
-    }
-
-    console.warn('⚠️ Unexpected suppliers response structure:', responseData);
-    return [];
-  },
+  return payload;
 };
 
-type SuppliersBroadcastEvent =
-  | {
-      type: 'suppliers/update';
-      payload: {
-        suppliers: Supplier[];
-        syncMode?: 'online' | 'offline';
-      };
-      source: string;
-      timestamp: number;
-    }
-  | {
-      type: 'suppliers/request-refresh';
-      source: string;
-      timestamp: number;
-    };
-
-const BROADCAST_CHANNEL_NAME = 'grid-manager:suppliers';
-
-const createTabId = () => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
-  }
-
-  return `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+const extractList = (response: any) => {
+  const responseData = response.data?.data ?? response.data;
+  const items = responseData?.data ?? responseData?.items ?? responseData;
+  return Array.isArray(items) ? items : [];
 };
-
-const tabId = createTabId();
-
-const broadcastChannel =
-  typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
-    ? new BroadcastChannel(BROADCAST_CHANNEL_NAME)
-    : null;
-
-const broadcast = (event: SuppliersBroadcastEvent) => {
-  if (!broadcastChannel) {
-    return;
-  }
-
-  broadcastChannel.postMessage(event);
-};
-
-let isBroadcastRegistered = false;
-
-const registerBroadcastListener = (
-  set: StoreApi<SuppliersState>['setState'],
-  get: StoreApi<SuppliersState>['getState'],
-) => {
-  if (!broadcastChannel || isBroadcastRegistered) {
-    return;
-  }
-
-  broadcastChannel.addEventListener('message', (event: MessageEvent<SuppliersBroadcastEvent>) => {
-    const data = event.data;
-
-    if (!data || data.source === tabId) {
-      return;
-    }
-
-    if (data.type === 'suppliers/update') {
-      const { suppliers, syncMode } = data.payload;
-      set((state) => ({
-        suppliers,
-        syncMode: syncMode ?? state.syncMode,
-      }));
-    }
-
-    if (data.type === 'suppliers/request-refresh') {
-      void get().loadSuppliers();
-    }
-  });
-
-  isBroadcastRegistered = true;
-};
-
-const storage = typeof window !== 'undefined'
-  ? createJSONStorage<SuppliersState>(() => window.localStorage)
-  : undefined;
 
 export const useSuppliersStore = create<SuppliersState>()(
   persist(
-    (set, get) => {
-      registerBroadcastListener(set, get);
+    (set, get) => ({
+      suppliers: [],
+      isLoading: false,
+      error: null,
 
-      const broadcastState = (nextSuppliers?: Supplier[], nextSyncMode?: 'online' | 'offline') => {
+      loadSuppliers: async () => {
+        set({ isLoading: true, error: null });
+
+        try {
+          const response = await suppliersApi.getAll();
+          const suppliers = extractList(response).map(mapBackendToFrontend);
+          set({ suppliers, isLoading: false });
+        } catch (error: any) {
+          console.error('[SuppliersStore] Error loading suppliers:', error);
+          set({
+            isLoading: false,
+            error: error.response?.data?.message || 'Error al cargar proveedores',
+          });
+        }
+      },
+
+      getSuppliers: () => get().suppliers,
+
+      addSupplier: async (supplierData) => {
+        set({ error: null });
+
+        try {
+          const payload = mapFrontendToBackend(supplierData);
+          const response = await suppliersApi.create(payload);
+          const responseData = response.data?.data ?? response.data;
+          const createdSupplier = mapBackendToFrontend(responseData.supplier ?? responseData);
+
+          set((state) => ({ suppliers: [createdSupplier, ...state.suppliers] }));
+          return createdSupplier;
+        } catch (error: any) {
+          console.error('[SuppliersStore] Error creating supplier:', error);
+          const message = error.response?.data?.message || 'Error al crear proveedor';
+          set({ error: message });
+          throw new Error(message);
+        }
+      },
+
+      updateSupplier: async (id, supplierData) => {
+        set({ error: null });
+
+        try {
+          const payload = mapFrontendToBackend(supplierData);
+          await suppliersApi.update(id, payload);
+
+          set((state) => ({
+            suppliers: state.suppliers.map((supplier) =>
+              supplier.id === id ? { ...supplier, ...supplierData } : supplier,
+            ),
+          }));
+        } catch (error: any) {
+          console.error('[SuppliersStore] Error updating supplier:', error);
+          const message = error.response?.data?.message || 'Error al actualizar proveedor';
+          set({ error: message });
+          throw new Error(message);
+        }
+      },
+
+      deleteSupplier: async (id) => {
+        set({ error: null });
+
+        try {
+          await suppliersApi.update(id, mapFrontendToBackend({ active: false }));
+        } catch (error: any) {
+          console.error('[SuppliersStore] Error deleting supplier:', error);
+          const message = error.response?.data?.message || 'Error al eliminar proveedor';
+          set({ error: message });
+          throw new Error(message);
+        }
+
+        set((state) => ({
+          suppliers: state.suppliers.filter((supplier) => supplier.id !== id),
+        }));
+      },
+
+      getActiveSuppliers: () => get().suppliers.filter((supplier) => supplier.active),
+
+      getSupplierById: (id) => get().suppliers.find((supplier) => supplier.id === id),
+
+      updateSupplierBalance: (id, amount) => {
         const state = get();
-        broadcast({
-          type: 'suppliers/update',
-          payload: {
-            suppliers: nextSuppliers ?? state.suppliers,
-            syncMode: nextSyncMode ?? state.syncMode,
-          },
-          source: tabId,
-          timestamp: Date.now(),
-        });
-      };
+        const target = state.suppliers.find((supplier) => supplier.id === id);
 
-      return {
-  suppliers: initialSuppliers,
-  isLoading: false,
-  syncMode: getSyncMode(),
+        if (!target) {
+          return;
+        }
 
-  loadSuppliers: async () => {
-    console.log('[SuppliersStore] Starting loadSuppliers...');
-    set({ isLoading: true, syncMode: getSyncMode() });
-    try {
-      console.log('[SuppliersStore] Calling loadWithSync...');
-      const suppliers = await loadWithSync<Supplier>(syncConfig, initialSuppliers);
-      console.log('[SuppliersStore] Loaded suppliers:', suppliers.length, suppliers);
-      const nextSyncMode = getSyncMode();
-      set({ suppliers, isLoading: false, syncMode: nextSyncMode });
-      broadcastState(suppliers, nextSyncMode);
-    } catch (error) {
-      console.error('[SuppliersStore] Error loading suppliers:', error);
-      set({ isLoading: false });
-    }
-  },
+        const nextBalance = target.currentBalance + amount;
+        const nextTotalPurchases = amount > 0 ? target.totalPurchases + amount : target.totalPurchases;
+        const nextLastPurchaseDate = amount > 0 ? new Date().toISOString().split('T')[0] : target.lastPurchaseDate;
 
-  getSuppliers: () => get().suppliers,
+        set((current) => ({
+          suppliers: current.suppliers.map((supplier) =>
+            supplier.id === id
+              ? {
+                  ...supplier,
+                  currentBalance: nextBalance,
+                  totalPurchases: nextTotalPurchases,
+                  lastPurchaseDate: nextLastPurchaseDate,
+                }
+              : supplier,
+          ),
+        }));
 
-  addSupplier: async (supplierData) => {
-    const state = get();
+        suppliersApi
+          .update(
+            id,
+            mapFrontendToBackend({
+              currentBalance: nextBalance,
+              totalPurchases: nextTotalPurchases,
+              lastPurchaseDate: nextLastPurchaseDate,
+            }),
+          )
+          .catch((error: any) => console.error('[SuppliersStore] Error syncing balance:', error));
+      },
 
-    // Map frontend data to backend schema - send only what backend accepts
-    // Only include fields that have values to avoid sending undefined
-    const dataToSend: any = {
-      name: supplierData.name,
-    };
-
-    if (supplierData.businessName) dataToSend.businessName = supplierData.businessName;
-    if (supplierData.email) dataToSend.email = supplierData.email;
-    if (supplierData.phone) dataToSend.phone = supplierData.phone;
-    if (supplierData.address) dataToSend.address = supplierData.address;
-    if (supplierData.taxId) dataToSend.taxId = supplierData.taxId;
-    if (supplierData.contactPerson) dataToSend.contactPerson = supplierData.contactPerson;
-    if (supplierData.paymentTerms !== undefined) dataToSend.paymentTerms = Number(supplierData.paymentTerms);
-    if (supplierData.creditLimit !== undefined) dataToSend.creditLimit = Number(supplierData.creditLimit);
-
-    try {
-      // Create with API sync and wait for response
-      const createdSupplier = await createWithSync<Supplier>(syncConfig, dataToSend, state.suppliers);
-      const nextSuppliers = [createdSupplier, ...state.suppliers];
-      const nextSyncMode = getSyncMode();
-      set({ suppliers: nextSuppliers, syncMode: nextSyncMode });
-      broadcastState(nextSuppliers, nextSyncMode);
-      return createdSupplier;
-    } catch (error) {
-      console.error('Error creating supplier:', error);
-      throw error;
-    }
-  },
-
-  updateSupplier: async (id, supplierData) => {
-    const state = get();
-
-    try {
-      // Update with API sync first
-      await updateWithSync<Supplier>(syncConfig, id, supplierData, state.suppliers);
-
-      // Update local state after successful API call
-      const newSuppliers = state.suppliers.map(supplier =>
-        supplier.id === id
-          ? { ...supplier, ...supplierData }
-          : supplier
-      );
-
-      const nextSyncMode = getSyncMode();
-      set({ suppliers: newSuppliers, syncMode: nextSyncMode });
-      broadcastState(newSuppliers, nextSyncMode);
-    } catch (error) {
-      console.error('Error updating supplier:', error);
-      throw error;
-    }
-  },
-
-  deleteSupplier: async (id) => {
-    const state = get();
-
-    try {
-      await deleteWithSync<Supplier>(syncConfig, id, state.suppliers);
-    } catch (error) {
-      console.error('Error deleting supplier:', error);
-      throw error;
-    }
-
-    const nextSuppliers = state.suppliers.filter(supplier => supplier.id !== id);
-    const nextSyncMode = getSyncMode();
-    set({ suppliers: nextSuppliers, syncMode: nextSyncMode });
-    broadcastState(nextSuppliers, nextSyncMode);
-  },
-
-  getActiveSuppliers: () => get().suppliers.filter(supplier => supplier.active),
-
-  getSupplierById: (id) => get().suppliers.find(supplier => supplier.id === id),
-
-  updateSupplierBalance: (id, amount) => {
-    const state = get();
-    const newSuppliers = state.suppliers.map(supplier =>
-      supplier.id === id
-        ? {
-            ...supplier,
-            currentBalance: supplier.currentBalance + amount,
-            totalPurchases: amount > 0 ? supplier.totalPurchases + amount : supplier.totalPurchases,
-            lastPurchaseDate: amount > 0 ? new Date().toISOString().split('T')[0] : supplier.lastPurchaseDate
-          }
-        : supplier
-    );
-
-    const updatedSupplier = newSuppliers.find(supplier => supplier.id === id);
-    if (updatedSupplier) {
-      updateWithSync(syncConfig, id, {
-        currentBalance: updatedSupplier.currentBalance,
-        totalPurchases: updatedSupplier.totalPurchases,
-        lastPurchaseDate: updatedSupplier.lastPurchaseDate,
-      }, state.suppliers).catch((error) => console.error('Error syncing supplier balance:', error));
-    }
-
-    const nextSyncMode = getSyncMode();
-    set({ suppliers: newSuppliers, syncMode: nextSyncMode });
-    broadcastState(newSuppliers, nextSyncMode);
-  },
-
-  getSupplierStats: () => {
-    const suppliers = get().suppliers;
-    return {
-      total: suppliers.length,
-      active: suppliers.filter(s => s.active).length,
-      totalBalance: suppliers.reduce((sum, s) => sum + s.currentBalance, 0),
-      totalPurchases: suppliers.reduce((sum, s) => sum + s.totalPurchases, 0)
-    };
-  }
-      };
-    },
+      getSupplierStats: () => {
+        const suppliers = get().suppliers;
+        return {
+          total: suppliers.length,
+          active: suppliers.filter((supplier) => supplier.active).length,
+          totalBalance: suppliers.reduce((sum, supplier) => sum + supplier.currentBalance, 0),
+          totalPurchases: suppliers.reduce((sum, supplier) => sum + supplier.totalPurchases, 0),
+        };
+      },
+    }),
     {
-      name: 'grid-manager:suppliers-store',
-      storage,
+      name: 'grid-manager:suppliers-cache',
+      storage: typeof window !== 'undefined' ? createJSONStorage(() => window.localStorage) : undefined,
+      partialize: (state) => ({ suppliers: state.suppliers }),
     },
   ),
 );

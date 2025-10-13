@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 
-const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api/v1';
+const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'https://gridmanager-production.up.railway.app/api/v1';
 
 const getTenantSlugFromLocation = (): string | null => {
   if (typeof window === 'undefined') {
@@ -300,4 +300,9 @@ export const reportsApi = {
     
   getFinancial: (params?: any) =>
     api.get('/reports/financial', { params }),
+};
+
+export const systemConfigApi = {
+  get: () => api.get('/settings/system'),
+  update: (data: any) => api.put('/settings/system', data),
 };

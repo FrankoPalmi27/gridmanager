@@ -1,3 +1,7 @@
+// Force reload of environment variables with override
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -23,6 +27,7 @@ import { purchaseRoutes } from './routes/purchases';
 import { userRoutes } from './routes/users';
 import { accountRoutes } from './routes/accounts';
 import { reportRoutes } from './routes/reports';
+import { settingsRoutes } from './routes/settings';
 
 // Factory function for creating the Express app (for serverless functions)
 export function createApp() {
@@ -206,6 +211,7 @@ app.use('/api/v1/purchases', tenantMiddleware, purchaseRoutes);
 app.use('/api/v1/users', tenantMiddleware, userRoutes);
 app.use('/api/v1/accounts', tenantMiddleware, accountRoutes);
 app.use('/api/v1/reports', tenantMiddleware, reportRoutes);
+app.use('/api/v1/settings', tenantMiddleware, settingsRoutes);
 
 // Error handling
 app.use(errorHandler);
